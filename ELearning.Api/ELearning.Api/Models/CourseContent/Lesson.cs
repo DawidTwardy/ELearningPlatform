@@ -3,13 +3,13 @@ namespace ELearning.Api.Models.CourseContent
     public class Lesson
     {
         public int Id { get; set; }
-        public int SectionId { get; set; } // Klucz obcy do CourseSection
+        public int SectionId { get; set; }
         public string Title { get; set; } = string.Empty;
-        public int Order { get; set; } // Kolejnoœæ lekcji w sekcji
-        public string Type { get; set; } = "video"; // 'video', 'pdf', 'text'
-        public string Content { get; set; } = string.Empty; // URL dla wideo/pdf lub pe³ny HTML dla tekstu
+        public int Order { get; set; }
+        public string Type { get; set; } = "video";
+        public string Content { get; set; } = string.Empty;
 
-        // Relacja
-        public CourseSection Section { get; set; } // Nawigacja do Sekcji
+
+        public CourseSection? Section { get; set; }
     }
 }

@@ -1,6 +1,4 @@
-﻿// Plik: ELearningPlatform-main/ELearning.Api/ELearning.Api/Controllers/CoursesController.cs
-
-using ELearning.Api.Models;
+﻿using ELearning.Api.Models;
 using ELearning.Api.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +20,6 @@ namespace ELearning.Api.Controllers
             _context = context;
         }
 
-        // GET: api/Courses (Publiczne)
         [HttpGet]
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<Course>>> GetCourses()
@@ -42,7 +39,6 @@ namespace ELearning.Api.Controllers
             return Ok(courses);
         }
 
-        // GET: api/Courses/5 (Publiczne)
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<ActionResult<Course>> GetCourse(int id)
@@ -62,7 +58,6 @@ namespace ELearning.Api.Controllers
             return Ok(course);
         }
 
-        // POST: api/Courses (Wymaga autoryzacji)
         [HttpPost]
         [Authorize(Roles = "Admin,Instructor")]
         public async Task<ActionResult<Course>> CreateCourse([FromBody] Course course)
@@ -72,17 +67,15 @@ namespace ELearning.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            var sections = course.Sections;
-            course.Sections = null;
+            var sections = course.Sections ?? new List<CourseSection>();
+            course.Sections = new List<CourseSection>();
 
-            course.Instructor = User.Identity.Name ?? "Nieznany Instruktor";
-            course.Id = 0; // Upewnij się, że Id jest zerowane przed zapisem głównego obiektu
+            course.Instructor = User.Identity!.Name ?? "Nieznany Instruktor";
 
             _context.Courses.Add(course);
 
             try
             {
-                // 1. Zapisz główny kurs
                 await _context.SaveChangesAsync();
             }
             catch (Exception ex)
@@ -90,35 +83,29 @@ namespace ELearning.Api.Controllers
                 return StatusCode(500, new { Message = "Błąd zapisu głównego kursu w bazie danych.", Details = ex.Message });
             }
 
-            // 2. Dodaj sekcje, lekcje i quizy, zerując ich ID i przypisując klucze
-            if (sections != null && sections.Any())
+            if (sections.Any())
             {
                 foreach (var section in sections)
                 {
-                    section.Id = 0; // KOREKTA: Zerowanie ID sekcji
                     section.CourseId = course.Id;
+                    _context.CourseSections.Add(section);
 
                     if (section.Lessons != null)
                     {
                         foreach (var lesson in section.Lessons)
                         {
-                            lesson.Id = 0; // KOREKTA: Zerowanie ID lekcji
                             _context.Entry(lesson).State = EntityState.Added;
                         }
                     }
 
                     if (section.Quiz != null)
                     {
-                        section.Quiz.Id = 0; // KOREKTA: Zerowanie ID quizu
                         _context.Entry(section.Quiz).State = EntityState.Added;
                     }
-
-                    _context.CourseSections.Add(section);
                 }
 
                 try
                 {
-                    // 3. Zapisz zagnieżdżone elementy
                     await _context.SaveChangesAsync();
                 }
                 catch (Exception ex)
@@ -132,7 +119,6 @@ namespace ELearning.Api.Controllers
             return CreatedAtAction(nameof(GetCourse), new { id = course.Id }, course);
         }
 
-        // PUT: api/Courses/5 (Wymaga autoryzacji)
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,Instructor")]
         public async Task<IActionResult> UpdateCourse(int id, [FromBody] Course course)
@@ -176,7 +162,6 @@ namespace ELearning.Api.Controllers
             return NoContent();
         }
 
-        // DELETE: api/Courses/5 (Wymaga autoryzacji: tylko Admin)
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCourse(int id)

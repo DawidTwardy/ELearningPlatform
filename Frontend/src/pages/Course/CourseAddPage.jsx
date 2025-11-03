@@ -29,13 +29,37 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
       return;
     }
     
+    const sectionsToSave = sections.map(section => ({
+        title: section.title, 
+        
+        lessons: section.lessons.map(lesson => ({
+            title: lesson.title,
+            type: lesson.type,
+            content: lesson.content,
+        })),
+        
+        quiz: {
+            // W QuizEditor pytania mogą mieć tymczasowe id, które trzeba usunąć
+            questions: section.quiz.questions.map(question => {
+                const { id, answers, ...rest } = question;
+                return {
+                    ...rest,
+                    answers: answers.map(answer => {
+                        const { id: answerId, ...answerRest } = answer;
+                        return answerRest;
+                    })
+                };
+            })
+        }
+    }));
+
     const newCourseData = { 
         title: title, 
         description: description || "", 
         imageSrc: thumbnailUrl || "/src/course/placeholder_default.png", 
         instructor: "Instruktor Mock", 
         rating: 5.0, 
-        sections: sections
+        sections: sectionsToSave
     };
 
     const apiUrl = 'https://localhost:7115/api/Courses';
@@ -48,15 +72,27 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
         body: JSON.stringify(newCourseData)
     })
     .then(response => {
-        return response.json().then(data => ({ status: response.status, body: data }));
+        if (response.status === 201 || response.status === 200) {
+             return response.json();
+        } 
+        
+        return response.json().then(data => {
+            if (response.status === 400) {
+                const validationErrors = data.errors || data;
+                console.error("Błąd walidacji API:", validationErrors);
+                let message = "Wystąpił błąd walidacji (400 Bad Request). Sprawdź, czy wszystkie pola są poprawnie wypełnione.";
+                if (validationErrors.errors && Object.keys(validationErrors.errors).length > 0) {
+                    message += "\nSzczegóły: " + Object.entries(validationErrors.errors).map(([key, value]) => `${key}: ${value.join(', ')}`).join('; ');
+                }
+                throw new Error(message);
+            }
+            throw new Error(data.title || "Wystąpił błąd podczas tworzenia kursu.");
+        });
+
     })
     .then(result => {
-        if (result.status === 201 || result.status === 200) {
-             alert(`Pomyślnie stworzono kurs: ${result.body.title} (ID: ${result.body.id})`);
-             onCourseCreate(result.body);
-        } else {
-             throw new Error(result.body.title || "Wystąpił błąd podczas tworzenia kursu.");
-        }
+        alert(`Pomyślnie stworzono kurs: ${result.title} (ID: ${result.id})`);
+        onCourseCreate(result);
     })
     .catch(error => {
         console.error("Błąd podczas tworzenia kursu:", error);
