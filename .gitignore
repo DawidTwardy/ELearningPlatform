@@ -1,0 +1,13 @@
+# Ignoruj pliki w dowolnym podfolderze
+
+# .NET / Visual Studio
+**/.vs/
+**/[Oo]bj/
+**/[Bb]in/
+
+# Node.js / React
+**/node_modules/
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
