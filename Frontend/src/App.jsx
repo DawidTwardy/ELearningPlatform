@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // Importy stylów
-import './styles/components/App.css'; // Zmieniona nazwa z App.css
+import './styles/components/App.css'; 
 import './styles/components/Actions.css';
 
 // Importy komponentów
@@ -71,8 +71,10 @@ const coursesData = [
 
 const App = () => {
     const [currentPage, setCurrentPage] = useState(PAGE_HOME); 
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(false);
+    
+    // NOWE STANY: Autoryzacja
+    const [authToken, setAuthToken] = useState(localStorage.getItem('authToken')); // Token JWT
+    const [user, setUser] = useState(null); // Obiekt { username, role, firstName, lastName }
 
     const [viewingCourse, setViewingCourse] = useState(null);
     const [detailsCourse, setDetailsCourse] = useState(null);
@@ -83,6 +85,21 @@ const App = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedInstructor, setSelectedInstructor] = useState(null);
     const [isInstructorView, setIsInstructorView] = useState(false);
+    
+    // LOGIKA ROLI I STATUSU ZALOGOWANIA
+    const isLoggedIn = !!authToken;
+    // MOCK ROLI ADMINA (W przyszłości wyciągane z tokenu/użytkownika)
+    const isAdmin = isLoggedIn && user?.role === 'Admin';
+    // MOCK ROLI INSTRUKTORA (W przyszłości wyciągane z tokenu/użytkownika)
+    const isInstructor = isLoggedIn && user?.role === 'Instructor';
+
+    // FUNKCJA: Ustawianie tokenu i danych użytkownika po logowaniu/rejestracji
+    const handleLoginSuccess = (token, userData) => {
+        localStorage.setItem('authToken', token);
+        setAuthToken(token);
+        setUser(userData); 
+        navigateToPage(PAGE_HOME);
+    };
 
     const navigateToPage = (page) => {
         setViewingCourse(null);
@@ -98,11 +115,48 @@ const App = () => {
         setCurrentPage(page);
     };
 
+    // FUNKCJA: Logout usuwa token
     const handleLogout = () => {
-        setIsLoggedIn(false);
-        setIsAdmin(false);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('lastUsername');
+        localStorage.removeItem('lastFirstName');
+        localStorage.removeItem('lastName');
+        setAuthToken(null);
+        setUser(null);
         navigateToPage(PAGE_HOME);
     };
+
+    // EFFECT: Symulacja pobierania danych użytkownika po odświeżeniu (gdy token istnieje)
+    useEffect(() => {
+        if (authToken && !user) {
+            // W prawdziwej aplikacji to byłoby żądanie GET /api/user/me z nagłówkiem Authorization
+            // Na potrzeby mocka: próbujemy użyć lokalnego storage (zapisane przy logowaniu)
+            const storedUsername = localStorage.getItem('lastUsername');
+            const storedFirstName = localStorage.getItem('lastFirstName');
+            const storedLastName = localStorage.getItem('lastName');
+            let userRole = 'Student';
+
+            if (storedUsername?.toLowerCase() === 'admin') {
+                 userRole = 'Admin';
+            } else if (storedUsername?.toLowerCase() === 'instructor') {
+                 userRole = 'Instructor';
+            }
+            
+            if (storedUsername) {
+                setUser({ 
+                    username: storedUsername, 
+                    role: userRole, 
+                    firstName: storedFirstName || 'Anonim', 
+                    lastName: storedLastName || 'Anonim' 
+                });
+            } else {
+                 // Jeśli token jest, ale nie ma danych użytkownika, trzeba go usunąć
+                 localStorage.removeItem('authToken');
+                 setAuthToken(null);
+            }
+        }
+    }, [authToken, user]);
+
 
     const handleStartEdit = (course) => {
         setEditingCourse(course);
@@ -199,7 +253,7 @@ const App = () => {
             return (
                 <CertificatePage
                     course={viewingCertificate}
-                    userName="Jan Kowalski"
+                    userName={user?.firstName + ' ' + user?.lastName || "Użytkownik"}
                     onBack={handleBackFromViews}
                 />
             );
@@ -270,16 +324,16 @@ const App = () => {
 
         switch(currentPage) {
             case PAGE_LOGIN:
+                // PRZEKAZUJEMY onLoginSuccess
                 return <LoginPage 
                             setCurrentPage={navigateToPage} 
-                            setIsLoggedIn={setIsLoggedIn} 
-                            setIsAdmin={setIsAdmin} 
+                            onLoginSuccess={handleLoginSuccess}
                        />;
             case PAGE_REGISTER:
+                // PRZEKAZUJEMY onRegisterSuccess
                 return <RegisterPage 
                             setCurrentPage={navigateToPage} 
-                            setIsLoggedIn={setIsLoggedIn} 
-                            setIsAdmin={setIsAdmin}
+                            onRegisterSuccess={handleLoginSuccess}
                        />;
             case PAGE_INSTRUCTORS:
                 return <InstructorsPage onInstructorClick={handleShowInstructorProfile} />;
@@ -332,9 +386,9 @@ const App = () => {
         <div className="app">
             <Header 
                 currentPage={currentPage} 
-                isLoggedIn={isLoggedIn} 
+                isLoggedIn={isLoggedIn} // Używa nowego logicznego stanu
                 handleLogout={handleLogout} 
-                isAdmin={isAdmin}
+                isAdmin={isAdmin} // Używa nowego logicznego stanu
                 navigateToPage={navigateToPage}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}

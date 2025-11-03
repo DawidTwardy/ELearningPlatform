@@ -10,10 +10,12 @@ const EyeIcon = ({ show, toggle }) => (
     />
 );
 
-const RegisterPage = ({ setCurrentPage }) => {
+const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
     const [login, setLogin] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [firstName, setFirstName] = useState(''); // DODANY STAN
+    const [lastName, setLastName] = useState(''); // DODANY STAN
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [error, setError] = useState('');
 
@@ -21,16 +23,65 @@ const RegisterPage = ({ setCurrentPage }) => {
         e.preventDefault();
         setError(''); 
         
-        if (login && email && password.length >= 6) {
-            console.log(`Zarejestrowano użytkownika: ${login}, Email: ${email}`);
-            alert("Rejestracja przebiegła pomyślnie! Przekierowanie do logowania.");
-            setCurrentPage('login');
-
-        } else if (password.length < 6) {
-            setError('Hasło musi mieć co najmniej 6 znaków.');
-        } else {
-            setError('Proszę wypełnić wszystkie pola.');
+        // Minimalna długość 4, zgodnie z Program.cs
+        if (password.length < 4) { 
+            setError('Hasło musi mieć co najmniej 4 znaki.');
+            return;
         }
+        
+        const registerData = {
+            username: login,
+            email: email,
+            password: password,
+            firstName: firstName,
+            lastName: lastName
+        };
+
+        // NOWA LOGIKA: Wysyłanie do API
+        fetch('https://localhost:7115/api/Auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(registerData)
+        })
+        .then(response => {
+            // Zawsze próbujemy sparsować JSON, aby uzyskać token lub błędy
+            return response.json().then(data => ({ status: response.status, body: data }));
+        })
+        .then(result => {
+            if (result.status === 200) {
+                // Pomyślna rejestracja, otrzymaliśmy token
+                alert("Rejestracja przebiegła pomyślnie! Zostałeś zalogowany.");
+                
+                // Zapisujemy mockowe dane użytkownika do lokalnego storage, aby App.jsx mogło je odtworzyć po odświeżeniu
+                localStorage.setItem('lastUsername', login);
+                localStorage.setItem('lastFirstName', firstName);
+                localStorage.setItem('lastName', lastName);
+
+                // Nowy użytkownik to domyślnie Student
+                onRegisterSuccess(result.body.token, { username: login, role: 'Student', firstName: firstName, lastName: lastName }); 
+
+            } else {
+                // Błąd rejestracji (400 Bad Request)
+                const errorBody = result.body.Errors;
+                
+                let errorMessage = 'Nieznany błąd rejestracji.';
+                if (errorBody && Array.isArray(errorBody)) {
+                    errorMessage = errorBody.map(err => err.Description).join('; ');
+                } else if (result.body.message) {
+                    errorMessage = result.body.message;
+                } else if (result.status === 400 && result.body.title) {
+                    errorMessage = result.body.title; // Błąd walidacji ModelState
+                }
+                
+                setError(errorMessage);
+            }
+        })
+        .catch(err => {
+            console.error("Błąd sieci/serwera:", err);
+            setError('Błąd połączenia z serwerem. Spróbuj ponownie.');
+        });
     };
 
     const handleLoginClick = (e) => {
@@ -58,6 +109,28 @@ const RegisterPage = ({ setCurrentPage }) => {
                     <form onSubmit={handleRegister}>
                         
                         <div className="form-group">
+                            <label htmlFor="firstName">Imię</label>
+                            <input 
+                                id="firstName"
+                                type="text" 
+                                placeholder="Imię"
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="lastName">Nazwisko</label>
+                            <input 
+                                id="lastName"
+                                type="text" 
+                                placeholder="Nazwisko"
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="form-group">
                             <label htmlFor="login">Login</label>
                             <input 
                                 id="login"
@@ -82,7 +155,7 @@ const RegisterPage = ({ setCurrentPage }) => {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="password">Hasło</label>
+                            <label htmlFor="password">Hasło (min. 4 znaki)</label>
                             <div className="input-container">
                                 <input 
                                     id="password"

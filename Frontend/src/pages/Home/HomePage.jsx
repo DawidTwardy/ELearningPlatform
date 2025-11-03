@@ -15,18 +15,27 @@ const HomePage = ({ onShowDetails }) => {
     };
 
     useEffect(() => {
-        const apiUrl = 'https://localhost:7115/api/courses';
+        // ZMIENIONY: Endpoint API, używamy HTTPS
+        const apiUrl = 'https://localhost:7115/api/Courses';
 
         fetch(apiUrl)
-            .then(response => response.json())
+            .then(response => {
+                 if (!response.ok) {
+                    // Wyrzuć błąd, jeśli status nie jest 2xx
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                 }
+                 return response.json();
+            })
             .then(data => {
-                setCourses(data);
+                setCourses(data); // Ustawia kursy pobrane z bazy
             })
             .catch(error => {
-                console.error("Błąd podczas pobierania kursów:", error);
+                console.error("Błąd podczas pobierania kursów z API:", error);
+                // W środowisku produkcyjnym można użyć lokalnych mocków jako fallback
+                // alert("Nie udało się załadować kursów z API. Sprawdź, czy backend działa.");
             });
             
-    }, []);
+    }, []); // Pusta tablica oznacza, że efekt uruchomi się tylko raz po zamontowaniu
 
     return (
         <main className="main-content">

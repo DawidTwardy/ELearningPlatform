@@ -1,4 +1,7 @@
-﻿namespace ELearning.Api.Models
+﻿
+
+using ELearning.Api.Models.CourseContent; 
+namespace ELearning.Api.Models
 {
     public class Course
     {
@@ -8,5 +11,8 @@
         public double Rating { get; set; }
         public string ImageSrc { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+
+
+        public List<CourseSection> Sections { get; set; } = new List<CourseSection>();
     }
 }

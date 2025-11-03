@@ -10,7 +10,7 @@ const EyeIcon = ({ show, toggle }) => (
     />
 );
 
-const LoginPage = ({ setCurrentPage, setIsLoggedIn, setIsAdmin }) => {
+const LoginPage = ({ setCurrentPage, onLoginSuccess }) => {
     const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const [passwordVisible, setPasswordVisible] = useState(false);
@@ -20,18 +20,59 @@ const LoginPage = ({ setCurrentPage, setIsLoggedIn, setIsAdmin }) => {
         e.preventDefault();
         setError(''); 
         
-        if (login === 'admin' && password === 'admin') {
-            setIsLoggedIn(true);
-            setIsAdmin(true); 
-            setCurrentPage('admin'); 
-        
-        } else if (login === 'test' && password === 'haslo') {
-            setIsLoggedIn(true);
-            setIsAdmin(false); 
-            setCurrentPage('home'); 
-        } else {
-            setError('Błędny Login lub Hasło'); 
-        }
+        const loginData = {
+            username: login,
+            password: password,
+        };
+
+        // NOWA LOGIKA: Wysyłanie do API
+        fetch('https://localhost:7115/api/Auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(loginData)
+        })
+        .then(response => {
+             // Zawsze próbujemy sparsować JSON, aby uzyskać token lub błędy
+            return response.json().then(data => ({ status: response.status, body: data }));
+        })
+        .then(result => {
+            if (result.status === 200) {
+                // Pomyślne logowanie, otrzymaliśmy token
+                
+                // MOCK ROLI I DANYCH UŻYTKOWNIKA (na podstawie loginu, dopóki Identity nie obsługuje ról)
+                let userRole = 'Student';
+                let firstName = 'Jan';
+                let lastName = 'Kowalski';
+
+                if (login.toLowerCase() === 'admin') {
+                    userRole = 'Admin';
+                    firstName = 'Admin';
+                    lastName = 'User';
+                } else if (login.toLowerCase() === 'instructor') {
+                    userRole = 'Instructor';
+                    firstName = 'Michał';
+                    lastName = 'Nowak';
+                }
+                
+                // Zapisujemy mockowe dane użytkownika do lokalnego storage, aby App.jsx mogło je odtworzyć po odświeżeniu
+                localStorage.setItem('lastUsername', login);
+                localStorage.setItem('lastFirstName', firstName);
+                localStorage.setItem('lastName', lastName);
+
+                // Przekazanie tokenu i danych do App.jsx
+                onLoginSuccess(result.body.token, { username: login, role: userRole, firstName: firstName, lastName: lastName });
+
+            } else {
+                // Błąd logowania (np. 401 Unauthorized)
+                setError(result.body.message || 'Błędny Login lub Hasło'); 
+            }
+        })
+        .catch(err => {
+            console.error("Błąd sieci/serwera:", err);
+            setError('Błąd połączenia z serwerem. Spróbuj ponownie.');
+        });
     };
 
     const handleRegisterClick = (e) => {

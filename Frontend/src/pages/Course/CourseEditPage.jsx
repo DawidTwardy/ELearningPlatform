@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
 import '../../styles/pages/CourseEditPage.css';
-// NOWE IMPORTY DLA EDYTORA TEKSTU
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css'; // Import stylów
+import 'react-quill/dist/quill.snow.css';
 
 const MOCK_SECTIONS = [
   {
@@ -50,12 +49,8 @@ export const getEmptyContentForType = (type) => {
   }
 };
 
-// USUNIĘTO: Komponent RteToolbar
-
 export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
   const contentRef = useRef(null);
-
-  // USUNIĘTO: handleBlur dla starego edytora
 
   switch (lesson.type) {
     case 'video':
@@ -77,13 +72,12 @@ export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
         </div>
       );
     case 'text':
-      // ZMIANA: Zastąpiono stary edytor nowym ReactQuill
       return (
         <div className="text-editor-wrapper-quill">
           <ReactQuill 
             theme="snow" 
             value={lesson.content.text || ''} 
-            onChange={(value) => onTextChange('text', value)} // ReactQuill zwraca pełny HTML
+            onChange={(value) => onTextChange('text', value)}
           />
         </div>
       );
@@ -93,7 +87,6 @@ export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
 };
 
 export const OptionEditor = ({ option, questionType, onOptionChange, onCorrectChange }) => {
-  // ... (bez zmian) ...
   return (
     <div className="option-item">
       <input 
@@ -115,7 +108,6 @@ export const OptionEditor = ({ option, questionType, onOptionChange, onCorrectCh
 };
 
 export const QuestionEditor = ({ question, onQuestionChange, onOptionChange, onAddOption, onCorrectOptionChange }) => {
-  // ... (bez zmian) ...
   return (
     <div className="question-item">
       <div className="question-item-header">
@@ -156,7 +148,6 @@ export const QuestionEditor = ({ question, onQuestionChange, onOptionChange, onA
 };
 
 export const QuizEditor = ({ quiz, onQuizChange }) => {
-  // ... (cała logika QuizEditor bez zmian) ...
   const updateQuestion = (questionId, field, value) => {
     const newQuestions = quiz.questions.map(q => 
       q.id === questionId ? { ...q, [field]: value } : q
@@ -252,7 +243,6 @@ const CourseEditPage = ({ course, onBack }) => {
   const [sections, setSections] = useState(MOCK_SECTIONS);
   const [openItems, setOpenItems] = useState({});
 
-  // ... (wszystkie handlery i funkcje bez zmian) ...
   const toggleItem = (id) => {
     setOpenItems(prev => ({
       ...prev,
@@ -262,9 +252,40 @@ const CourseEditPage = ({ course, onBack }) => {
 
   const handleSave = (e) => {
     e.preventDefault();
-    console.log("Zapisywanie danych:", { title, description, thumbnailUrl, sections });
-    alert(`Zapisano zmiany dla kursu: ${title}`);
-    onBack();
+    
+    const updatedCourseData = { 
+        id: course.id, 
+        title: title,
+        description: description,
+        imageSrc: thumbnailUrl,
+        instructor: course.instructor, 
+        rating: course.rating,
+        sections: sections
+    };
+    
+    const apiUrl = `https://localhost:7115/api/Courses/${course.id}`;
+
+    fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedCourseData)
+    })
+    .then(response => {
+        if (response.status === 204) {
+             alert(`Zapisano zmiany dla kursu: ${title}`);
+             onBack();
+        } else if (response.status === 404) {
+             throw new Error('Kurs nie znaleziony (404).');
+        } else {
+             return response.json().then(data => { throw new Error(data.title || `Nie udało się zaktualizować kursu. Status: ${response.status}`); });
+        }
+    })
+    .catch(error => {
+        console.error("Błąd podczas aktualizacji kursu:", error);
+        alert(`Wystąpił błąd podczas aktualizacji kursu: ${error.message}`);
+    });
   };
 
   const updateSectionField = (sectionId, field, value) => {
@@ -420,12 +441,11 @@ const CourseEditPage = ({ course, onBack }) => {
               <div className="edit-form-group">
                 <label htmlFor="courseDescription">Opis Kursu</label>
                 
-                {/* ZMIANA: Zastąpiono stary edytor nowym ReactQuill */}
                 <div className="text-editor-wrapper-quill">
                   <ReactQuill 
                     theme="snow" 
                     value={description} 
-                    onChange={setDescription} // Bezpośrednio aktualizuje stan
+                    onChange={setDescription}
                   />
                 </div>
               </div>

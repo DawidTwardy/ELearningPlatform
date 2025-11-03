@@ -3,6 +3,7 @@ using System;
 using ELearning.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ELearning.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251103211154_AddIdentityTables")]
+    partial class AddIdentityTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
@@ -117,85 +120,44 @@ namespace ELearning.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Courses");
-                });
 
-            modelBuilder.Entity("ELearning.Api.Models.CourseContent.CourseSection", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("CourseId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CourseId");
-
-                    b.ToTable("CourseSections");
-                });
-
-            modelBuilder.Entity("ELearning.Api.Models.CourseContent.Lesson", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("SectionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SectionId");
-
-                    b.ToTable("Lessons");
-                });
-
-            modelBuilder.Entity("ELearning.Api.Models.CourseContent.Quiz", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("QuizDataJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SectionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SectionId")
-                        .IsUnique();
-
-                    b.ToTable("Quizzes");
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Description = "Poznaj podstawy i zaawansowane techniki SQL...",
+                            ImageSrc = "/src/course/placeholder_sql.png",
+                            Instructor = "Michał Nowak",
+                            Rating = 5.0,
+                            Title = "Kurs Nauki SQL"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Description = "Zacznij swoją przygodę z programowaniem w Pythonie...",
+                            ImageSrc = "/src/course/placeholder_python.png",
+                            Instructor = "Jan Kowalski",
+                            Rating = 4.5,
+                            Title = "Kurs Pythona"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Description = "Wprowadzenie do świata Sztucznej Inteligencji...",
+                            ImageSrc = "/src/course/placeholder_ai.png",
+                            Instructor = "Michał Nowak",
+                            Rating = 4.0,
+                            Title = "Kurs AI"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Description = "Buduj nowoczesne, wieloplatformowe aplikacje z .NET Core...",
+                            ImageSrc = "/src/course/placeholder_dotnet.png",
+                            Instructor = "Michał Nowak",
+                            Rating = 5.0,
+                            Title = "Kurs .Net Core"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -330,39 +292,6 @@ namespace ELearning.Api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("ELearning.Api.Models.CourseContent.CourseSection", b =>
-                {
-                    b.HasOne("ELearning.Api.Models.Course", "Course")
-                        .WithMany("Sections")
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Course");
-                });
-
-            modelBuilder.Entity("ELearning.Api.Models.CourseContent.Lesson", b =>
-                {
-                    b.HasOne("ELearning.Api.Models.CourseContent.CourseSection", "Section")
-                        .WithMany("Lessons")
-                        .HasForeignKey("SectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Section");
-                });
-
-            modelBuilder.Entity("ELearning.Api.Models.CourseContent.Quiz", b =>
-                {
-                    b.HasOne("ELearning.Api.Models.CourseContent.CourseSection", "Section")
-                        .WithOne("Quiz")
-                        .HasForeignKey("ELearning.Api.Models.CourseContent.Quiz", "SectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Section");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -411,19 +340,6 @@ namespace ELearning.Api.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("ELearning.Api.Models.Course", b =>
-                {
-                    b.Navigation("Sections");
-                });
-
-            modelBuilder.Entity("ELearning.Api.Models.CourseContent.CourseSection", b =>
-                {
-                    b.Navigation("Lessons");
-
-                    b.Navigation("Quiz")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

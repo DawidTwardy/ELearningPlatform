@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-// ZMIANA: Importujemy style z nowej lokalizacji
 import '../../styles/pages/CourseEditPage.css';
-// ZMIANA: Importujemy komponenty ze zaktualizowanego CourseEditPage
 import { 
   getEmptyContentForType, 
   LessonContentInput,
@@ -11,7 +9,6 @@ import {
 } from './CourseEditPage.jsx';
 
 const CourseAddPage = ({ onBack, onCourseCreate }) => {
-  // ... (cała logika komponentu bez zmian) ...
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
@@ -31,9 +28,40 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
       alert("Proszę podać tytuł kursu.");
       return;
     }
-    const newCourseData = { title, description, thumbnailUrl, sections, id: Date.now() };
-    console.log("Tworzenie nowego kursu:", newCourseData);
-    onCourseCreate(newCourseData);
+    
+    const newCourseData = { 
+        title: title, 
+        description: description || "", 
+        imageSrc: thumbnailUrl || "/src/course/placeholder_default.png", 
+        instructor: "Instruktor Mock", 
+        rating: 5.0, 
+        sections: sections
+    };
+
+    const apiUrl = 'https://localhost:7115/api/Courses';
+
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCourseData)
+    })
+    .then(response => {
+        return response.json().then(data => ({ status: response.status, body: data }));
+    })
+    .then(result => {
+        if (result.status === 201 || result.status === 200) {
+             alert(`Pomyślnie stworzono kurs: ${result.body.title} (ID: ${result.body.id})`);
+             onCourseCreate(result.body);
+        } else {
+             throw new Error(result.body.title || "Wystąpił błąd podczas tworzenia kursu.");
+        }
+    })
+    .catch(error => {
+        console.error("Błąd podczas tworzenia kursu:", error);
+        alert(`Wystąpił błąd: ${error.message}`);
+    });
   };
 
   const updateSectionField = (sectionId, field, value) => {
