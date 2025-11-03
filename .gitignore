@@ -1,13 +1,82 @@
-# Ignoruj pliki w dowolnym podfolderze
+# -----------------------------------------------------------------------------
+# ZALEŻNOŚCI I KOD GENEROWANY
+# -----------------------------------------------------------------------------
 
-# .NET / Visual Studio
-**/.vs/
-**/[Oo]bj/
-**/[Bb]in/
+# Dependencies - Frontend (Node.js/npm/Yarn)
+# Ignoruje node_modules w folderze głównym (jeśli istnieje)
+/node_modules
+# Ignoruje node_modules w podkatalogu Frontend (Twój przypadek)
+/Frontend/node_modules
 
-# Node.js / React
-**/node_modules/
-.npm/
-npm-debug.log*
+# Pnp/Yarn
+/.pnp
+.pnp.js
+.yarn-cache
+.npm
 yarn-debug.log*
 yarn-error.log*
+npm-debug.log*
+
+# Production/Build
+/build
+/dist
+/out
+/Frontend/build
+/Frontend/dist
+/Frontend/out
+
+# -----------------------------------------------------------------------------
+# .NET / ASP.NET CORE (Backend)
+# -----------------------------------------------------------------------------
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+[Tt]emp/
+
+## Dependency directories
+packages/
+*.nupkg
+project.lock.json
+project.assets.json
+
+## Migracje (często lepiej je śledzić, ale usuwam typowe tymczasowe pliki)
+/Migrations/
+!/Migrations/*.cs 
+
+# -----------------------------------------------------------------------------
+# IDE (Visual Studio / Rider / VS Code) i OS
+# -----------------------------------------------------------------------------
+
+## VS temporary files
+*.user
+*.userosscamp
+*.vspscc
+*.vssscc
+*.bak
+*.suo
+*.sln.docstates
+.vs/               # Visual Studio 2017+ hidden folder
+
+## Rider / JetBrains IDEs
+.idea/
+
+## VS Code
+.vscode/
+
+## Windows / macOS
+Thumbs.db
+.DS_Store
+
+# -----------------------------------------------------------------------------
+# Zmienne Środowiskowe
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
