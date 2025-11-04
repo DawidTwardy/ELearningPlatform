@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import '../../styles/pages/LoginReg.css'; // ZMIENIONA ŚCIEŻKA
+import '../../styles/pages/LoginReg.css';
 
 const EyeIcon = ({ show, toggle }) => (
     <img 
@@ -21,7 +21,7 @@ const LoginPage = ({ setCurrentPage, onLoginSuccess }) => {
         setError(''); 
         
         const loginData = {
-            username: login,
+            username: login, // UŻYWAMY username ZGODNIE Z TWOJĄ LOGIKĄ MOCKOWANIA
             password: password,
         };
 
@@ -40,6 +40,11 @@ const LoginPage = ({ setCurrentPage, onLoginSuccess }) => {
         .then(result => {
             if (result.status === 200) {
                 // Pomyślne logowanie, otrzymaliśmy token
+                
+                // --- KLUCZOWA POPRAWKA: ZAPIS TOKENU DO LOCAL STORAGE ---
+                if (result.body.token) {
+                    localStorage.setItem('token', result.body.token); 
+                }
                 
                 // MOCK ROLI I DANYCH UŻYTKOWNIKA (na podstawie loginu, dopóki Identity nie obsługuje ról)
                 let userRole = 'Student';

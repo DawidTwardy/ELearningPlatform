@@ -1,12 +1,11 @@
-// Plik: ELearningPlatform-main/ELearning.Api/ELearning.Api/Program.cs
-
 using ELearning.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using ELearning.Api.Controllers; // Upewniamy siê, ¿e ApplicationUser jest widoczny
+using ELearning.Api.Models;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,12 +21,14 @@ builder.Services.AddCors(options =>
                       });
 });
 
-// Pobieranie konfiguracji JWT
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key not configured.");
 var issuer = builder.Configuration["Jwt:Issuer"];
 var audience = builder.Configuration["Jwt:Audience"];
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -35,8 +36,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 
-// Konfiguracja Identity
-builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;
     options.Password.RequireDigit = false;
@@ -45,9 +45,11 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequiredLength = 4;
 })
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
 
-// DODANIE JWT AUTHENTICATION
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -70,7 +72,6 @@ builder.Services.AddAuthentication(options =>
 
 var app = builder.Build();
 
-// Uruchamia Swagger ZAWSZE
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -78,7 +79,6 @@ app.UseHttpsRedirection();
 
 app.UseCors(MyReactAppPolicy);
 
-// WA¯NE: Wymagane dla JWT
 app.UseAuthentication();
 app.UseAuthorization();
 

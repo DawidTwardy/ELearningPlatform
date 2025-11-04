@@ -8,6 +8,29 @@ import {
   QuizEditor,
 } from './CourseEditPage.jsx';
 
+const deepParseCourseContent = (course) => {
+    if (!course || !course.sections) return course;
+
+    const parsedSections = course.sections.map(section => {
+        if (section.lessons) {
+            section.lessons = section.lessons.map(lesson => {
+                try {
+                    if (typeof lesson.content === 'string' && lesson.content.trim().startsWith('{')) {
+                        lesson.content = JSON.parse(lesson.content);
+                    }
+                } catch (e) {
+                    console.warn("Błąd parsowania treści lekcji:", e);
+                }
+                return lesson;
+            });
+        }
+        return section;
+    });
+
+    return { ...course, sections: parsedSections };
+};
+
+
 const CourseAddPage = ({ onBack, onCourseCreate }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -29,26 +52,37 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
       return;
     }
     
+    const token = localStorage.getItem('userToken'); 
+    
+    if (!token) {
+        alert("Błąd: Nie jesteś zalogowany. Zaloguj się jako instruktor, aby stworzyć kurs.");
+        return; 
+    }
+    
     const sectionsToSave = sections.map(section => ({
         title: section.title, 
         
         lessons: section.lessons.map(lesson => ({
             title: lesson.title,
             type: lesson.type,
-            content: lesson.content,
+            content: JSON.stringify(lesson.content),
         })),
         
+        // KLUCZOWA ZMIANA: Serializujemy pytania do pola QuizDataJson
         quiz: {
-            // W QuizEditor pytania mogą mieć tymczasowe id, które trzeba usunąć
-            questions: section.quiz.questions.map(question => {
-                const { id, answers, ...rest } = question;
-                return {
-                    ...rest,
-                    answers: answers.map(answer => {
-                        const { id: answerId, ...answerRest } = answer;
-                        return answerRest;
-                    })
-                };
+            title: section.title ? `Test: ${section.title}` : "Test podsumowujący",
+            // Pytania i opcje są czyszczone z tymczasowych ID, a następnie serializowane jako string
+            QuizDataJson: JSON.stringify({
+                questions: (section.quiz.questions || []).map(question => {
+                    const { id, answers, ...rest } = question;
+                    return {
+                        ...rest,
+                        answers: (answers || []).map(answer => {
+                            const { id: answerId, ...answerRest } = answer;
+                            return answerRest;
+                        })
+                    };
+                })
             })
         }
     }));
@@ -68,31 +102,47 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`, 
         },
         body: JSON.stringify(newCourseData)
     })
-    .then(response => {
+    .then(async response => {
+        const text = await response.text();
+        let data = {};
+        
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            if (response.status >= 500) {
+                throw new Error(`Wystąpił wewnętrzny błąd serwera (Status: ${response.status}). Sprawdź logi backendu.`);
+            }
+            throw new Error(`Nieoczekiwany format odpowiedzi z serwera (Status: ${response.status}).`);
+        }
+        
         if (response.status === 201 || response.status === 200) {
-             return response.json();
+             return data;
         } 
         
-        return response.json().then(data => {
-            if (response.status === 400) {
-                const validationErrors = data.errors || data;
-                console.error("Błąd walidacji API:", validationErrors);
-                let message = "Wystąpił błąd walidacji (400 Bad Request). Sprawdź, czy wszystkie pola są poprawnie wypełnione.";
-                if (validationErrors.errors && Object.keys(validationErrors.errors).length > 0) {
-                    message += "\nSzczegóły: " + Object.entries(validationErrors.errors).map(([key, value]) => `${key}: ${value.join(', ')}`).join('; ');
-                }
-                throw new Error(message);
+        if (response.status === 403) {
+            throw new Error("Brak autoryzacji. Upewnij się, że jesteś zalogowany jako instruktor lub administrator.");
+        }
+        
+        if (response.status === 400) {
+            const validationErrors = data.errors || data;
+            console.error("Błąd walidacji API:", validationErrors);
+            let message = "Wystąpił błąd walidacji (400 Bad Request). Sprawdź, czy wszystkie pola są poprawnie wypełnione.";
+            if (validationErrors.errors && Object.keys(validationErrors.errors).length > 0) {
+                message += "\nSzczegóły: " + Object.entries(validationErrors.errors).map(([key, value]) => `${key}: ${value.join(', ')}`).join('; ');
             }
-            throw new Error(data.title || "Wystąpił błąd podczas tworzenia kursu.");
-        });
-
+            throw new Error(message);
+        }
+        
+        throw new Error(data.title || "Wystąpił błąd podczas tworzenia kursu.");
     })
     .then(result => {
-        alert(`Pomyślnie stworzono kurs: ${result.title} (ID: ${result.id})`);
-        onCourseCreate(result);
+        const parsedResult = deepParseCourseContent(result); 
+        alert(`Pomyślnie stworzono kurs: ${parsedResult.title} (ID: ${parsedResult.id})`);
+        onCourseCreate(parsedResult);
     })
     .catch(error => {
         console.error("Błąd podczas tworzenia kursu:", error);
@@ -197,7 +247,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
   };
   
   const addLesson = (sectionId) => {
-     setSections(prevSections =>
+    setSections(prevSections =>
       prevSections.map(section => {
         if (section.id === sectionId) {
           const newLesson = {
@@ -343,7 +393,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
                     className={`collapsible-header ${isQuizOpen ? 'open' : ''}`}
                     onClick={() => toggleItem(quizId)}
                   >
-                    Test podsumowujący ({section.quiz.questions.length} pytań)
+                    Test podsumowujący ({section.quiz?.questions?.length || 0} pytań)
                   </h4>
                   
                   {isQuizOpen && (

@@ -3,39 +3,28 @@ import '../../styles/pages/CourseEditPage.css';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
-const MOCK_SECTIONS = [
-  {
-    id: 1,
-    title: "Sekcja 1 kursu",
-    lessons: [
-      { id: 'l1-1', title: "Lekcja 1 (Wideo)", type: "video", content: { url: "https://www.youtube.com/embed/sLluVHUCMww", fileName: "wprowadzenie.mp4" } },
-      { id: 'l1-2', title: "Lekcja 2 (Tekst)", type: "text", content: { text: "To są <b>przykładowe</b> <i>notatki</i> do lekcji..." } },
-      { id: 'l1-3', title: "Lekcja 3 (PDF)", type: "pdf", content: { url: "/src/pdf/sample.pdf", fileName: "paradygmaty.pdf" } },
-    ],
-    quiz: {
-      questions: [
-        { 
-          id: 'q1', 
-          text: 'Które z poniższych jest językiem programowania?', 
-          type: 'single', 
-          options: [
-            { id: 'q1o1', text: 'HTML', isCorrect: false },
-            { id: 'q1o2', text: 'Python', isCorrect: true },
-            { id: 'q1o3', text: 'CSS', isCorrect: false },
-          ]
-        },
-      ]
-    }
-  },
-  {
-    id: 2,
-    title: "Sekcja 2 kursu",
-    lessons: [
-      { id: 'l2-1', title: "Lekcja 1 (Sekcja 2)", type: "video", content: { url: "", fileName: "" } },
-    ],
-    quiz: { questions: [] }
-  }
-];
+const deepParseCourseContent = (course) => {
+    if (!course || !course.sections) return course;
+
+    const parsedSections = course.sections.map(section => {
+        if (section.lessons) {
+            section.lessons = section.lessons.map(lesson => {
+                try {
+                    if (typeof lesson.content === 'string' && lesson.content.trim().startsWith('{')) {
+                        lesson.content = JSON.parse(lesson.content);
+                    }
+                } catch (e) {
+                    console.warn("Błąd parsowania treści lekcji:", e);
+                }
+                return lesson;
+            });
+        }
+        return section;
+    });
+
+    return { ...course, sections: parsedSections };
+};
+
 
 export const getEmptyContentForType = (type) => {
   switch (type) {
@@ -57,7 +46,7 @@ export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
     case 'pdf':
       return (
         <div className="file-upload-wrapper">
-          {lesson.content.fileName ? (
+          {lesson.content?.fileName ? (
             <div className="file-name-display">
               Wybrany plik: <span>{lesson.content.fileName}</span>
             </div>
@@ -76,7 +65,7 @@ export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
         <div className="text-editor-wrapper-quill">
           <ReactQuill 
             theme="snow" 
-            value={lesson.content.text || ''} 
+            value={lesson.content?.text || ''} 
             onChange={(value) => onTextChange('text', value)}
           />
         </div>
@@ -198,7 +187,7 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
         { id: `o2-${Date.now()}`, text: "Opcja B", isCorrect: false },
       ]
     };
-    onQuizChange({ ...quiz, questions: [...quiz.questions, newQuestion] });
+    onQuizChange({ ...quiz, questions: [...(quiz.questions || []), newQuestion] });
   };
   
   const addOption = (questionId) => {
@@ -218,7 +207,7 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
   
   return (
     <div className="quiz-editor-wrapper">
-      {quiz.questions.map(q => (
+      {(quiz.questions || []).map(q => ( 
         <QuestionEditor 
           key={q.id}
           question={q}
@@ -237,10 +226,12 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
 
 
 const CourseEditPage = ({ course, onBack }) => {
-  const [title, setTitle] = useState(course.title);
-  const [description, setDescription] = useState(course.description || "Przykładowy opis pobrany z obiektu kursu...");
-  const [thumbnailUrl, setThumbnailUrl] = useState(course.imageSrc || "/src/course/placeholder_sql.png");
-  const [sections, setSections] = useState(MOCK_SECTIONS);
+  const initialCourseData = deepParseCourseContent(course);
+
+  const [title, setTitle] = useState(initialCourseData.title);
+  const [description, setDescription] = useState(initialCourseData.description || "");
+  const [thumbnailUrl, setThumbnailUrl] = useState(initialCourseData.imageSrc || "/src/course/placeholder_sql.png");
+  const [sections, setSections] = useState(initialCourseData.sections || []); 
   const [openItems, setOpenItems] = useState({});
 
   const toggleItem = (id) => {
@@ -253,6 +244,19 @@ const CourseEditPage = ({ course, onBack }) => {
   const handleSave = (e) => {
     e.preventDefault();
     
+    const token = localStorage.getItem('userToken'); 
+    if (!token) {
+        alert("Błąd: Nie jesteś zalogowany. Zaloguj się ponownie.");
+        return; 
+    }
+
+    console.log("ID kursu do wysłania (course.id):", course.id);
+    if (!course.id) {
+        alert("Błąd: ID kursu jest puste lub niepoprawne. Nie można zapisać.");
+        console.error("KRYTYCZNY BŁĄD: course.id jest undefined/null/puste.");
+        return; 
+    }
+    
     const updatedCourseData = { 
         id: course.id, 
         title: title,
@@ -260,7 +264,6 @@ const CourseEditPage = ({ course, onBack }) => {
         imageSrc: thumbnailUrl,
         instructor: course.instructor, 
         rating: course.rating,
-        sections: sections
     };
     
     const apiUrl = `https://localhost:7115/api/Courses/${course.id}`;
@@ -269,6 +272,7 @@ const CourseEditPage = ({ course, onBack }) => {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`, 
         },
         body: JSON.stringify(updatedCourseData)
     })
@@ -279,7 +283,18 @@ const CourseEditPage = ({ course, onBack }) => {
         } else if (response.status === 404) {
              throw new Error('Kurs nie znaleziony (404).');
         } else {
-             return response.json().then(data => { throw new Error(data.title || `Nie udało się zaktualizować kursu. Status: ${response.status}`); });
+             return response.json().then(data => { 
+                if (response.status === 400) {
+                     const validationErrors = data.errors || data;
+                     console.error("Błąd walidacji API:", validationErrors);
+                     let message = "Wystąpił błąd walidacji (400 Bad Request). Sprawdź, czy wszystkie pola są poprawnie wypełnione.";
+                     if (validationErrors.errors && Object.keys(validationErrors.errors).length > 0) {
+                         message += "\nSzczegóły: " + Object.entries(validationErrors.errors).map(([key, value]) => `${key}: ${value.join(', ')}`).join('; ');
+                     }
+                     throw new Error(message);
+                }
+                throw new Error(data.title || `Nie udało się zaktualizować kursu. Status: ${response.status}`); 
+             });
         }
     })
     .catch(error => {
@@ -485,12 +500,12 @@ const CourseEditPage = ({ course, onBack }) => {
                     className={`collapsible-header ${areLessonsOpen ? 'open' : ''}`}
                     onClick={() => toggleItem(lessonsId)}
                   >
-                    Lekcje w sekcji ({section.lessons.length})
+                    Lekcje w sekcji ({section.lessons?.length || 0})
                   </h4>
                   
                   {areLessonsOpen && (
                     <div className="lessons-list">
-                      {section.lessons.map(lesson => (
+                      {section.lessons?.map(lesson => (
                         <div key={lesson.id} className="lesson-item">
                           <div className="lesson-item-header">
                             <input
@@ -526,7 +541,7 @@ const CourseEditPage = ({ course, onBack }) => {
                     className={`collapsible-header ${isQuizOpen ? 'open' : ''}`}
                     onClick={() => toggleItem(quizId)}
                   >
-                    Test podsumowujący ({section.quiz.questions.length} pytań)
+                    Test podsumowujący ({section.quiz?.questions?.length || 0} pytań)
                   </h4>
                   
                   {isQuizOpen && (

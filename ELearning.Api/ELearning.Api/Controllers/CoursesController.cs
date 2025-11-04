@@ -83,25 +83,28 @@ namespace ELearning.Api.Controllers
                 return StatusCode(500, new { Message = "Błąd zapisu głównego kursu w bazie danych.", Details = ex.Message });
             }
 
+            // Zmieniona logika zapisu sekcji i zagnieżdżonych encji (Lekcji i Quizów)
             if (sections.Any())
             {
                 foreach (var section in sections)
                 {
                     section.CourseId = course.Id;
-                    _context.CourseSections.Add(section);
 
+                    // Ustawienie relacji w dół, aby zapewnić, że Entity Framework Core poprawnie je śledzi i zapisuje
                     if (section.Lessons != null)
                     {
                         foreach (var lesson in section.Lessons)
                         {
-                            _context.Entry(lesson).State = EntityState.Added;
+                            lesson.SectionId = section.Id;
                         }
                     }
-
                     if (section.Quiz != null)
                     {
-                        _context.Entry(section.Quiz).State = EntityState.Added;
+                        section.Quiz.SectionId = section.Id;
                     }
+
+                    // Dodanie głównej encji (Sekcji)
+                    _context.CourseSections.Add(section);
                 }
 
                 try
@@ -110,7 +113,8 @@ namespace ELearning.Api.Controllers
                 }
                 catch (Exception ex)
                 {
-                    return StatusCode(500, new { Message = "Błąd zapisu sekcji/lekcji do bazy danych.", Details = ex.Message });
+                    // Użycie bardziej szczegółowego komunikatu w przypadku błędu wewnętrznego
+                    return StatusCode(500, new { Message = "Błąd zapisu sekcji, lekcji lub quizów do bazy danych.", Details = ex.Message, InnerDetails = ex.InnerException?.Message });
                 }
             }
 

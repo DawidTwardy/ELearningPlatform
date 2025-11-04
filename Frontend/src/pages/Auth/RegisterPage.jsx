@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import '../../styles/pages/LoginReg.css'; // ZMIENIONA ŚCIEŻKA
+import '../../styles/pages/LoginReg.css';
 
 const EyeIcon = ({ show, toggle }) => (
     <img 
@@ -14,8 +14,8 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
     const [login, setLogin] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [firstName, setFirstName] = useState(''); // DODANY STAN
-    const [lastName, setLastName] = useState(''); // DODANY STAN
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [error, setError] = useState('');
 
@@ -23,7 +23,6 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
         e.preventDefault();
         setError(''); 
         
-        // Minimalna długość 4, zgodnie z Program.cs
         if (password.length < 4) { 
             setError('Hasło musi mieć co najmniej 4 znaki.');
             return;
@@ -37,7 +36,6 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
             lastName: lastName
         };
 
-        // NOWA LOGIKA: Wysyłanie do API
         fetch('https://localhost:7115/api/Auth/register', {
             method: 'POST',
             headers: {
@@ -45,22 +43,44 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
             },
             body: JSON.stringify(registerData)
         })
-        .then(response => {
-            // Zawsze próbujemy sparsować JSON, aby uzyskać token lub błędy
-            return response.json().then(data => ({ status: response.status, body: data }));
+        .then(async response => {
+            // Zmieniona logika do bezpiecznej obsługi odpowiedzi nie będącej formatem JSON (np. błąd 500)
+            const text = await response.text();
+            let data = {};
+            
+            try {
+                // Spróbuj parsować jako JSON
+                data = JSON.parse(text);
+            } catch (e) {
+                // Jeśli parsowanie JSON się nie powiedzie (np. otrzymano HTML/czysty tekst)
+                if (response.ok) {
+                    // W teorii pomyślna odpowiedź powinna być JSON, więc to jest nieoczekiwane
+                    throw new Error("Pomyślny status, ale nieoczekiwany format odpowiedzi.");
+                } else {
+                    // W przypadku błędu serwera, który nie jest JSON-em, rzuć ogólny błąd
+                    console.error("Błąd serwera zwrócił nie-JSON:", text);
+                    throw new Error(`Wystąpił błąd serwera (Status: ${response.status}). Serwer zwrócił nieoczekiwany format danych.`);
+                }
+            }
+            
+            return { status: response.status, body: data };
         })
         .then(result => {
             if (result.status === 200) {
-                // Pomyślna rejestracja, otrzymaliśmy token
                 alert("Rejestracja przebiegła pomyślnie! Zostałeś zalogowany.");
                 
-                // Zapisujemy mockowe dane użytkownika do lokalnego storage, aby App.jsx mogło je odtworzyć po odświeżeniu
+                // Nowy użytkownik w backendzie domyślnie otrzymuje rolę Instructor, ale tutaj mockujemy rolę Studenta, 
+                // dopóki nie pobierzemy faktycznych ról z tokena. (To powinno być obsłużone w funkcji onRegisterSuccess)
+                const userRole = 'Student'; 
+
+                // Przechowujemy dane użytkownika
+                localStorage.setItem('userToken', result.body.token); // Dodanie zapisu tokena
                 localStorage.setItem('lastUsername', login);
                 localStorage.setItem('lastFirstName', firstName);
                 localStorage.setItem('lastName', lastName);
 
-                // Nowy użytkownik to domyślnie Student
-                onRegisterSuccess(result.body.token, { username: login, role: 'Student', firstName: firstName, lastName: lastName }); 
+                // Przekazujemy token i dane użytkownika
+                onRegisterSuccess(result.body.token, { username: login, role: userRole, firstName: firstName, lastName: lastName }); 
 
             } else {
                 // Błąd rejestracji (400 Bad Request)
@@ -72,7 +92,7 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
                 } else if (result.body.message) {
                     errorMessage = result.body.message;
                 } else if (result.status === 400 && result.body.title) {
-                    errorMessage = result.body.title; // Błąd walidacji ModelState
+                    errorMessage = result.body.title; 
                 }
                 
                 setError(errorMessage);
@@ -80,7 +100,8 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
         })
         .catch(err => {
             console.error("Błąd sieci/serwera:", err);
-            setError('Błąd połączenia z serwerem. Spróbuj ponownie.');
+            // Używamy error.message z rzuconego błędu w bloku .then
+            setError(err.message || 'Błąd połączenia z serwerem. Spróbuj ponownie.'); 
         });
     };
 

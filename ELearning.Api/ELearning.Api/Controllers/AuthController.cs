@@ -14,15 +14,18 @@ namespace ELearning.Api.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
+            RoleManager<IdentityRole> roleManager,
             IConfiguration configuration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
             _configuration = configuration;
         }
 
@@ -46,7 +49,16 @@ namespace ELearning.Api.Controllers
 
             if (result.Succeeded)
             {
-                return Ok(new { Token = GenerateJwtToken(user) });
+              
+                const string defaultRole = "Instructor";
+                if (!await _roleManager.RoleExistsAsync(defaultRole))
+                {
+                    await _roleManager.CreateAsync(new IdentityRole(defaultRole));
+                }
+
+                await _userManager.AddToRoleAsync(user, defaultRole);
+
+                return Ok(new { Token = await GenerateJwtToken(user) });
             }
 
             return BadRequest(new
@@ -69,13 +81,13 @@ namespace ELearning.Api.Controllers
 
             if (result.Succeeded)
             {
-                return Ok(new { Token = GenerateJwtToken(user) });
+                return Ok(new { Token = await GenerateJwtToken(user) });
             }
 
             return Unauthorized(new { Message = "B³êdny login lub has³o." });
         }
 
-        private string GenerateJwtToken(ApplicationUser user)
+        private async Task<string> GenerateJwtToken(ApplicationUser user)
         {
             var claims = new List<Claim>
             {
@@ -83,6 +95,13 @@ namespace ELearning.Api.Controllers
                 new Claim(ClaimTypes.Name, user.UserName!),
                 new Claim(ClaimTypes.Email, user.Email!),
             };
+
+            
+            var roles = await _userManager.GetRolesAsync(user);
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key not configured or is null.");
 

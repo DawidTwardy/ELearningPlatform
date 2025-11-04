@@ -2,11 +2,9 @@
   "ExpandedNodes": [
     "",
     "\\Controllers",
-    "\\Data",
-    "\\DTOs",
-    "\\Models",
-    "\\Models\\CourseContent"
+    "\\Models\\CourseContent",
+    "\\Properties"
   ],
-  "SelectedNode": "\\Models\\CourseContent\\Quiz.cs",
+  "SelectedNode": "\\Controllers\\CoursesController.cs",
   "PreviewInSolutionExplorer": false
 }
