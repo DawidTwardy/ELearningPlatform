@@ -1,12 +1,30 @@
 import React, { useState } from 'react';
 import '../../styles/pages/QuizView.css'; 
 
-// Usunięto MOCK_QUIZ_DATA - używamy danych z API
-
-const QuizView = ({ quizData = { questions: [] }, onQuizComplete }) => {
-    // 1. Zabezpieczenie: Definiujemy bezpieczną tablicę pytań
-    const questions = quizData.questions || []; 
+const QuizView = ({ quizData, onQuizComplete }) => {
+    // 1. Parsowanie JSON string na obiekt pytań.
+    let loadedQuestions = [];
     
+    if (quizData && quizData.quizDataJson) {
+        try {
+            const parsedData = JSON.parse(quizData.quizDataJson);
+            loadedQuestions = parsedData.questions || [];
+        } catch (e) {
+            console.error("Błąd parsowania QuizDataJson:", e);
+        }
+    } else if (quizData && Array.isArray(quizData.questions)) {
+        loadedQuestions = quizData.questions;
+    }
+
+    // Gwarantujemy UNIKALNE, STABILNE ID dla KAŻDEGO pytania.
+    // To jest kluczowe dla poprawnego śledzenia odpowiedzi w selectedAnswers.
+    const questions = loadedQuestions.map((q, index) => ({
+        ...q,
+        // Używamy oryginalnego q.id, jeśli istnieje, lub indexu jako fallbacka.
+        stableId: q.id || `q-temp-${index}` 
+    }));
+    
+    // Konieczne jest użycie tego stableId w całym komponencie.
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [showResults, setShowResults] = useState(false);
@@ -26,24 +44,26 @@ const QuizView = ({ quizData = { questions: [] }, onQuizComplete }) => {
 
     // 3. Używamy bezpiecznej zmiennej questions
     const currentQuestion = questions[currentQuestionIndex];
+    const currentQuestionKey = currentQuestion.stableId; // Używamy stableId jako klucza!
 
     const handleOptionSelect = (optionId) => {
         setSelectedAnswers(prev => {
-            const currentSelections = prev[currentQuestion.id] || [];
+            const currentSelections = prev[currentQuestionKey] || [];
             
+            // KLUCZ: Używamy stableId do zapisania odpowiedzi
             if (currentQuestion.type === 'single') {
-                return { ...prev, [currentQuestion.id]: [optionId] };
+                return { ...prev, [currentQuestionKey]: [optionId] };
             }
             
             if (currentSelections.includes(optionId)) {
                 return {
                     ...prev,
-                    [currentQuestion.id]: currentSelections.filter(id => id !== optionId)
+                    [currentQuestionKey]: currentSelections.filter(id => id !== optionId)
                 };
             } else {
                 return {
                     ...prev,
-                    [currentQuestion.id]: [...currentSelections, optionId]
+                    [currentQuestionKey]: [...currentSelections, optionId]
                 };
             }
         });
@@ -63,17 +83,32 @@ const QuizView = ({ quizData = { questions: [] }, onQuizComplete }) => {
 
     const calculateScore = () => {
         let score = 0;
-        // Używamy bezpiecznej zmiennej questions
         questions.forEach(q => {
-            const userAnswers = selectedAnswers[q.id] || [];
+            // KLUCZ: Używamy stableId do pobrania odpowiedzi
+            const userAnswers = selectedAnswers[q.stableId] || [];
+
+            // POBRANIE POPRAWNYCH ODPOWIEDZI Z OPCJI DLA KAŻDEGO TYPU PYTANIA
+            const correctOptionIds = q.options
+                .filter(option => option.isCorrect)
+                .map(option => option.id);
+            
+            // Tworzymy Set z poprawnych odpowiedzi dla efektywnego sprawdzania istnienia
+            const correctSet = new Set(correctOptionIds);
+
             if (q.type === 'single') {
-                if (userAnswers[0] === q.correctAnswer) {
+                // LOGIKA DLA PYTAŃ JEDNOKROTNEGO WYBORU
+                const userAnswerId = userAnswers[0];
+                
+                if (userAnswerId && correctSet.has(userAnswerId)) {
                     score++;
                 }
             } else {
-                const correct = q.correctAnswers;
-                // Musimy mieć pewność, że correct to tablica
-                if (userAnswers.length === (correct || []).length && userAnswers.every(ans => (correct || []).includes(ans))) {
+                // Dla multiple-choice (checkbox):
+                
+                const isCorrectLength = userAnswers.length === correctSet.size;
+                const allSelectedAreCorrect = userAnswers.every(ansId => correctSet.has(ansId));
+                
+                if (isCorrectLength && allSelectedAreCorrect) {
                     score++;
                 }
             }
@@ -103,7 +138,7 @@ const QuizView = ({ quizData = { questions: [] }, onQuizComplete }) => {
         );
     }
 
-    const currentSelections = selectedAnswers[currentQuestion.id] || [];
+    const currentSelections = selectedAnswers[currentQuestionKey] || [];
 
     return (
         <div className="quiz-container">
@@ -124,7 +159,7 @@ const QuizView = ({ quizData = { questions: [] }, onQuizComplete }) => {
                         >
                             <input
                                 type={currentQuestion.type === 'single' ? 'radio' : 'checkbox'}
-                                name={`question-${currentQuestion.id}`}
+                                name={`question-${currentQuestionKey}`} // Używamy stableId w nazwie
                                 checked={currentSelections.includes(option.id)}
                                 onChange={() => handleOptionSelect(option.id)}
                                 className="quiz-option-input"

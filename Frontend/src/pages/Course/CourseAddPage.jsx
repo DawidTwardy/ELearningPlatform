@@ -71,16 +71,27 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
         // KLUCZOWA ZMIANA: Serializujemy pytania do pola QuizDataJson
         quiz: {
             title: section.title ? `Test: ${section.title}` : "Test podsumowujący",
-            // Pytania i opcje są czyszczone z tymczasowych ID, a następnie serializowane jako string
+            // POPRAWIONA LOGIKA SERIALIZACJI QUIZU
             QuizDataJson: JSON.stringify({
                 questions: (section.quiz.questions || []).map(question => {
-                    const { id, answers, ...rest } = question;
+                    // Usuwamy tymczasowe ID pytania (jeśli jest)
+                    const { id: questionId, ...restOfQuestion } = question;
+                    
+                    // Zakładamy, że lista opcji jest w polu 'options'
+                    const optionsToProcess = restOfQuestion.options || restOfQuestion.answers || [];
+
+                    const cleanedOptions = optionsToProcess.map(option => {
+                        // ZACHOWUJEMY ID, który jest KLUCZOWY do poprawnego liczenia wyników
+                        return {
+                            id: option.id, 
+                            text: option.text, 
+                            isCorrect: option.isCorrect
+                        };
+                    });
+                    
                     return {
-                        ...rest,
-                        answers: (answers || []).map(answer => {
-                            const { id: answerId, ...answerRest } = answer;
-                            return answerRest;
-                        })
+                        ...restOfQuestion, // Zachowujemy resztę pól pytania (text, type, itp.)
+                        options: cleanedOptions // ZAWSZE zapisujemy jako 'options'
                     };
                 })
             })

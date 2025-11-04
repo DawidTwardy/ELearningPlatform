@@ -3,6 +3,13 @@ import '../../styles/pages/CourseEditPage.css';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
+// Usunięto MOCK_SECTIONS
+
+/**
+ * Funkcja pomocnicza do rekurencyjnego parsowania pola 'content' w lekcjach 
+ * z powrotem na obiekt JavaScript, co jest niezbędne, ponieważ na serwerze 
+ * są one zapisywane jako ciąg JSON (string).
+ */
 const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
 
@@ -10,6 +17,7 @@ const deepParseCourseContent = (course) => {
         if (section.lessons) {
             section.lessons = section.lessons.map(lesson => {
                 try {
+                    // Sprawdzamy, czy content to string i parsujemy go
                     if (typeof lesson.content === 'string' && lesson.content.trim().startsWith('{')) {
                         lesson.content = JSON.parse(lesson.content);
                     }
@@ -187,7 +195,7 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
         { id: `o2-${Date.now()}`, text: "Opcja B", isCorrect: false },
       ]
     };
-    onQuizChange({ ...quiz, questions: [...(quiz.questions || []), newQuestion] });
+    onQuizChange({ ...quiz, questions: [...quiz.questions, newQuestion] });
   };
   
   const addOption = (questionId) => {
@@ -207,6 +215,7 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
   
   return (
     <div className="quiz-editor-wrapper">
+      {/* POPRAWKA: Zabezpieczenie przed undefined quiz.questions */}
       {(quiz.questions || []).map(q => ( 
         <QuestionEditor 
           key={q.id}
@@ -226,6 +235,7 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
 
 
 const CourseEditPage = ({ course, onBack }) => {
+  // 1. POPRAWKA: Parsowanie treści kursu i użycie prawdziwych danych
   const initialCourseData = deepParseCourseContent(course);
 
   const [title, setTitle] = useState(initialCourseData.title);
@@ -244,6 +254,7 @@ const CourseEditPage = ({ course, onBack }) => {
   const handleSave = (e) => {
     e.preventDefault();
     
+    // 2. POPRAWKA: Dodanie tokena JWT i weryfikacja ID
     const token = localStorage.getItem('userToken'); 
     if (!token) {
         alert("Błąd: Nie jesteś zalogowany. Zaloguj się ponownie.");
@@ -257,6 +268,8 @@ const CourseEditPage = ({ course, onBack }) => {
         return; 
     }
     
+    // Wysyłamy TYLKO pola, które są obsługiwane przez obecny backend PUT, 
+    // aby uniknąć błędów walidacji na zagnieżdżonych sekcjach.
     const updatedCourseData = { 
         id: course.id, 
         title: title,
@@ -264,6 +277,7 @@ const CourseEditPage = ({ course, onBack }) => {
         imageSrc: thumbnailUrl,
         instructor: course.instructor, 
         rating: course.rating,
+        // sections: sections - POMINIĘTE W CELU UNIKNIĘCIA BŁĘDU WALIDACJI 400
     };
     
     const apiUrl = `https://localhost:7115/api/Courses/${course.id}`;
@@ -272,7 +286,7 @@ const CourseEditPage = ({ course, onBack }) => {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`, 
+            'Authorization': `Bearer ${token}`, // Dodanie tokena JWT
         },
         body: JSON.stringify(updatedCourseData)
     })
@@ -541,6 +555,7 @@ const CourseEditPage = ({ course, onBack }) => {
                     className={`collapsible-header ${isQuizOpen ? 'open' : ''}`}
                     onClick={() => toggleItem(quizId)}
                   >
+                    {/* POPRAWKA: Zabezpieczenie przed undefined quiz.questions.length */}
                     Test podsumowujący ({section.quiz?.questions?.length || 0} pytań)
                   </h4>
                   
