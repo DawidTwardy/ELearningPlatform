@@ -29,6 +29,7 @@ namespace ELearning.Api.Controllers
                 .ThenInclude(s => s.Lessons)
                 .Include(c => c.Sections)
                 .ThenInclude(s => s.Quiz)
+                .AsSplitQuery() // <--- DODANY WIERSZ: Wymusza podział zapytania
                 .ToListAsync();
 
             if (courses == null)
@@ -48,6 +49,7 @@ namespace ELearning.Api.Controllers
                 .ThenInclude(s => s.Lessons)
                 .Include(c => c.Sections)
                 .ThenInclude(s => s.Quiz)
+                .AsSplitQuery() // <--- DODANY WIERSZ: Wymusza podział zapytania
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)
@@ -83,14 +85,12 @@ namespace ELearning.Api.Controllers
                 return StatusCode(500, new { Message = "Błąd zapisu głównego kursu w bazie danych.", Details = ex.Message });
             }
 
-            // Zmieniona logika zapisu sekcji i zagnieżdżonych encji (Lekcji i Quizów)
             if (sections.Any())
             {
                 foreach (var section in sections)
                 {
                     section.CourseId = course.Id;
 
-                    // Ustawienie relacji w dół, aby zapewnić, że Entity Framework Core poprawnie je śledzi i zapisuje
                     if (section.Lessons != null)
                     {
                         foreach (var lesson in section.Lessons)
@@ -101,9 +101,9 @@ namespace ELearning.Api.Controllers
                     if (section.Quiz != null)
                     {
                         section.Quiz.SectionId = section.Id;
+                        _context.Quizzes.Add(section.Quiz);
                     }
 
-                    // Dodanie głównej encji (Sekcji)
                     _context.CourseSections.Add(section);
                 }
 
@@ -113,7 +113,6 @@ namespace ELearning.Api.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // Użycie bardziej szczegółowego komunikatu w przypadku błędu wewnętrznego
                     return StatusCode(500, new { Message = "Błąd zapisu sekcji, lekcji lub quizów do bazy danych.", Details = ex.Message, InnerDetails = ex.InnerException?.Message });
                 }
             }

@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\CoursesController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Controllers\\CoursesController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\AuthController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -26,7 +26,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 9,
+          "SelectedChildIndex": 7,
           "Children": [
             {
               "$type": "Bookmark",
@@ -58,13 +58,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "CoursesController.cs",
               "DocumentMoniker": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\CoursesController.cs",
               "RelativeDocumentMoniker": "Controllers\\CoursesController.cs",
               "ToolTip": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\CoursesController.cs",
               "RelativeToolTip": "Controllers\\CoursesController.cs",
-              "ViewState": "AgIAAKkAAAAAAAAAAAAuwLgAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAK8AAAAAAAAAAAAwwLYAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-04T21:20:31.332Z",
               "EditorCaption": ""
@@ -79,12 +79,11 @@
               "RelativeToolTip": "Controllers\\AuthController.cs",
               "ViewState": "AgIAACIAAAAAAAAAAAAuwDMAAAAOAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-04T21:04:21.643Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-04T21:04:21.643Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
@@ -105,8 +104,7 @@
               "RelativeToolTip": "Properties\\launchSettings.json",
               "ViewState": "AgIAAA0AAAAAAAAAAAAswBoAAAA3AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-11-04T20:59:27.533Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-04T20:59:27.533Z"
             }
           ]
         },

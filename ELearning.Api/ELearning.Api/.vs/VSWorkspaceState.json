@@ -2,7 +2,6 @@
   "ExpandedNodes": [
     "",
     "\\Controllers",
-    "\\Models\\CourseContent",
     "\\Properties"
   ],
   "SelectedNode": "\\Controllers\\CoursesController.cs",
