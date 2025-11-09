@@ -36,7 +36,8 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
             lastName: lastName
         };
 
-        fetch('https://localhost:7115/api/Auth/register', {
+        // POPRAWKA: Używamy HTTP
+        fetch('http://localhost:7115/api/Auth/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -74,7 +75,7 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
                 const userRole = 'Student'; 
 
                 // Przechowujemy dane użytkownika
-                localStorage.setItem('userToken', result.body.token); // Dodanie zapisu tokena
+                localStorage.setItem('token', result.body.token); // POPRAWKA: Używamy klucza 'token'
                 localStorage.setItem('lastUsername', login);
                 localStorage.setItem('lastFirstName', firstName);
                 localStorage.setItem('lastName', lastName);

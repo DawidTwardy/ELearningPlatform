@@ -25,8 +25,8 @@ const LoginPage = ({ setCurrentPage, onLoginSuccess }) => {
             password: password,
         };
 
-        // NOWA LOGIKA: Wysyłanie do API
-        fetch('https://localhost:7115/api/Auth/login', {
+        // POPRAWKA: Używamy HTTP
+        fetch('http://localhost:7115/api/Auth/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

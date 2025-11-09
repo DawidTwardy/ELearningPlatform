@@ -52,7 +52,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
       return;
     }
     
-    const token = localStorage.getItem('userToken'); 
+    const token = localStorage.getItem('token'); // POPRAWKA: Zmieniono 'userToken' na 'token'
     
     if (!token) {
         alert("Błąd: Nie jesteś zalogowany. Zaloguj się jako instruktor, aby stworzyć kurs.");
@@ -107,7 +107,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
         sections: sectionsToSave
     };
 
-    const apiUrl = 'https://localhost:7115/api/Courses';
+    const apiUrl = 'http://localhost:7115/api/Courses'; // POPRAWKA: Zmieniono z HTTPS na HTTP
 
     fetch(apiUrl, {
         method: 'POST',

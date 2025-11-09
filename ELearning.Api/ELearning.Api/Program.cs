@@ -17,7 +17,8 @@ builder.Services.AddCors(options =>
                       {
                           policy.WithOrigins("http://localhost:5173")
                                 .AllowAnyHeader()
-                                .AllowAnyMethod();
+                                .AllowAnyMethod()
+                                .AllowCredentials();
                       });
 });
 
@@ -75,7 +76,7 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection(); - USUNIÊTO, aby umo¿liwiæ dzia³anie na HTTP
 
 app.UseCors(MyReactAppPolicy);
 

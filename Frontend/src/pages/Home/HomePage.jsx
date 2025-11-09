@@ -15,8 +15,8 @@ const HomePage = ({ onShowDetails }) => {
     };
 
     useEffect(() => {
-        // ZMIENIONY: Endpoint API, używamy HTTPS
-        const apiUrl = 'https://localhost:7115/api/Courses';
+        // POPRAWKA: Endpoint API musi używać HTTP
+        const apiUrl = 'http://localhost:7115/api/Courses';
 
         fetch(apiUrl)
             .then(response => {

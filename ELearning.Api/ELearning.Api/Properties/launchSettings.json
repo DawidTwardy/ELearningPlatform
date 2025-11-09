@@ -1,38 +1,10 @@
 ﻿{
-    "$schema": "http://json.schemastore.org/launchsettings.json",
-    "iisSettings": {
-        "windowsAuthentication": false,
-        "anonymousAuthentication": true,
-        "iisExpress": {
-            "applicationUrl": "http://localhost:39291",
-            "sslPort": 44366
-        }
-    },
     "profiles": {
-        "http": {
+        "ELearning.Api": {
             "commandName": "Project",
-            "dotnetRunMessages": true,
             "launchBrowser": true,
             "launchUrl": "swagger",
-            "applicationUrl": "http://localhost:5250",
-            "environmentVariables": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        "https": {
-            "commandName": "Project",
-            "dotnetRunMessages": true,
-            "launchBrowser": true,
-            "launchUrl": "swagger",
-            "applicationUrl": "https://localhost:7115",
-            "environmentVariables": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        "IIS Express": {
-            "commandName": "IISExpress",
-            "launchBrowser": true,
-            "launchUrl": "swagger",
+            "applicationUrl": "http://localhost:7115",
             "environmentVariables": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             }

@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using ELearning.Api.Models;
 
 namespace ELearning.Api.Controllers
 {
@@ -49,7 +50,7 @@ namespace ELearning.Api.Controllers
 
             if (result.Succeeded)
             {
-              
+
                 const string defaultRole = "Instructor";
                 if (!await _roleManager.RoleExistsAsync(defaultRole))
                 {
@@ -96,7 +97,7 @@ namespace ELearning.Api.Controllers
                 new Claim(ClaimTypes.Email, user.Email!),
             };
 
-            
+
             var roles = await _userManager.GetRolesAsync(user);
             foreach (var role in roles)
             {

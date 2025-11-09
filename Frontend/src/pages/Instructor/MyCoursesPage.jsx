@@ -5,9 +5,7 @@ import '../../styles/pages/Favorites.css';
 import { CourseCard } from '../../components/Course/CourseCard'; 
 import StarRating from '../../components/Course/StarRating'; 
 import '../../styles/pages/InstructorDashboard.css'; 
-import NoCourseImage from '/src/NoCourse.png'; // Użycie obrazu z public/src
-
-// Usunięto initialMyCoursesData - dane będą pobierane z API
+import NoCourseImage from '/src/NoCourse.png';
 
 const InstructorDashboardStats = ({ courses }) => {
   const totalCourses = courses.length;
@@ -66,7 +64,7 @@ const MyCoursesPage = ({ setSelectedCourse, onNavigateToHome, onStartEdit, onSta
   const [error, setError] = useState(null);
 
   const fetchMyCourses = async () => {
-    const token = localStorage.getItem('userToken');
+    const token = localStorage.getItem('token'); // POPRAWKA: Zmieniono 'userToken' na 'token'
     if (!token) {
       setError('Błąd: Użytkownik nie jest zalogowany.');
       setLoading(false);
@@ -74,8 +72,8 @@ const MyCoursesPage = ({ setSelectedCourse, onNavigateToHome, onStartEdit, onSta
     }
 
     try {
-      // Pobieramy kursy z API
-      const response = await fetch('https://localhost:7115/api/Courses', {
+      // POPRAWKA: Używamy HTTP, aby pasowało do konfiguracji backendu
+      const response = await fetch('http://localhost:7115/api/Courses', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
