@@ -1,6 +1,10 @@
-import React from 'react';
-import '../../styles/pages/CourseDetailsPage.css'; // ZMIENIONA ŚCIEŻKA
-import StarRating from '../../components/Course/StarRating'; // ZMIENIONA ŚCIEŻKA
+import React, { useState, useEffect } from 'react';
+import '../../styles/pages/CourseDetailsPage.css';
+import StarRating from '../../components/Course/StarRating'; 
+import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:7115/api';
 
 const mockInstructor = {
   name: "Michał Nowak",
@@ -9,7 +13,67 @@ const mockInstructor = {
 };
 
 const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
-  
+  const { isAuthenticated, token } = useAuth();
+  const [enrollmentStatus, setEnrollmentStatus] = useState('not_enrolled'); 
+
+  useEffect(() => {
+    
+    if (isAuthenticated && course.id) {
+      checkEnrollmentStatus(course.id);
+    }
+  }, [course.id, isAuthenticated]);
+
+  const checkEnrollmentStatus = async (courseId) => {
+    
+    setEnrollmentStatus('loading');
+    try {
+      // Sprawdź listę zapisanych kursów użytkownika, aby ustalić status
+      const response = await axios.get(`${API_BASE_URL}/Enrollments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const isEnrolled = response.data.some(c => c.id === courseId);
+      setEnrollmentStatus(isEnrolled ? 'enrolled' : 'not_enrolled');
+    } catch (error) {
+      console.error("Błąd sprawdzania zapisu:", error);
+      
+      setEnrollmentStatus('not_enrolled');
+    }
+  };
+
+  const handleEnroll = async () => {
+    if (!isAuthenticated) {
+      alert("Musisz być zalogowany, aby zapisać się na kurs.");
+      
+      return;
+    }
+
+    setEnrollmentStatus('loading');
+
+    try {
+      // WYSYŁANIE ŻĄDANIA ZAPISU
+      await axios.post(`${API_BASE_URL}/Enrollments/${course.id}`, null, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      setEnrollmentStatus('success');
+      alert("Pomyślnie zapisano na kurs! Możesz go znaleźć w sekcji Moja Nauka.");
+      
+      onEnroll(course);
+    } catch (error) {
+      if (error.response && error.response.status === 409) {
+        setEnrollmentStatus('enrolled');
+        alert("Jesteś już zapisany na ten kurs.");
+      } else {
+        setEnrollmentStatus('error');
+        console.error("Błąd zapisu:", error);
+        alert("Wystąpił błąd podczas zapisu na kurs.");
+      }
+    }
+  };
+
   const mockCurriculum = [
     { id: 1, title: "Wprowadzenie do SQL", lessons: ["Co to jest SQL?", "Instalacja środowiska"] },
     { id: 2, title: "Podstawowe Zapytania", lessons: ["SELECT i WHERE", "JOIN", "GROUP BY"] },
@@ -18,6 +82,45 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
 
   const handleReportCourse = () => {
     alert("Kurs został zgłoszony do administratora. Dziękujemy za Twoją opinię.");
+  };
+
+  const renderEnrollButton = () => {
+    if (!isAuthenticated) {
+      return (
+        <button className="details-enroll-button disabled" disabled>
+          Zaloguj się, aby się zapisać
+        </button>
+      );
+    }
+    
+    switch (enrollmentStatus) {
+      case 'loading':
+        return (
+          <button className="details-enroll-button disabled" disabled>
+            Sprawdzanie statusu...
+          </button>
+        );
+      case 'enrolled':
+      case 'success':
+        return (
+          <button className="details-enroll-button enrolled" disabled>
+            Już zapisany
+          </button>
+        );
+      case 'error':
+        return (
+          <button className="details-enroll-button error" onClick={handleEnroll}>
+            Błąd. Spróbuj ponownie
+          </button>
+        );
+      case 'not_enrolled':
+      default:
+        return (
+          <button className="details-enroll-button" onClick={handleEnroll}>
+            Zapisz się i rozpocznij naukę
+          </button>
+        );
+    }
   };
 
   return (
@@ -37,9 +140,8 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
             <div className="details-rating-sidebar">
               <StarRating rating={course.rating} />
             </div>
-            <button className="details-enroll-button" onClick={() => onEnroll(course)}>
-              Zapisz się i rozpocznij naukę
-            </button>
+            
+            {renderEnrollButton()}
             
             <button className="details-report-button" onClick={handleReportCourse}>
               Zgłoś ten kurs
