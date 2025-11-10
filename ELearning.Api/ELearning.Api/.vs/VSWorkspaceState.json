@@ -2,8 +2,11 @@
   "ExpandedNodes": [
     "",
     "\\Controllers",
+    "\\Data",
+    "\\Models",
+    "\\Models\\CourseContent",
     "\\Properties"
   ],
-  "SelectedNode": "\\Properties\\launchSettings.json",
+  "SelectedNode": "\\Controllers\\ProgressController.cs",
   "PreviewInSolutionExplorer": false
 }
