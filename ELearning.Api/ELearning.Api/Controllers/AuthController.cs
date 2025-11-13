@@ -6,6 +6,10 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using ELearning.Api.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ELearning.Api.Controllers
 {
@@ -104,14 +108,17 @@ namespace ELearning.Api.Controllers
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key not configured or is null.");
+            var jwtSettings = _configuration.GetSection("JwtSettings");
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var jwtKey = jwtSettings["Secret"] ?? throw new InvalidOperationException("JwtSettings:Secret not configured or is null.");
+
+            // KRYTYCZNA POPRAWKA: Dodajemy .Trim(), aby usun¹æ wszelkie bia³e znaki z klucza
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey.Trim()));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
+                issuer: jwtSettings["Issuer"],
+                audience: jwtSettings["Audience"],
                 claims: claims,
                 expires: DateTime.Now.AddDays(7),
                 signingCredentials: creds

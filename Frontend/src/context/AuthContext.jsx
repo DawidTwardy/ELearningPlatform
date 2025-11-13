@@ -10,13 +10,38 @@ export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
 
+    // Używamy tego hooka, aby ustawić globalny interceptor, który będzie działał przez cały czas.
+    useEffect(() => {
+        // Konfiguracja interceptora, który jest uruchamiany RAZ przy starcie aplikacji
+        const requestInterceptor = axios.interceptors.request.use(
+            config => {
+                // Odczytujemy token bezpośrednio z localStorage przy każdym żądaniu, 
+                // co gwarantuje, że jest aktualny.
+                const currentToken = localStorage.getItem('token');
+                
+                // Jeśli token istnieje i żądanie nie jest już autoryzowane, dodajemy nagłówek
+                if (currentToken && !config.headers.Authorization) {
+                    config.headers.Authorization = `Bearer ${currentToken}`;
+                }
+                return config;
+            },
+            error => {
+                return Promise.reject(error);
+            }
+        );
+
+        // Cleanup: usunięcie interceptora przy odmontowaniu komponentu
+        return () => {
+            axios.interceptors.request.eject(requestInterceptor);
+        };
+    }, []); // Pusta tablica, aby odpalić to raz
+
+    // Utrzymanie stanu aplikacji (ten hook był już poprawny)
     useEffect(() => {
         
         if (token) {
             localStorage.setItem('token', token);
             setIsAuthenticated(true);
-            
-            
         } else {
             localStorage.removeItem('token');
             setIsAuthenticated(false);

@@ -4,7 +4,7 @@ import '../../styles/pages/Favorites.css';
 import '../../styles/pages/MyLearningPage.css'; 
 import { CourseCard } from '../../components/Course/CourseCard'; 
 import StarRating from '../../components/Course/StarRating'; 
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext'; 
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:7115/api';
@@ -48,12 +48,8 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
   
   const fetchProgressForCourse = async (courseId) => {
     try {
-      // POBIERANIE POSTĘPU
-      const response = await axios.get(`${API_BASE_URL}/Progress/course/${courseId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // POBIERANIE POSTĘPU - Nagłówek jest dodawany przez Interceptor
+      const response = await axios.get(`${API_BASE_URL}/Progress/course/${courseId}`);
       return response.data.ProgressPercentage;
     } catch (error) {
       // Błędy są ignorowane, zwracamy 0%
@@ -67,17 +63,41 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
     setIsLoading(true);
     setError(null);
     try {
-      // 1. POBIERANIE LISTY ZAPISANYCH KURSÓW
-      const response = await axios.get(`${API_BASE_URL}/Enrollments`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // 1. POBIERANIE LISTY ZAPISANYCH KURSÓW - Nagłówek jest dodawany przez Interceptor
+      const response = await axios.get(`${API_BASE_URL}/Enrollments`);
       
-      console.log("Pobrane kursy (data):", response.data); // KONSOLA DO DIAGNOSTYKI
+      console.log("Pobrane kursy (raw data):", response.data); 
       
-      let courses = response.data;
+      let courses = response.data.map(c => {
+          // GWARANTOWANE POBRANIE ID: sprawdzamy obie konwencje nazewnictwa
+          const courseId = c.id || c.Id;
+          
+          if (!courseId) {
+              // Błąd powinien się pojawić, jeśli ID jest null/undefined
+              console.error("Krytyczny błąd: ID kursu jest niezdefiniowane po mapowaniu, pomijam kurs.", c);
+              return null;
+          }
+
+          // Mapowanie na oczekiwany obiekt z gwarancją camelCase dla CourseCard i kluczy
+          return {
+              id: courseId,
+              title: c.title || c.Title,
+              description: c.description || c.Description,
+              imageSrc: c.imageSrc || c.ImageSrc,
+              instructor: c.instructor || c.Instructor,
+              rating: c.rating || c.Rating,
+              sections: c.sections || c.Sections || [], // Gwarantujemy, że Sections to zawsze tablica
+              ...c // Dodajemy resztę pól na wszelki wypadek
+          };
+      }).filter(c => c !== null); // Filtrujemy uszkodzone kursy
       
+      
+      if (!courses || courses.length === 0) {
+        setEnrolledCourses([]);
+        setIsLoading(false);
+        return;
+      }
+
       // 2. ŁADOWANIE ASYNCHRONICZNE POSTĘPU DLA KAŻDEGO KURSU
       const coursesWithProgressPromises = courses.map(async (course) => {
         const progress = await fetchProgressForCourse(course.id);

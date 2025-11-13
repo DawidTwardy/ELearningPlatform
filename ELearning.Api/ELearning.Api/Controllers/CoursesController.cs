@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using ELearning.Api.Models.CourseContent;
 using Microsoft.AspNetCore.Authorization;
 using System.Linq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System;
 
 namespace ELearning.Api.Controllers
 {
@@ -24,12 +27,8 @@ namespace ELearning.Api.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<Course>>> GetCourses()
         {
+            // USUNIĘTO: Głębokie Include, aby uniknąć błędów serializacji JSON (błąd 500)
             var courses = await _context.Courses
-                .Include(c => c.Sections)
-                .ThenInclude(s => s.Lessons)
-                .Include(c => c.Sections)
-                .ThenInclude(s => s.Quiz)
-                .AsSplitQuery() // <--- DODANY WIERSZ: Wymusza podział zapytania
                 .ToListAsync();
 
             if (courses == null)
@@ -44,12 +43,9 @@ namespace ELearning.Api.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<Course>> GetCourse(int id)
         {
+            // USUNIĘTO: Głębokie Include, aby uniknąć błędów serializacji JSON (błąd 500)
+            // Lądujemy tylko podstawowy obiekt Course
             var course = await _context.Courses
-                .Include(c => c.Sections)
-                .ThenInclude(s => s.Lessons)
-                .Include(c => c.Sections)
-                .ThenInclude(s => s.Quiz)
-                .AsSplitQuery() // <--- DODANY WIERSZ: Wymusza podział zapytania
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)

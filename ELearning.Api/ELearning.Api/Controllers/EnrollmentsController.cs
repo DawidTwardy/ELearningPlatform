@@ -61,7 +61,7 @@ namespace ELearning.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Course>>> GetMyCourses()
+        public async Task<ActionResult> GetMyCourses()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -70,19 +70,21 @@ namespace ELearning.Api.Controllers
                 return Unauthorized(new { Message = "Nie mo¿na zidentyfikowaæ u¿ytkownika." });
             }
 
+            // OSTATECZNA POPRAWKA DLA B£ÊDU 500: Projekcja na typ anonimowy. 
+            // Tworzy czysty obiekt (DTO) bez proxy i usuwa b³êdy materializacji/serializacji EF.
             var myCourses = await _context.Set<Enrollment>()
                 .Where(e => e.ApplicationUserId == userId)
-                // KROK 1: £ADUJEMY RELACJE ZACZYNAJ¥C OD W£AŒCIWOŒCI Course w Enrollment
-                .Include(e => e.Course)
-                    .ThenInclude(c => c.Sections)
-                        .ThenInclude(s => s.Lessons)
-                // KROK 2: ZACZYNAMY NOWY £AÑCUCH Z TEGO SAMEGO ROOT Enrollment
-                .Include(e => e.Course)
-                    .ThenInclude(c => c.Sections)
-                        .ThenInclude(s => s.Quiz)
-                // KROK 3: PROJEKCJA NA KOÑCU: ZWRACAMY TYLKO OBIEKT Course
-                .Select(e => e.Course)
-                .AsSplitQuery()
+                .Select(e => new
+                {
+                    Id = e.Course.Id,
+                    Title = e.Course.Title,
+                    Description = e.Course.Description,
+                    ImageSrc = e.Course.ImageSrc,
+                    Instructor = e.Course.Instructor,
+                    Rating = e.Course.Rating,
+                    // Dodajemy puste Sections, aby frontend go nie pomija³
+                    Sections = new List<object>()
+                })
                 .ToListAsync();
 
             return Ok(myCourses);
