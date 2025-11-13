@@ -70,20 +70,17 @@ namespace ELearning.Api.Controllers
                 return Unauthorized(new { Message = "Nie mo¿na zidentyfikowaæ u¿ytkownika." });
             }
 
-            // OSTATECZNA POPRAWKA DLA B£ÊDU 500: Projekcja na typ anonimowy. 
-            // Tworzy czysty obiekt (DTO) bez proxy i usuwa b³êdy materializacji/serializacji EF.
             var myCourses = await _context.Set<Enrollment>()
                 .Where(e => e.ApplicationUserId == userId)
                 .Select(e => new
                 {
-                    Id = e.Course.Id,
-                    Title = e.Course.Title,
-                    Description = e.Course.Description,
-                    ImageSrc = e.Course.ImageSrc,
-                    Instructor = e.Course.Instructor,
-                    Rating = e.Course.Rating,
-                    // Dodajemy puste Sections, aby frontend go nie pomija³
-                    Sections = new List<object>()
+                    id = e.Course.Id,
+                    title = e.Course.Title,
+                    description = e.Course.Description,
+                    imageSrc = e.Course.ImageSrc,
+                    instructor = e.Course.Instructor,
+                    rating = e.Course.Rating,
+                    sections = new List<object>()
                 })
                 .ToListAsync();
 

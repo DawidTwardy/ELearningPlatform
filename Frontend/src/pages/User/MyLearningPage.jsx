@@ -50,7 +50,8 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
     try {
       // POBIERANIE POSTĘPU - Nagłówek jest dodawany przez Interceptor
       const response = await axios.get(`${API_BASE_URL}/Progress/course/${courseId}`);
-      return response.data.ProgressPercentage;
+      // Gwarantujemy, że zwracamy liczbę (lub 0 jeśli ProgressPercentage jest undefined/null)
+      return response.data?.ProgressPercentage ?? 0;
     } catch (error) {
       // Błędy są ignorowane, zwracamy 0%
       console.error(`Błąd pobierania postępu dla kursu ${courseId}:`, error);
@@ -69,30 +70,32 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
       console.log("Pobrane kursy (raw data):", response.data); 
       
       let courses = response.data.map(c => {
-          // GWARANTOWANE POBRANIE ID: sprawdzamy obie konwencje nazewnictwa
+          // Używamy c.id/c.Id jako fallback.
           const courseId = c.id || c.Id;
           
           if (!courseId) {
-              // Błąd powinien się pojawić, jeśli ID jest null/undefined
               console.error("Krytyczny błąd: ID kursu jest niezdefiniowane po mapowaniu, pomijam kurs.", c);
               return null;
           }
 
-          // Mapowanie na oczekiwany obiekt z gwarancją camelCase dla CourseCard i kluczy
+          // Uproszczone i oczyszczone mapowanie, usunięto operator rozsiewu.
+          // Oczekujemy, że API zwraca camelCase (po poprzedniej poprawce), 
+          // ale zostawiamy fallback dla bezpieczeństwa.
           return {
               id: courseId,
-              title: c.title || c.Title,
-              description: c.description || c.Description,
+              title: c.title || c.Title || 'Brak tytułu',
+              description: c.description || c.Description || 'Brak opisu',
               imageSrc: c.imageSrc || c.ImageSrc,
-              instructor: c.instructor || c.Instructor,
-              rating: c.rating || c.Rating,
-              sections: c.sections || c.Sections || [], // Gwarantujemy, że Sections to zawsze tablica
-              ...c // Dodajemy resztę pól na wszelki wypadek
+              instructor: c.instructor || c.Instructor || 'Nieznany',
+              rating: c.rating || c.Rating || 0,
+              sections: c.sections || c.Sections || [],
           };
       }).filter(c => c !== null); // Filtrujemy uszkodzone kursy
+
+      console.log("Kursy po mapowaniu i filtrowaniu (jeśli puste, to jest problem z backendem lub brak kursów):", courses); 
       
       
-      if (!courses || courses.length === 0) {
+      if (courses.length === 0) {
         setEnrolledCourses([]);
         setIsLoading(false);
         return;
