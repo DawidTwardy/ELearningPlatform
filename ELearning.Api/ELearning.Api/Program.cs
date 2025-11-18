@@ -9,8 +9,12 @@ using System.Text;
 using ELearning.Api.Interfaces;
 using ELearning.Api.Services;
 using System.Text.Json.Serialization;
+using QuestPDF.Infrastructure;
+using Microsoft.AspNetCore.Http; // DODANE
 
 var builder = WebApplication.CreateBuilder(args);
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -36,8 +40,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<IQuizService, QuizService>();
+builder.Services.AddScoped<FileStorageService>();
+builder.Services.AddScoped<CertificateService>();
 
-// Konfiguracja CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllDev",
@@ -96,7 +101,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// CORS MUSI byæ pierwszy
 app.UseCors("AllowAllDev");
 
 if (app.Environment.IsDevelopment())
@@ -105,6 +109,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// KLUCZOWA ZMIANA: Wymuszenie nag³ówków CORS dla plików statycznych, 
+// co naprawia b³¹d OpaqueResponseBlocking
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        // U¿ywamy * poniewa¿ 'AllowAllDev' jest ustawione na allow all origins
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    }
+});
 
 
 app.UseAuthentication();

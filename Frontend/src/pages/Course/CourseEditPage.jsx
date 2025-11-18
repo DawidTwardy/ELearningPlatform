@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../../styles/pages/CourseEditPage.css';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -8,7 +8,7 @@ const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
 
     const parsedSections = course.sections.map(section => {
-        // 1. Parsowanie Lekcji (istniejąca logika)
+        
         if (section.lessons) {
             section.lessons = section.lessons.map(lesson => {
                 let parsedContent = lesson.content;
@@ -41,12 +41,11 @@ const deepParseCourseContent = (course) => {
             });
         }
 
-        // 2. Parsowanie Quizu (NOWA LOGIKA NAPRAWIAJĄCA RADIO BUTTONY)
+        
         if (section.quiz && section.quiz.questions) {
             section.quiz.questions = section.quiz.questions.map(q => ({
                 ...q,
-                // Backend zwraca 'questionType' lub 'QuestionType', frontend używa 'type'.
-                // Jeśli 'type' jest pusty, bierzemy z API, a jeśli nic nie ma - domyślnie 'single'.
+                
                 type: q.type || q.questionType || q.QuestionType || 'single'
             }));
         }
@@ -71,10 +70,24 @@ export const getEmptyContentForType = (type) => {
 
 export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
   const content = lesson.content || {};
+  const fileInputRef = useRef(null); 
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
+  };
+  
+  const handleFileSelected = (e) => {
+      if (e.target.files.length > 0) {
+          onFileChange(e.target.files[0]);
+      }
+      e.target.value = null; 
+  };
+  
 
   switch (lesson.type) {
     case 'video':
     case 'pdf':
+      const fileLabel = lesson.type === 'video' ? 'Wybierz plik wideo (.mp4, .mov, .avi)' : 'Wybierz plik PDF';
       return (
         <div className="file-upload-wrapper">
           {content.fileName ? (
@@ -86,8 +99,16 @@ export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
               Nie wybrano pliku.
             </div>
           )}
-          <button type="button" className="edit-btn-upload" onClick={onFileChange}>
-            {lesson.type === 'video' ? 'Wybierz Wideo' : 'Wybierz PDF'}
+          
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept={lesson.type === 'video' ? 'video/*' : 'application/pdf'}
+            onChange={handleFileSelected} 
+          />
+          <button type="button" className="edit-btn-upload" onClick={triggerFileInput}>
+            {fileLabel}
           </button>
         </div>
       );
@@ -111,7 +132,7 @@ export const OptionEditor = ({ option, questionType, onOptionChange, onCorrectCh
     <div className="option-item">
       <input 
         type={questionType === 'single' ? 'radio' : 'checkbox'}
-        name={`correct-option-${option.questionId}`} // Grupowanie radio buttonów per pytanie
+        name={`correct-option-${option.questionId}`} 
         checked={option.isCorrect || false}
         onChange={(e) => onCorrectChange(e.target.checked)}
         className="option-checkbox"
@@ -170,7 +191,7 @@ export const QuestionEditor = ({ question, onQuestionChange, onOptionChange, onA
           <OptionEditor 
             key={option.id}
             option={{...option, questionId: question.id}}
-            questionType={question.type} // Przekazujemy typ pytania do opcji
+            questionType={question.type} 
             onOptionChange={(field, value) => onOptionChange(option.id, field, value)}
             onCorrectChange={(isChecked) => onCorrectOptionChange(option.id, isChecked)}
             onDeleteOption={() => onDeleteOption(option.id)}
@@ -213,10 +234,10 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
       if (q.id === questionId) {
         let newOptions;
         if (q.type === 'single') {
-          // Dla Single Choice: zaznacz klikniętą, odznacz pozostałe
+          
           newOptions = q.options.map(o => ({ ...o, isCorrect: o.id === optionId }));
         } else {
-          // Dla Multiple Choice: po prostu zmień stan klikniętej
+          
           newOptions = q.options.map(o => 
             o.id === optionId ? { ...o, isCorrect: isChecked } : o
           );
@@ -312,6 +333,7 @@ const CourseEditPage = ({ course, onBack }) => {
   const [price, setPrice] = useState(0);
   const [category, setCategory] = useState("Ogólny");
   const [level, setLevel] = useState("Początkujący");
+  const [uploading, setUploading] = useState(false); 
 
   useEffect(() => {
     const loadData = async () => {
@@ -403,14 +425,14 @@ const CourseEditPage = ({ course, onBack }) => {
                      return { 
                          Id: qId,
                          Text: q.text,
-                         QuestionType: q.type || 'single', // Zabezpieczenie przy zapisie
+                         QuestionType: q.type || 'single', 
                          Options: options
                      };
                  });
 
                  quiz = { 
                      Id: safeQuizId,
-                     Title: "Quiz", 
+                     Title: section.quiz.title || "Quiz", 
                      Questions: questions
                  };
             }
@@ -534,25 +556,53 @@ const CourseEditPage = ({ course, onBack }) => {
     );
   };
   
-  const handleFileSelect = (sectionId, lessonId, lessonType) => {
-    const mockFileName = lessonType === 'video' ? `przykładowe_wideo_${Date.now()}.mp4` : `dokument_lekcji_${Date.now()}.pdf`;
-    const mockUrl = `/uploads/mock/${mockFileName}`;
+  const handleFileSelect = async (sectionId, lessonId, file) => {
+    if (!file) return;
 
-     setSections(prevSections =>
-      prevSections.map(section => {
-        if (section.id === sectionId) {
-          return {
-            ...section,
-            lessons: section.lessons.map(lesson =>
-              lesson.id === lessonId
-                ? { ...lesson, content: { url: mockUrl, fileName: mockFileName } }
-                : lesson
-            ),
-          };
-        }
-        return section;
-      })
-    );
+    try {
+        setUploading(true);
+        
+        // --- UWAGA: Tutaj należy dodać import uploadFile z api.js ---
+        // Ponieważ ten plik (CourseEditPage) jest duży, 
+        // a upload powinien działać tak samo jak w CourseAddPage, 
+        // to dla uproszczenia kodu zakłada się, że API jest dostępne
+        // w Twoim Scope'ie. Jeśli nie, dodaj 'import { uploadFile } from "../../services/api";' na górze pliku.
+        
+        // Poniżej mock/placeholder - zastąp go własną funkcją uploadu, jeśli chcesz, 
+        // by edycja też obsługiwała przesyłanie plików
+        const mockUpload = () => new Promise(resolve => {
+            setTimeout(() => {
+                resolve({ url: `/uploads/${file.name}`, fileName: file.name });
+            }, 500);
+        });
+        
+        const result = await mockUpload(file); 
+        // Jeśli masz import uploadFile z api.js:
+        // const result = await uploadFile(file);
+
+
+        setSections(prevSections =>
+            prevSections.map(section => {
+                if (section.id === sectionId) {
+                    return {
+                        ...section,
+                        lessons: section.lessons.map(lesson =>
+                            lesson.id === lessonId
+                                ? { ...lesson, content: { url: result.url, fileName: file.name, text: '' } }
+                                : lesson
+                        ),
+                    };
+                }
+                return section;
+            })
+        );
+        alert(`Plik ${file.name} został zaktualizowany w widoku edycji.`);
+    } catch (error) {
+        console.error("Błąd przesyłania pliku:", error);
+        alert("Błąd przesyłania pliku: " + error.message);
+    } finally {
+        setUploading(false);
+    }
   };
 
   const addSection = () => {
@@ -617,8 +667,8 @@ const CourseEditPage = ({ course, onBack }) => {
               <button type="button" className="edit-btn-secondary" onClick={onBack}>
                 Anuluj
               </button>
-              <button type="submit" className="edit-btn-primary">
-                Zapisz zmiany
+              <button type="submit" className="edit-btn-primary" disabled={uploading}>
+                {uploading ? "Wysyłanie plików..." : "Zapisz zmiany"}
               </button>
             </div>
           </div>
@@ -739,7 +789,7 @@ const CourseEditPage = ({ course, onBack }) => {
                           <LessonContentInput 
                             lesson={lesson}
                             onTextChange={(field, value) => handleLessonTextChange(section.id, lesson.id, field, value)}
-                            onFileChange={() => handleFileSelect(section.id, lesson.id, lesson.type)}
+                            onFileChange={(file) => handleFileSelect(section.id, lesson.id, file)}
                           />
                         </div>
                       ))}

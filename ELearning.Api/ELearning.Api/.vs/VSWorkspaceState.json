@@ -3,9 +3,8 @@
     "",
     "\\Controllers",
     "\\Data",
-    "\\Models",
-    "\\Models\\CourseContent"
+    "\\Services"
   ],
-  "SelectedNode": "\\Controllers\\ProgressController.cs",
+  "SelectedNode": "\\Program.cs",
   "PreviewInSolutionExplorer": false
 }

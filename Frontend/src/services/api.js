@@ -162,6 +162,47 @@ const fetchMyEnrollments = async () => {
     return handleResponse(response);
 };
 
+const uploadFile = async (file) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/Upload`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+        body: formData
+    });
+
+    return handleResponse(response);
+};
+
+const downloadCertificate = async (courseId) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Certificates/${courseId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || 'Nie udało się pobrać certyfikatu.');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Certyfikat_Kurs_${courseId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+};
+
 export {
     fetchCourseDetails,
     fetchLessonCompletion,
@@ -174,5 +215,7 @@ export {
     createComment,
     updateComment,
     deleteComment,
-    fetchMyEnrollments
+    fetchMyEnrollments,
+    uploadFile,
+    downloadCertificate
 };

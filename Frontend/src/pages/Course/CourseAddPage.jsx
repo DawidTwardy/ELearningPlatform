@@ -7,6 +7,7 @@ import {
   LessonContentInput,
   QuizEditor,
 } from './CourseEditPage.jsx';
+import { uploadFile } from '../../services/api'; // DODANO: Import funkcji uploadu
 
 const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
@@ -37,6 +38,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [sections, setSections] = useState([]);
   const [openItems, setOpenItems] = useState({});
+  const [uploading, setUploading] = useState(false); // DODANO: Stan do blokowania przycisku
 
   const toggleItem = (id) => {
     setOpenItems(prev => ({
@@ -52,6 +54,11 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
       return;
     }
     
+    if (uploading) {
+        alert("Poczekaj na zakończenie wysyłania plików.");
+        return;
+    }
+
     const token = localStorage.getItem('token');
     
     if (!token) {
@@ -65,6 +72,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
             let contentStr = "";
             
             if (typeof lesson.content === 'object' && lesson.content !== null) {
+                // Zapisujemy treść lekcji jako JSON (dla plików i tekstu)
                 contentStr = JSON.stringify(lesson.content);
             } else {
                 contentStr = lesson.content || "";
@@ -88,7 +96,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
                 
                 return {
                     Text: question.text,
-                    QuestionType: question.questionType || 'single', 
+                    QuestionType: question.type || 'single', 
                     Options: optionsToSave 
                 };
             })
@@ -228,25 +236,41 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
     );
   };
   
-  const handleFileSelect = (sectionId, lessonId, lessonType) => {
-    const mockFileName = lessonType === 'video' ? `przykładowe_wideo_${Date.now()}.mp4` : `dokument_lekcji_${Date.now()}.pdf`;
-    const mockUrl = `/uploads/mock/${mockFileName}`;
+  // ZMODYFIKOWANA FUNKCJA PRZESYŁANIA PLIKU
+  const handleFileSelect = async (sectionId, lessonId, file) => {
+    if (!file) return;
 
-     setSections(prevSections =>
-      prevSections.map(section => {
-        if (section.id === sectionId) {
-          return {
-            ...section,
-            lessons: section.lessons.map(lesson =>
-              lesson.id === lessonId
-                ? { ...lesson, content: { url: mockUrl, fileName: mockFileName } }
-                : lesson
-            ),
-          };
-        }
-        return section;
-      })
-    );
+    try {
+        setUploading(true);
+        const result = await uploadFile(file); 
+        
+        setSections(prevSections =>
+            prevSections.map(section => {
+                if (section.id === sectionId) {
+                    return {
+                        ...section,
+                        lessons: section.lessons.map(lesson => {
+                            if (lesson.id === lessonId) {
+                                // Zapisujemy zwrócony URL i nazwę pliku w content jako obiekt
+                                return { 
+                                    ...lesson, 
+                                    content: { url: result.url, fileName: file.name, text: '' } 
+                                };
+                            }
+                            return lesson;
+                        }),
+                    };
+                }
+                return section;
+            })
+        );
+        alert("Plik został przesłany.");
+    } catch (error) {
+        console.error("Błąd przesyłania pliku:", error);
+        alert("Błąd przesyłania pliku: " + error.message);
+    } finally {
+        setUploading(false);
+    }
   };
 
   const addSection = () => {
@@ -316,8 +340,8 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
               <button type="button" className="edit-btn-secondary" onClick={onBack}>
                 Anuluj
               </button>
-              <button type="submit" className="edit-btn-primary">
-                Stwórz Kurs
+              <button type="submit" className="edit-btn-primary" disabled={uploading}>
+                {uploading ? "Wysyłanie plików..." : "Stwórz Kurs"}
               </button>
             </div>
           </div>
@@ -438,7 +462,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
                           <LessonContentInput 
                             lesson={lesson}
                             onTextChange={(field, value) => handleLessonTextChange(section.id, lesson.id, field, value)}
-                            onFileChange={() => handleFileSelect(section.id, lesson.id, lesson.type)}
+                            onFileChange={(file) => handleFileSelect(section.id, lesson.id, file)}
                           />
                         </div>
                       ))}
