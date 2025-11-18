@@ -3,10 +3,9 @@
     "",
     "\\Controllers",
     "\\Data",
-    "\\DTOs\\Discussion",
     "\\Models",
     "\\Models\\CourseContent"
   ],
-  "SelectedNode": "\\Models\\CourseContent\\Lesson.cs",
+  "SelectedNode": "\\Controllers\\CoursesController.cs",
   "PreviewInSolutionExplorer": false
 }

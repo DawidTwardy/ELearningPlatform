@@ -17,7 +17,8 @@ namespace ELearning.Api.Models.CourseContent
 
         public int SectionId { get; set; }
 
+        
         [ForeignKey("SectionId")]
-        public CourseSection Section { get; set; }
+        public CourseSection? Section { get; set; }
     }
 }

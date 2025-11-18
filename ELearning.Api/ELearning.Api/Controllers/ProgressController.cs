@@ -29,7 +29,54 @@ namespace ELearning.Api.Controllers
 
             if (enrollment == null) return NotFound("Nie jesteœ zapisany na ten kurs.");
 
-            return Ok(enrollment.Progress);
+            var totalLessons = await _context.Lessons
+                .Where(l => l.Section.CourseId == courseId)
+                .CountAsync();
+
+            var completedLessons = await _context.LessonCompletions
+                .Include(lc => lc.Lesson)
+                .ThenInclude(l => l.Section)
+                .Where(lc => lc.UserId == userId && lc.Lesson.Section.CourseId == courseId)
+                .CountAsync();
+
+            int currentProgress = 0;
+            if (totalLessons > 0)
+            {
+                currentProgress = (int)((double)completedLessons / totalLessons * 100);
+            }
+
+            if (enrollment.Progress != currentProgress)
+            {
+                enrollment.Progress = currentProgress;
+                if (currentProgress == 100)
+                {
+                    enrollment.IsCompleted = true;
+                }
+                else
+                {
+                    enrollment.IsCompleted = false;
+                }
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(currentProgress);
+        }
+
+        // NOWA METODA: Zwraca listê ID ukoñczonych lekcji w kursie
+        [HttpGet("course/{courseId}/completed-lessons")]
+        public async Task<ActionResult<IEnumerable<int>>> GetCompletedLessons(int courseId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var completedLessonIds = await _context.LessonCompletions
+                .Include(lc => lc.Lesson)
+                .ThenInclude(l => l.Section)
+                .Where(lc => lc.UserId == userId && lc.Lesson.Section.CourseId == courseId)
+                .Select(lc => lc.LessonId)
+                .ToListAsync();
+
+            return Ok(completedLessonIds);
         }
 
         [HttpPost("lesson/{lessonId}/complete")]
@@ -45,7 +92,6 @@ namespace ELearning.Api.Controllers
 
             if (lesson == null) return NotFound("Lekcja nie istnieje.");
 
-            // SprawdŸ czy lekcja jest ju¿ ukoñczona
             var existingCompletion = await _context.LessonCompletions
                 .FirstOrDefaultAsync(lc => lc.LessonId == lessonId && lc.UserId == userId);
 
@@ -61,7 +107,6 @@ namespace ELearning.Api.Controllers
             _context.LessonCompletions.Add(completion);
             await _context.SaveChangesAsync();
 
-            // Aktualizuj postêp kursu w Enrollment
             await UpdateEnrollmentProgress(userId, lesson.Section.Course.Id);
 
             return Ok(new { success = true });
@@ -86,14 +131,12 @@ namespace ELearning.Api.Controllers
 
             if (enrollment == null) return;
 
-            // Policz wszystkie lekcje w kursie
             var totalLessons = await _context.Lessons
                 .Where(l => l.Section.CourseId == courseId)
                 .CountAsync();
 
             if (totalLessons == 0) return;
 
-            // Policz ukoñczone lekcje dla tego kursu
             var completedLessons = await _context.LessonCompletions
                 .Include(lc => lc.Lesson)
                 .ThenInclude(l => l.Section)
@@ -102,11 +145,14 @@ namespace ELearning.Api.Controllers
 
             int progressPercentage = (int)((double)completedLessons / totalLessons * 100);
 
-            // Zapisz postêp
             enrollment.Progress = progressPercentage;
             if (progressPercentage == 100)
             {
                 enrollment.IsCompleted = true;
+            }
+            else
+            {
+                enrollment.IsCompleted = false;
             }
 
             await _context.SaveChangesAsync();

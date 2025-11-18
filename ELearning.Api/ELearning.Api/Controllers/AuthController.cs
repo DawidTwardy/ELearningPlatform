@@ -54,8 +54,8 @@ namespace ELearning.Api.Controllers
 
             if (result.Succeeded)
             {
+                const string defaultRole = "User";
 
-                const string defaultRole = "Instructor";
                 if (!await _roleManager.RoleExistsAsync(defaultRole))
                 {
                     await _roleManager.CreateAsync(new IdentityRole(defaultRole));
@@ -101,7 +101,6 @@ namespace ELearning.Api.Controllers
                 new Claim(ClaimTypes.Email, user.Email!),
             };
 
-
             var roles = await _userManager.GetRolesAsync(user);
             foreach (var role in roles)
             {
@@ -110,9 +109,12 @@ namespace ELearning.Api.Controllers
 
             var jwtSettings = _configuration.GetSection("JwtSettings");
 
-            var jwtKey = jwtSettings["Secret"] ?? throw new InvalidOperationException("JwtSettings:Secret not configured or is null.");
+            var jwtKey = jwtSettings["Secret"];
+            if (string.IsNullOrEmpty(jwtKey))
+            {
+                throw new InvalidOperationException("JwtSettings:Secret not configured or is null.");
+            }
 
-            // KRYTYCZNA POPRAWKA: Dodajemy .Trim(), aby usun¹æ wszelkie bia³e znaki z klucza
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey.Trim()));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

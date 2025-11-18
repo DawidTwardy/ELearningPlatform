@@ -24,7 +24,6 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ZMIANA: Poluzowanie zasad has³a w Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = false;
@@ -38,17 +37,25 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
 builder.Services.AddScoped<IQuizService, QuizService>();
 
+// Konfiguracja CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecificOrigin",
-        builder => builder.WithOrigins("http://localhost:5173")
-                          .AllowAnyHeader()
-                          .AllowAnyMethod()
-                          .AllowCredentials());
+    options.AddPolicy("AllowAllDev",
+        builder => builder
+            .SetIsOriginAllowed(_ => true)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials());
 });
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var key = Encoding.UTF8.GetBytes(jwtSettings["Secret"]!);
+var secretKey = jwtSettings["Secret"];
+if (string.IsNullOrEmpty(secretKey))
+{
+    throw new Exception("JWT Secret is missing in appsettings.json");
+}
+
+var key = Encoding.UTF8.GetBytes(secretKey);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -68,7 +75,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = System.TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero
     };
 });
 
@@ -89,15 +96,16 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// CORS MUSI byæ pierwszy
+app.UseCors("AllowAllDev");
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 
-app.UseCors("AllowSpecificOrigin");
 
 app.UseAuthentication();
 app.UseAuthorization();
