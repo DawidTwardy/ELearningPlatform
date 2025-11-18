@@ -6,11 +6,20 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-// Usuniêto: using ELearning.Api.Data;
+using ELearning.Api.Interfaces;
+using ELearning.Api.Services;
+using System.Text.Json.Serialization; // DODANE
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+// POPRAWIONE: Dodanie obs³ugi cyklicznych referencji w JSON
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Instruuje serializer, aby ignorowa³ cykle (np. Course -> Section -> Course)
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -20,6 +29,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
+
+// REJESTRACJA NOWEGO SERWISU QUIZÓW
+builder.Services.AddScoped<IQuizService, QuizService>();
 
 builder.Services.AddCors(options =>
 {
@@ -66,7 +78,6 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
         context.Database.Migrate();
-        // Usuniêto DbInitializer.Initialize(...), które powodowa³o b³¹d kompilacji.
     }
     catch (Exception ex)
     {

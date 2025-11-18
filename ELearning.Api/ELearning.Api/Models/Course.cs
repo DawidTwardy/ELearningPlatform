@@ -1,12 +1,14 @@
-﻿
-
-using ELearning.Api.Models.CourseContent; 
+﻿using ELearning.Api.Models.CourseContent;
 namespace ELearning.Api.Models
 {
     public class Course
     {
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
+
+
+        public string InstructorId { get; set; } = string.Empty;
+      
         public string Instructor { get; set; } = string.Empty;
         public double Rating { get; set; }
         public string ImageSrc { get; set; } = string.Empty;

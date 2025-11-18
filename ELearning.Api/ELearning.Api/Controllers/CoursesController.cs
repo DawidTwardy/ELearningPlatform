@@ -8,6 +8,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
+using System.Security.Claims;
 
 namespace ELearning.Api.Controllers
 {
@@ -27,8 +28,9 @@ namespace ELearning.Api.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<Course>>> GetCourses()
         {
-            // USUNIĘTO: Głębokie Include, aby uniknąć błędów serializacji JSON (błąd 500)
+            // Płytkie ładowanie kursów (tylko sekcje), aby uniknąć przeciążania widoku listy.
             var courses = await _context.Courses
+                .Include(c => c.Sections)
                 .ToListAsync();
 
             if (courses == null)
@@ -43,9 +45,15 @@ namespace ELearning.Api.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<Course>> GetCourse(int id)
         {
-            // USUNIĘTO: Głębokie Include, aby uniknąć błędów serializacji JSON (błąd 500)
-            // Lądujemy tylko podstawowy obiekt Course
+            // Głębokie ładowanie całego grafu obiektu (Eager Loading)
+            // To jest krytyczne dla wyświetlania sekcji i quizów na frontendzie.
             var course = await _context.Courses
+                .Include(c => c.Sections)
+                    .ThenInclude(s => s.Lessons) // Ładuje lekcje w sekcjach
+                .Include(c => c.Sections)
+                    .ThenInclude(s => s.Quiz) // Ładuje quiz w sekcji
+                        .ThenInclude(q => q.Questions) // Ładuje pytania w quizie
+                            .ThenInclude(qs => qs.Options) // Ładuje opcje w pytaniu
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)
@@ -65,57 +73,30 @@ namespace ELearning.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            var sections = course.Sections ?? new List<CourseSection>();
-            course.Sections = new List<CourseSection>();
-
-            course.Instructor = User.Identity!.Name ?? "Nieznany Instruktor";
-
-            _context.Courses.Add(course);
-
             try
             {
+                // 1. Przypisanie Instruktora z tokena
+                course.InstructorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                course.Instructor = User.Identity!.Name ?? "Nieznany Instruktor";
+
+                // 2. Dodanie całego grafu obiektów (Course + Sections + Lessons + Quizzes + Questions + Options)
+                _context.Courses.Add(course);
+
+                // 3. JEDNOKROTNY, ATOMOWY ZAPIS DO BAZY DANYCH
                 await _context.SaveChangesAsync();
+
+                // Zwracamy stworzony obiekt z nowymi Id
+                return CreatedAtAction(nameof(GetCourse), new { id = course.Id }, course);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "Błąd zapisu głównego kursu w bazie danych.", Details = ex.Message });
+                // Logowanie pełnego wyjątku do diagnozy błędu 500
+                Console.WriteLine($"\n==================== BŁĄD ZAPISU KURSU (500) ====================");
+                Console.WriteLine($"PEŁNY WYJĄTEK: {ex.ToString()}");
+                Console.WriteLine($"=================================================================\n");
+
+                return StatusCode(500, new { Message = "Wewnętrzny błąd serwera podczas zapisu kursu. Sprawdź logi serwera.", Details = ex.Message, InnerDetails = ex.InnerException?.Message });
             }
-
-            if (sections.Any())
-            {
-                foreach (var section in sections)
-                {
-                    section.CourseId = course.Id;
-
-                    if (section.Lessons != null)
-                    {
-                        foreach (var lesson in section.Lessons)
-                        {
-                            lesson.SectionId = section.Id;
-                        }
-                    }
-                    if (section.Quiz != null)
-                    {
-                        section.Quiz.SectionId = section.Id;
-                        _context.Quizzes.Add(section.Quiz);
-                    }
-
-                    _context.CourseSections.Add(section);
-                }
-
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch (Exception ex)
-                {
-                    return StatusCode(500, new { Message = "Błąd zapisu sekcji, lekcji lub quizów do bazy danych.", Details = ex.Message, InnerDetails = ex.InnerException?.Message });
-                }
-            }
-
-            course.Sections = sections;
-
-            return CreatedAtAction(nameof(GetCourse), new { id = course.Id }, course);
         }
 
         [HttpPut("{id}")]

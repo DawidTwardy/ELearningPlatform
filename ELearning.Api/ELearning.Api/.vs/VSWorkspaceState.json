@@ -2,11 +2,12 @@
   "ExpandedNodes": [
     "",
     "\\Controllers",
-    "\\Data",
+    "\\DTOs",
+    "\\Interfaces",
     "\\Models",
-    "\\Models\\CourseContent",
-    "\\Properties"
+    "\\Properties",
+    "\\Services"
   ],
-  "SelectedNode": "\\Controllers\\EnrollmentsController.cs",
+  "SelectedNode": "\\Controllers\\CoursesController.cs",
   "PreviewInSolutionExplorer": false
 }

@@ -1,199 +1,171 @@
-import React, { useState } from 'react';
-import '../../styles/pages/QuizView.css'; 
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext'; // Zakładam, że masz AuthContext
 
-const QuizView = ({ quizData, onQuizComplete }) => {
-    // 1. Parsowanie JSON string na obiekt pytań.
-    let loadedQuestions = [];
-    
-    if (quizData && quizData.quizDataJson) {
+// Zmienna dla łatwego zarządzania adresem API
+const API_BASE_URL = 'https://localhost:7001/api/quizzes'; // Użyj poprawnego adresu URL (HTTPS lub HTTP)
+
+const QuizView = () => {
+    const { quizId } = useParams();
+    const navigate = useNavigate();
+    const { isAuthenticated } = useAuth(); // Zakładam, że używasz tego do weryfikacji
+
+    const [quizData, setQuizData] = useState(null); 
+    // Przechowujemy odpowiedzi w formacie { QuestionId: AnswerOptionId }
+    const [userAnswers, setUserAnswers] = useState({}); 
+    const [result, setResult] = useState(null); 
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // Pobieranie danych quizu
+    const fetchQuiz = useCallback(async () => {
+        if (!isAuthenticated) return;
+
+        setLoading(true);
         try {
-            const parsedData = JSON.parse(quizData.quizDataJson);
-            loadedQuestions = parsedData.questions || [];
-        } catch (e) {
-            console.error("Błąd parsowania QuizDataJson:", e);
+            const token = localStorage.getItem('token'); 
+            const response = await fetch(`${API_BASE_URL}/${quizId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.status === 404) {
+                 setError('Quiz o podanym ID nie istnieje lub nie ma danych.');
+                 setLoading(false);
+                 return;
+            }
+
+            if (!response.ok) {
+                // To wyłapie 401 Unauthorized (brak tokena) lub 500 Internal Server Error
+                throw new Error(`Błąd serwera: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            setQuizData(data);
+            setLoading(false);
+        } catch (err) {
+            console.error("Błąd podczas pobierania quizu:", err);
+            setError(`Wystąpił błąd sieci lub serwera. Sprawdź, czy backend działa. (${err.message})`);
+            setLoading(false);
         }
-    } else if (quizData && Array.isArray(quizData.questions)) {
-        loadedQuestions = quizData.questions;
-    }
+    }, [quizId, isAuthenticated]);
 
-    // Gwarantujemy UNIKALNE, STABILNE ID dla KAŻDEGO pytania.
-    // To jest kluczowe dla poprawnego śledzenia odpowiedzi w selectedAnswers.
-    const questions = loadedQuestions.map((q, index) => ({
-        ...q,
-        // Używamy oryginalnego q.id, jeśli istnieje, lub indexu jako fallbacka.
-        stableId: q.id || `q-temp-${index}` 
-    }));
-    
-    // Konieczne jest użycie tego stableId w całym komponencie.
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [selectedAnswers, setSelectedAnswers] = useState({});
-    const [showResults, setShowResults] = useState(false);
+    useEffect(() => {
+        fetchQuiz();
+    }, [fetchQuiz]);
 
-    // 2. Wczesny powrót: Obsługa pustego quizu
-    if (questions.length === 0) {
+    // Obsługa zmiany odpowiedzi (użycie QuestionId i AnswerOptionId)
+    const handleAnswerChange = (questionId, answerOptionId) => {
+        // Konwersja na liczby całkowite, ponieważ QuestionId i AnswerOptionId są intami w DTO
+        const qId = parseInt(questionId);
+        const aId = parseInt(answerOptionId);
+
+        setUserAnswers(prevAnswers => ({
+            ...prevAnswers,
+            [qId]: aId,
+        }));
+    };
+
+    // Obsługa przesyłania quizu
+    const handleSubmitQuiz = async () => {
+        if (Object.keys(userAnswers).length !== quizData.questions.length) {
+            alert("Musisz odpowiedzieć na wszystkie pytania przed zakończeniem.");
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        // Mapowanie stanu userAnswers na strukturę SubmitQuizDto
+        const submitDto = {
+            quizId: parseInt(quizId),
+            answers: Object.entries(userAnswers).map(([questionId, answerOptionId]) => ({
+                // Klucze DTO z backendu: QuestionId, AnswerOptionId
+                questionId: parseInt(questionId), 
+                answerOptionId: parseInt(answerOptionId),
+            })),
+        };
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/submit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(submitDto),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Błąd serwera: ${response.status} ${response.statusText}`);
+            }
+            
+            const resultData = await response.json();
+            setResult(resultData); 
+            setQuizData(null); // Ukrycie pytań
+            setLoading(false);
+        } catch (err) {
+            console.error("Błąd podczas przesyłania quizu:", err);
+            setError(`Wystąpił błąd sieci lub serwera. Sprawdź, czy backend działa. (${err.message})`);
+            setLoading(false);
+        }
+    };
+
+    if (loading && !error) return <div className="quiz-view-container">Ładowanie quizu...</div>;
+    if (error) return <div className="quiz-view-container error">Błąd: {error}</div>;
+
+    // Wyświetlanie wyniku po przesłaniu
+    if (result) {
         return (
-            <div className="quiz-container">
-                <h2 className="quiz-title">Brak Pytań</h2>
-                <p>Ten quiz nie zawiera jeszcze żadnych pytań lub wystąpił błąd ładowania.</p>
-                <button className="quiz-nav-button" onClick={() => onQuizComplete(0, 0)}>
-                    Powrót do lekcji
-                </button>
+            <div className="quiz-view-container result-view">
+                <h2>Wynik Quizu: {quizData?.title || 'Quiz'}</h2>
+                <p>Twój wynik: {result.score} / {result.maxScore}</p>
+                <p className={result.isPassed ? 'passed' : 'failed'}>
+                    Status: {result.isPassed ? 'ZALICZONY 🎉' : 'NIEZALICZONY 😔'}
+                </p>
+                <p>Liczba prób: {result.attemptsCount}</p>
+                {/* Załóżmy, że potrzebujesz sectionId do powrotu do widoku kursu */}
+                <button onClick={() => navigate(`/course-view/${quizData?.sectionId || 'default'}/content`)}>Wróć do kursu</button> 
             </div>
         );
     }
 
-    // 3. Używamy bezpiecznej zmiennej questions
-    const currentQuestion = questions[currentQuestionIndex];
-    const currentQuestionKey = currentQuestion.stableId; // Używamy stableId jako klucza!
-
-    const handleOptionSelect = (optionId) => {
-        setSelectedAnswers(prev => {
-            const currentSelections = prev[currentQuestionKey] || [];
-            
-            // KLUCZ: Używamy stableId do zapisania odpowiedzi
-            if (currentQuestion.type === 'single') {
-                return { ...prev, [currentQuestionKey]: [optionId] };
-            }
-            
-            if (currentSelections.includes(optionId)) {
-                return {
-                    ...prev,
-                    [currentQuestionKey]: currentSelections.filter(id => id !== optionId)
-                };
-            } else {
-                return {
-                    ...prev,
-                    [currentQuestionKey]: [...currentSelections, optionId]
-                };
-            }
-        });
-    };
-
-    const goToNext = () => {
-        if (currentQuestionIndex < questions.length - 1) {
-            setCurrentQuestionIndex(prev => prev + 1);
-        }
-    };
-
-    const goToPrev = () => {
-        if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex(prev => prev - 1);
-        }
-    };
-
-    const calculateScore = () => {
-        let score = 0;
-        questions.forEach(q => {
-            // KLUCZ: Używamy stableId do pobrania odpowiedzi
-            const userAnswers = selectedAnswers[q.stableId] || [];
-
-            // POBRANIE POPRAWNYCH ODPOWIEDZI Z OPCJI DLA KAŻDEGO TYPU PYTANIA
-            const correctOptionIds = q.options
-                .filter(option => option.isCorrect)
-                .map(option => option.id);
-            
-            // Tworzymy Set z poprawnych odpowiedzi dla efektywnego sprawdzania istnienia
-            const correctSet = new Set(correctOptionIds);
-
-            if (q.type === 'single') {
-                // LOGIKA DLA PYTAŃ JEDNOKROTNEGO WYBORU
-                const userAnswerId = userAnswers[0];
-                
-                if (userAnswerId && correctSet.has(userAnswerId)) {
-                    score++;
-                }
-            } else {
-                // Dla multiple-choice (checkbox):
-                
-                const isCorrectLength = userAnswers.length === correctSet.size;
-                const allSelectedAreCorrect = userAnswers.every(ansId => correctSet.has(ansId));
-                
-                if (isCorrectLength && allSelectedAreCorrect) {
-                    score++;
-                }
-            }
-        });
-        return score;
-    };
-
-    const handleFinishQuiz = () => {
-        setShowResults(true);
-    };
-
-    if (showResults) {
-        const score = calculateScore();
-        const total = questions.length;
-        const percentage = ((score / total) * 100).toFixed(0);
-
-        return (
-            <div className="quiz-container quiz-results">
-                <h2 className="quiz-title">Wyniki Testu</h2>
-                <div className="quiz-score">
-                    Twój wynik: {score} / {total} ({percentage}%)
-                </div>
-                <button className="quiz-nav-button" onClick={() => onQuizComplete(score, total)}>
-                    Powrót do lekcji
-                </button>
-            </div>
-        );
-    }
-
-    const currentSelections = selectedAnswers[currentQuestionKey] || [];
-
+    // Wyświetlanie pytań quizu
     return (
-        <div className="quiz-container">
-            <div className="quiz-header">
-                <h2 className="quiz-title">Test z Sekcji</h2>
-                <div className="quiz-progress">
-                    Pytanie {currentQuestionIndex + 1} z {questions.length}
-                </div>
-            </div>
+        <div className="quiz-view-container">
+            <h1>{quizData.title}</h1>
             
-            <div className="quiz-question-body">
-                <h3 className="quiz-question-text">{currentQuestion.text}</h3>
-                <div className="quiz-options">
-                    {currentQuestion.options.map(option => (
-                        <label 
-                            key={option.id} 
-                            className={`quiz-option-label ${currentSelections.includes(option.id) ? 'selected' : ''}`}
-                        >
-                            <input
-                                type={currentQuestion.type === 'single' ? 'radio' : 'checkbox'}
-                                name={`question-${currentQuestionKey}`} // Używamy stableId w nazwie
-                                checked={currentSelections.includes(option.id)}
-                                onChange={() => handleOptionSelect(option.id)}
-                                className="quiz-option-input"
-                            />
-                            {option.text}
-                        </label>
-                    ))}
+            {quizData.questions.map((question, qIndex) => (
+                <div key={question.questionId} className="question-block">
+                    {/* Ważne: używamy .questionId i .options z DTO */}
+                    <h3>{qIndex + 1}. {question.text}</h3>
+                    <div className="answer-options">
+                        {question.options.map(option => (
+                            <label key={option.answerOptionId} className="answer-option-label">
+                                <input
+                                    type="radio"
+                                    name={`question-${question.questionId}`}
+                                    value={option.answerOptionId}
+                                    // Używamy .questionId i .answerOptionId
+                                    checked={userAnswers[question.questionId] === option.answerOptionId}
+                                    onChange={() => handleAnswerChange(question.questionId, option.answerOptionId)}
+                                />
+                                {option.text}
+                            </label>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            ))}
             
-            <div className="quiz-navigation">
-                <button 
-                    className="quiz-nav-button"
-                    onClick={goToPrev} 
-                    disabled={currentQuestionIndex === 0}
-                >
-                    Poprzednie
-                </button>
-                {currentQuestionIndex < questions.length - 1 ? (
-                    <button 
-                        className="quiz-nav-button"
-                        onClick={goToNext}
-                    >
-                        Następne
-                    </button>
-                ) : (
-                    <button 
-                        className="quiz-nav-button finish"
-                        onClick={handleFinishQuiz}
-                    >
-                        Zakończ Test
-                    </button>
-                )}
-            </div>
+            <button 
+                onClick={handleSubmitQuiz} 
+                disabled={loading || Object.keys(userAnswers).length !== quizData.questions.length}
+                className="submit-quiz-button"
+            >
+                {loading ? 'Przesyłanie...' : 'Zakończ i sprawdź wynik'}
+            </button>
         </div>
     );
 };
