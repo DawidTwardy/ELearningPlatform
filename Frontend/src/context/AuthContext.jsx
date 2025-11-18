@@ -3,23 +3,18 @@ import axios from 'axios';
 
 const AuthContext = createContext(null);
 
-const API_BASE_URL = 'http://localhost:7115/api'; // ZMIANA PORTU NA 7115
+const API_BASE_URL = 'http://localhost:7115/api';
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
 
-    // Używamy tego hooka, aby ustawić globalny interceptor, który będzie działał przez cały czas.
     useEffect(() => {
-        // Konfiguracja interceptora, który jest uruchamiany RAZ przy starcie aplikacji
         const requestInterceptor = axios.interceptors.request.use(
             config => {
-                // Odczytujemy token bezpośrednio z localStorage przy każdym żądaniu, 
-                // co gwarantuje, że jest aktualny.
                 const currentToken = localStorage.getItem('token');
                 
-                // Jeśli token istnieje i żądanie nie jest już autoryzowane, dodajemy nagłówek
                 if (currentToken && !config.headers.Authorization) {
                     config.headers.Authorization = `Bearer ${currentToken}`;
                 }
@@ -30,13 +25,11 @@ export const AuthProvider = ({ children }) => {
             }
         );
 
-        // Cleanup: usunięcie interceptora przy odmontowaniu komponentu
         return () => {
             axios.interceptors.request.eject(requestInterceptor);
         };
-    }, []); // Pusta tablica, aby odpalić to raz
+    }, []);
 
-    // Utrzymanie stanu aplikacji (ten hook był już poprawny)
     useEffect(() => {
         
         if (token) {
@@ -98,3 +91,5 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
     return useContext(AuthContext);
 };
+
+export { AuthContext };

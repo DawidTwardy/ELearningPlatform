@@ -27,7 +27,6 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
     
     setEnrollmentStatus('loading');
     try {
-      // Sprawdź listę zapisanych kursów użytkownika, aby ustalić status
       const response = await axios.get(`${API_BASE_URL}/Enrollments`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -52,7 +51,6 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
     setEnrollmentStatus('loading');
 
     try {
-      // WYSYŁANIE ŻĄDANIA ZAPISU
       await axios.post(`${API_BASE_URL}/Enrollments/${course.id}`, null, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -61,7 +59,7 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
       setEnrollmentStatus('success');
       alert("Pomyślnie zapisano na kurs! Możesz go znaleźć w sekcji Moja Nauka.");
       
-      onEnroll(course);
+      onEnroll(course.id); 
     } catch (error) {
       if (error.response && error.response.status === 409) {
         setEnrollmentStatus('enrolled');

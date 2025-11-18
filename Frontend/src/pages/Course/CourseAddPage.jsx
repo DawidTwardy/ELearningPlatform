@@ -52,51 +52,69 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
       return;
     }
     
-    const token = localStorage.getItem('token'); // POPRAWKA: Zmieniono 'userToken' na 'token'
+    const token = localStorage.getItem('token');
     
     if (!token) {
         alert("Błąd: Nie jesteś zalogowany. Zaloguj się jako instruktor, aby stworzyć kurs.");
         return; 
     }
     
-    const sectionsToSave = sections.map(section => ({
-        title: section.title, 
+    const sectionsToSave = sections.map((section, index) => {
         
-        lessons: section.lessons.map(lesson => ({
-            title: lesson.title,
-            type: lesson.type,
-            content: JSON.stringify(lesson.content),
-        })),
-        
-        // KLUCZOWA ZMIANA: Serializujemy pytania do pola QuizDataJson
-        quiz: {
-            title: section.title ? `Test: ${section.title}` : "Test podsumowujący",
-            // POPRAWIONA LOGIKA SERIALIZACJI QUIZU
-            QuizDataJson: JSON.stringify({
-                questions: (section.quiz.questions || []).map(question => {
-                    // Usuwamy tymczasowe ID pytania (jeśli jest)
-                    const { id: questionId, ...restOfQuestion } = question;
-                    
-                    // Zakładamy, że lista opcji jest w polu 'options'
-                    const optionsToProcess = restOfQuestion.options || restOfQuestion.answers || [];
+        // Lekcje
+        const lessonsToSave = section.lessons.map(lesson => {
+            let finalContent = "";
+            // KLUCZOWA POPRAWKA: Weryfikujemy, czy content jest obiektem, i wyciągamy właściwy string
+            if (typeof lesson.content === 'object' && lesson.content !== null) {
+                // Jeśli jest obiektem z polem 'url' (wideo/plik), to URL jest treścią
+                if (lesson.content.url) {
+                    finalContent = lesson.content.url;
+                } 
+                // Jeśli jest obiektem z polem 'text' (edytor Quill), to text jest treścią
+                else if (lesson.content.text) {
+                    finalContent = lesson.content.text;
+                }
+            } else {
+                // Jeśli jest już prostym stringiem (np. z domyślnej wartości), używamy go
+                finalContent = lesson.content || "";
+            }
 
-                    const cleanedOptions = optionsToProcess.map(option => {
-                        // ZACHOWUJEMY ID, który jest KLUCZOWY do poprawnego liczenia wyników
-                        return {
-                            id: option.id, 
-                            text: option.text, 
-                            isCorrect: option.isCorrect
-                        };
-                    });
-                    
-                    return {
-                        ...restOfQuestion, // Zachowujemy resztę pól pytania (text, type, itp.)
-                        options: cleanedOptions // ZAWSZE zapisujemy jako 'options'
-                    };
-                })
+            return {
+                title: lesson.title,
+                type: lesson.type,
+                content: finalContent, // Teraz jest to zawsze czysty string
+            };
+        });
+        
+        // Quiz
+        const hasQuizQuestions = section.quiz && section.quiz.questions && section.quiz.questions.length > 0;
+        
+        const quizToSave = hasQuizQuestions ? {
+            title: section.quiz.title || `Test: ${section.title}` || "Test podsumowujący",
+            questions: (section.quiz.questions || []).map(question => {
+                const optionsToSave = (question.options || question.answers || []).map(option => ({
+                    text: option.text, 
+                    isCorrect: option.isCorrect
+                }));
+                
+                return {
+                    text: question.text,
+                    questionType: question.questionType, 
+                    options: optionsToSave 
+                };
             })
-        }
-    }));
+        } : null;
+
+
+        const sectionObject = {
+            title: section.title, 
+            order: index + 1,
+            lessons: lessonsToSave,
+            ...(quizToSave && { quiz: quizToSave })
+        };
+        
+        return sectionObject;
+    });
 
     const newCourseData = { 
         title: title, 
@@ -107,7 +125,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
         sections: sectionsToSave
     };
 
-    const apiUrl = 'http://localhost:7115/api/Courses'; // POPRAWKA: Zmieniono z HTTPS na HTTP
+    const apiUrl = 'http://localhost:7115/api/Courses';
 
     fetch(apiUrl, {
         method: 'POST',

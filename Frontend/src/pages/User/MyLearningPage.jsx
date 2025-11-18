@@ -48,12 +48,9 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
   
   const fetchProgressForCourse = async (courseId) => {
     try {
-      // POBIERANIE POSTĘPU - Nagłówek jest dodawany przez Interceptor
       const response = await axios.get(`${API_BASE_URL}/Progress/course/${courseId}`);
-      // Gwarantujemy, że zwracamy liczbę (lub 0 jeśli ProgressPercentage jest undefined/null)
       return response.data?.ProgressPercentage ?? 0;
     } catch (error) {
-      // Błędy są ignorowane, zwracamy 0%
       console.error(`Błąd pobierania postępu dla kursu ${courseId}:`, error);
       return 0;
     }
@@ -64,13 +61,11 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
     setIsLoading(true);
     setError(null);
     try {
-      // 1. POBIERANIE LISTY ZAPISANYCH KURSÓW - Nagłówek jest dodawany przez Interceptor
       const response = await axios.get(`${API_BASE_URL}/Enrollments`);
       
       console.log("Pobrane kursy (raw data):", response.data); 
       
       let courses = response.data.map(c => {
-          // Używamy c.id/c.Id jako fallback.
           const courseId = c.id || c.Id;
           
           if (!courseId) {
@@ -78,9 +73,6 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
               return null;
           }
 
-          // Uproszczone i oczyszczone mapowanie, usunięto operator rozsiewu.
-          // Oczekujemy, że API zwraca camelCase (po poprzedniej poprawce), 
-          // ale zostawiamy fallback dla bezpieczeństwa.
           return {
               id: courseId,
               title: c.title || c.Title || 'Brak tytułu',
@@ -90,7 +82,7 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
               rating: c.rating || c.Rating || 0,
               sections: c.sections || c.Sections || [],
           };
-      }).filter(c => c !== null); // Filtrujemy uszkodzone kursy
+      }).filter(c => c !== null);
 
       console.log("Kursy po mapowaniu i filtrowaniu (jeśli puste, to jest problem z backendem lub brak kursów):", courses); 
       
@@ -101,7 +93,6 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
         return;
       }
 
-      // 2. ŁADOWANIE ASYNCHRONICZNE POSTĘPU DLA KAŻDEGO KURSU
       const coursesWithProgressPromises = courses.map(async (course) => {
         const progress = await fetchProgressForCourse(course.id);
         return {
@@ -166,7 +157,10 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
               <CourseCard 
                 key={course.id} 
                 course={course}
-                onClick={() => onCourseClick(course)}
+                onClick={() => {
+                  console.log(`[MyLearningPage] Kliknięto kurs: ${course.title} z ID: ${course.id}`);
+                  onCourseClick(course.id);
+                }}
                 showInstructor={true}
                 showFavoriteButton={false}
                 progress={course.progress}
@@ -186,11 +180,18 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome, onShowCertificate }) 
               <CourseCard 
                 key={course.id} 
                 course={course}
-                onClick={null}
+                // POPRAWKA: Ustawiamy onClick, aby umożliwić wejście w ukończony kurs
+                onClick={() => {
+                  console.log(`[MyLearningPage] Kliknięto ukończony kurs: ${course.title} z ID: ${course.id}`);
+                  onCourseClick(course.id);
+                }}
                 showInstructor={true}
                 showFavoriteButton={false}
                 progress={course.progress}
-                onShowCertificate={() => onShowCertificate(course)}
+                onShowCertificate={() => {
+                  console.log(`[MyLearningPage] Kliknięto certyfikat dla kursu: ${course.title} z ID: ${course.id}`);
+                  onShowCertificate(course.id);
+                }}
               >
                 <StarRating rating={course.rating} /> 
               </CourseCard>

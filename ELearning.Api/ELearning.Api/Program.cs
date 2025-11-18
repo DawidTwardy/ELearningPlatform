@@ -8,15 +8,13 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using ELearning.Api.Interfaces;
 using ELearning.Api.Services;
-using System.Text.Json.Serialization; // DODANE
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// POPRAWIONE: Dodanie obs³ugi cyklicznych referencji w JSON
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Instruuje serializer, aby ignorowa³ cykle (np. Course -> Section -> Course)
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
 
@@ -26,11 +24,18 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+// ZMIANA: Poluzowanie zasad has³a w Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 4;
+})
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// REJESTRACJA NOWEGO SERWISU QUIZÓW
 builder.Services.AddScoped<IQuizService, QuizService>();
 
 builder.Services.AddCors(options =>
@@ -42,7 +47,6 @@ builder.Services.AddCors(options =>
                           .AllowCredentials());
 });
 
-// POPRAWKA: Odczyt sekcji JwtSettings jeden raz, aby wymusiæ spójnoœæ
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Secret"]!);
 
@@ -61,7 +65,6 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        // U¿ywamy zmiennej sekcji (jwtSettings), aby zapewniæ, ¿e odczyt jest identyczny
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),

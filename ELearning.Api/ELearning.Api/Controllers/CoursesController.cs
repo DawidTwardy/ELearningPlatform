@@ -28,7 +28,6 @@ namespace ELearning.Api.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<Course>>> GetCourses()
         {
-            // Płytkie ładowanie kursów (tylko sekcje), aby uniknąć przeciążania widoku listy.
             var courses = await _context.Courses
                 .Include(c => c.Sections)
                 .ToListAsync();
@@ -43,18 +42,22 @@ namespace ELearning.Api.Controllers
 
         [HttpGet("{id}")]
         [AllowAnonymous]
-        public async Task<ActionResult<Course>> GetCourse(int id)
+        public async Task<ActionResult<Course>> GetCourse(int? id)
         {
-            // Głębokie ładowanie całego grafu obiektu (Eager Loading)
-            // To jest krytyczne dla wyświetlania sekcji i quizów na frontendzie.
+            if (!id.HasValue)
+            {
+                return BadRequest("Brak identyfikatora kursu.");
+            }
+
             var course = await _context.Courses
+                .AsSplitQuery()
                 .Include(c => c.Sections)
-                    .ThenInclude(s => s.Lessons) // Ładuje lekcje w sekcjach
+                    .ThenInclude(s => s.Lessons)
                 .Include(c => c.Sections)
-                    .ThenInclude(s => s.Quiz) // Ładuje quiz w sekcji
-                        .ThenInclude(q => q.Questions) // Ładuje pytania w quizie
-                            .ThenInclude(qs => qs.Options) // Ładuje opcje w pytaniu
-                .FirstOrDefaultAsync(c => c.Id == id);
+                    .ThenInclude(s => s.Quiz)
+                        .ThenInclude(q => q.Questions)
+                            .ThenInclude(qs => qs.Options)
+                .FirstOrDefaultAsync(c => c.Id == id.Value);
 
             if (course == null)
             {
@@ -62,6 +65,30 @@ namespace ELearning.Api.Controllers
             }
 
             return Ok(course);
+        }
+
+        // NOWY ENDPOINT: USUWANIE WSZYSTKICH KURSÓW I POWIĄZANYCH DANYCH
+        [HttpDelete("all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteAllCourses()
+        {
+            // Usunięcie danych powiązanych
+            _context.UserAnswers.RemoveRange(_context.UserAnswers);
+            _context.UserQuizAttempts.RemoveRange(_context.UserQuizAttempts);
+            _context.LessonCompletions.RemoveRange(_context.LessonCompletions);
+            _context.Enrollments.RemoveRange(_context.Enrollments);
+            _context.AnswerOptions.RemoveRange(_context.AnswerOptions);
+            _context.Questions.RemoveRange(_context.Questions);
+            _context.Quizzes.RemoveRange(_context.Quizzes);
+            _context.Lessons.RemoveRange(_context.Lessons);
+            _context.CourseSections.RemoveRange(_context.CourseSections);
+
+            // Usunięcie kursów
+            _context.Courses.RemoveRange(_context.Courses);
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
 
         [HttpPost]
@@ -75,22 +102,17 @@ namespace ELearning.Api.Controllers
 
             try
             {
-                // 1. Przypisanie Instruktora z tokena
                 course.InstructorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 course.Instructor = User.Identity!.Name ?? "Nieznany Instruktor";
 
-                // 2. Dodanie całego grafu obiektów (Course + Sections + Lessons + Quizzes + Questions + Options)
                 _context.Courses.Add(course);
 
-                // 3. JEDNOKROTNY, ATOMOWY ZAPIS DO BAZY DANYCH
                 await _context.SaveChangesAsync();
 
-                // Zwracamy stworzony obiekt z nowymi Id
                 return CreatedAtAction(nameof(GetCourse), new { id = course.Id }, course);
             }
             catch (Exception ex)
             {
-                // Logowanie pełnego wyjątku do diagnozy błędu 500
                 Console.WriteLine($"\n==================== BŁĄD ZAPISU KURSU (500) ====================");
                 Console.WriteLine($"PEŁNY WYJĄTEK: {ex.ToString()}");
                 Console.WriteLine($"=================================================================\n");
