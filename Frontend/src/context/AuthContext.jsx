@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext(null);
@@ -10,7 +10,12 @@ export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
 
+    const logout = useCallback(() => {
+        setToken(null);
+    }, []);
+
     useEffect(() => {
+        // Interceptor dla dodawania tokenu do nagłówka (Request Interceptor)
         const requestInterceptor = axios.interceptors.request.use(
             config => {
                 const currentToken = localStorage.getItem('token');
@@ -25,10 +30,26 @@ export const AuthProvider = ({ children }) => {
             }
         );
 
+        // Interceptor dla obsługi błędu 401/403 z API (Response Interceptor)
+        const responseInterceptor = axios.interceptors.response.use(
+            response => response,
+            error => {
+                
+                if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                    console.error("Token wygasł lub jest nieprawidłowy. Wylogowanie użytkownika.");
+                    logout();
+                    
+                }
+                return Promise.reject(error);
+            }
+        );
+
         return () => {
             axios.interceptors.request.eject(requestInterceptor);
+            axios.interceptors.response.eject(responseInterceptor);
         };
-    }, []);
+    }, [logout]);
+
 
     useEffect(() => {
         
@@ -70,11 +91,7 @@ export const AuthProvider = ({ children }) => {
             return { success: false, message: errorMessages };
         }
     };
-
-    const logout = () => {
-        setToken(null);
-        
-    };
+    
 
     const value = {
         isAuthenticated,

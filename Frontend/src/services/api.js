@@ -21,7 +21,7 @@ const fetchCourseDetails = async (courseId) => {
 
 const fetchUserEnrollment = async (courseId) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Enrollments/enroll/${courseId}`, {
+    const response = await fetch(`${API_BASE_URL}/Enrollments/${courseId}`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -43,6 +43,11 @@ const fetchCourseProgress = async (courseId) => {
             'Authorization': `Bearer ${token}`,
         },
     });
+    
+    if (response.status === 404) {
+        return null;
+    }
+    
     return handleResponse(response);
 };
 

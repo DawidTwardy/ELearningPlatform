@@ -1,18 +1,16 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchCourseDetails, fetchLessonCompletion, markLessonCompleted, fetchUserEnrollment, fetchCourseProgress } from '../../services/api';
+import { fetchCourseDetails, markLessonCompleted, fetchUserEnrollment, fetchCourseProgress } from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
 import { Clock, BookOpen, Layers, CheckCircle } from 'lucide-react';
 import '../../styles/pages/CourseView.css';
 import QuizView from './QuizView';
 
 const CourseView = ({ course: courseIdProp }) => {
-    // OK: Używamy ID z URL (idFromUrl) lub ID przekazanego jako prop (courseIdProp).
     const { id: idFromUrl } = useParams();
     const navigate = useNavigate();
-    const { user } = useContext(AuthContext);
+    const { user, isAuthenticated } = useContext(AuthContext);
     
-    // Obiekt 'viewingCourse' w App.jsx zawiera ID, które jest teraz używane jako fallback.
     const id = idFromUrl || courseIdProp;
 
     const [course, setCourse] = useState(null);
@@ -28,37 +26,39 @@ const CourseView = ({ course: courseIdProp }) => {
     const courseCompletionPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
     const isCourseCompleted = courseCompletionPercentage === 100;
 
-    useEffect(() => {
-        // Dodana walidacja ID
+    const loadCourse = useCallback(async () => {
+        setError(null);
+        
         if (!id) {
             setLoading(false);
             setError("Brak identyfikatora kursu w adresie URL.");
             return;
         }
 
-        const loadCourse = async () => {
-            try {
-                setLoading(true);
-                const courseData = await fetchCourseDetails(id);
-                setCourse(courseData);
+        try {
+            setLoading(true);
+            const courseData = await fetchCourseDetails(id);
+            setCourse(courseData);
 
-                if (user) {
-                    const progressData = await fetchCourseProgress(id);
-                    setProgress(progressData);
-                } else {
-                    setProgress(null);
-                }
-
-            } catch (err) {
-                console.error("Błąd ładowania kursu:", err);
-                setError("Nie udało się załadować kursu lub nie masz do niego dostępu. Szczegóły: " + err.message);
-            } finally {
-                setLoading(false);
+            if (isAuthenticated) {
+                const progressData = await fetchCourseProgress(id);
+                setProgress(progressData); 
+            } else {
+                setProgress(null);
             }
-        };
 
+        } catch (err) {
+            console.error("Błąd ładowania kursu:", err);
+            setProgress(null); 
+            setError("Nie udało się załadować kursu lub wystąpił błąd komunikacji. Spróbuj odświeżyć stronę.");
+        } finally {
+            setLoading(false);
+        }
+    }, [id, isAuthenticated]);
+
+    useEffect(() => {
         loadCourse();
-    }, [id, user]);
+    }, [loadCourse]);
 
     useEffect(() => {
         if (course && progress && !selectedLesson && !selectedQuiz) {
@@ -90,7 +90,7 @@ const CourseView = ({ course: courseIdProp }) => {
     };
 
     const handleCompleteLesson = async (lessonId) => {
-        if (!user) return;
+        if (!isAuthenticated) return;
         try {
             await markLessonCompleted(lessonId);
             setProgress(prev => ({
@@ -99,25 +99,29 @@ const CourseView = ({ course: courseIdProp }) => {
             }));
         } catch (error) {
             console.error("Błąd oznaczania lekcji jako ukończonej:", error);
+            alert("Nie udało się oznaczyć lekcji jako ukończonej."); 
         }
     };
 
     const handleEnroll = async () => {
-        if (!user) {
+        if (!isAuthenticated) {
             navigate('/login');
             return;
         }
+        
         try {
-            await fetchUserEnrollment(id);
-            const progressData = await fetchCourseProgress(id);
-            setProgress(progressData);
+            await fetchUserEnrollment(id); 
+            alert("Pomyślnie zapisano na kurs!");
+            await loadCourse(); 
         } catch (error) {
             console.error("Błąd zapisania na kurs:", error);
+            alert(`Nie udało się zapisać na kurs. Spróbuj ponownie. Szczegóły: ${error.message}`); 
         }
     };
 
     if (loading) return <div className="loading-container">Ładowanie kursu...</div>;
-    if (error) return <div className="error-message">{error}</div>;
+    
+    if (error) return <div className="error-message">{error}</div>; 
     if (!course) return <div className="error-message">Kurs nie znaleziony.</div>;
 
     const currentContent = selectedLesson || selectedQuiz;
