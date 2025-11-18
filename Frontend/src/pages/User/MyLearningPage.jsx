@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { fetchMyEnrollments } from '../../services/api';
+import { CourseCard } from '../../components/Course/CourseCard'; 
+import '../../styles/components/App.css';
 import '../../styles/pages/MyLearningPage.css';
 
-const MyLearningPage = () => {
+const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const loadEnrollments = async () => {
@@ -26,73 +26,68 @@ const MyLearningPage = () => {
     loadEnrollments();
   }, []);
 
+  // POPRAWKA: Używamy onCourseClick przekazanego z App.jsx, aby poprawnie zmienić widok
   const handleContinue = (courseId) => {
-    navigate(`/course-view/${courseId}`);
+    if (onCourseClick) {
+        onCourseClick(courseId);
+    }
   };
 
-  if (loading) return <div className="loading-spinner">Ładowanie kursów...</div>;
-  if (error) return <div className="error-message">{error}</div>;
+  if (loading) return <main className="main-content"><div className="loading-container">Ładowanie kursów...</div></main>;
+  if (error) return <main className="main-content"><div className="error-container">{error}</div></main>;
 
   return (
-    <div className="my-learning-container">
-      <h1 className="page-title">Moja nauka</h1>
+    <main className="main-content">
+      <h2 className="page-title" style={{ borderBottom: '1px solid #333', paddingBottom: '15px', marginBottom: '30px' }}>
+        Moja nauka
+      </h2>
       
       {enrolledCourses.length === 0 ? (
-        <div className="empty-state">
-          <p>Nie jesteś jeszcze zapisany na żaden kurs.</p>
-          <button onClick={() => navigate('/search')} className="browse-btn">
+        <div className="empty-favorites-container">
+          <h3>Nie jesteś jeszcze zapisany na żaden kurs.</h3>
+          <button onClick={onNavigateToHome} className="browse-courses-button">
             Przeglądaj kursy
           </button>
         </div>
       ) : (
-        <div className="enrolled-courses-grid">
+        <div className="courses-list">
           {enrolledCourses.map((item) => {
-            // ZABEZPIECZENIE: Obsługa różnych formatów danych (wielkość liter z API)
             const courseData = item.course || item.Course;
-
-            // Jeśli z jakiegoś powodu dane kursu są puste, pomijamy ten element, żeby nie wywalić aplikacji
             if (!courseData) return null;
 
-            const imageUrl = courseData.imageUrl || courseData.ImageUrl || "/src/course/placeholder_ai.png";
-            const title = courseData.title || courseData.Title || "Bez tytułu";
-            const instructorName = courseData.instructorName || courseData.InstructorName || "Instruktor";
-            const courseId = courseData.id || courseData.Id;
-            const progress = item.progress || item.Progress || 0;
+            const mappedCourse = {
+                id: courseData.id || courseData.Id,
+                title: courseData.title || courseData.Title,
+                imageSrc: courseData.imageUrl || courseData.ImageUrl || "/src/course/placeholder_ai.png",
+                instructor: courseData.instructorName || courseData.InstructorName || "Instruktor",
+                rating: 0,
+                iconColor: '#2a2a2a' 
+            };
+
+            // Zabezpieczenie: Pobieramy postęp, domyślnie 0
+            const progressValue = item.progress !== undefined ? item.progress : (item.Progress || 0);
 
             return (
-              <div key={item.id || item.Id} className="course-card-learning">
-                <div className="course-image-wrapper">
-                  <img 
-                      src={imageUrl} 
-                      alt={title} 
-                      className="course-image" 
-                  />
-                </div>
-                <div className="course-info">
-                  <h3 className="course-title">{title}</h3>
-                  <p className="course-instructor">{instructorName}</p>
-                  
-                  <div className="progress-bar-container">
-                    <div 
-                      className="progress-bar-fill" 
-                      style={{ width: `${progress}%` }}
-                    ></div>
-                  </div>
-                  <span className="progress-text">{progress}% ukończono</span>
-                  
+              <CourseCard
+                key={item.id || item.Id}
+                course={mappedCourse}
+                onClick={() => handleContinue(mappedCourse.id)}
+                progress={progressValue}
+                showFavoriteButton={false}
+                showInstructor={true}
+              >
                   <button 
-                      className="continue-btn"
-                      onClick={() => handleContinue(courseId)}
+                      className="card-continue-button"
+                      onClick={(e) => { e.stopPropagation(); handleContinue(mappedCourse.id); }}
                   >
                       Kontynuuj
                   </button>
-                </div>
-              </div>
+              </CourseCard>
             );
           })}
         </div>
       )}
-    </div>
+    </main>
   );
 };
 

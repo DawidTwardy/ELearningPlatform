@@ -16,10 +16,10 @@ const QuizView = ({ quiz, courseId }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const handleAnswerChange = (questionId, answerOptionId) => {
+    const handleAnswerChange = (questionIndex, answerOptionId) => {
         setUserAnswers(prev => ({
             ...prev,
-            [questionId]: answerOptionId
+            [questionIndex]: answerOptionId
         }));
     };
 
@@ -48,10 +48,14 @@ const QuizView = ({ quiz, courseId }) => {
 
         const submitDto = {
             quizId: quizId,
-            answers: Object.entries(userAnswers).map(([qId, aId]) => ({
-                questionId: parseInt(qId),
-                answerOptionId: parseInt(aId)
-            }))
+            answers: Object.entries(userAnswers).map(([qIndex, aId]) => {
+                const question = questions[parseInt(qIndex)];
+                const qId = question.id || question.Id || question.questionId || question.QuestionId;
+                return {
+                    questionId: parseInt(qId),
+                    answerOptionId: parseInt(aId)
+                };
+            })
         };
 
         try {
@@ -109,7 +113,6 @@ const QuizView = ({ quiz, courseId }) => {
     }
 
     const currentQuestion = questions[currentQuestionIndex];
-    const qId = currentQuestion.id || currentQuestion.Id || currentQuestion.questionId || currentQuestion.QuestionId;
     const qText = currentQuestion.text || currentQuestion.Text;
     const options = currentQuestion.options || currentQuestion.Options || [];
     const isLastQuestion = currentQuestionIndex === questions.length - 1;
@@ -124,34 +127,36 @@ const QuizView = ({ quiz, courseId }) => {
             <div className="question-block" style={{ marginBottom: '30px', background: '#2a2a2a', padding: '20px', borderRadius: '8px', minHeight: '200px' }}>
                 <h3 style={{ color: '#ddd', marginTop: 0, fontSize: '20px' }}>{qText}</h3>
                 <div className="answer-options" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
-                    {options.map(opt => {
+                    {options.map((opt, index) => {
                         const optId = opt.id || opt.Id || opt.answerOptionId || opt.AnswerOptionId;
                         const optText = opt.text || opt.Text;
-                        const isSelected = userAnswers[qId] === optId;
+                        const isSelected = userAnswers[currentQuestionIndex] === optId;
+                        const uniqueKey = optId || `opt-${index}`;
 
                         return (
                             <label 
-                                key={optId} 
+                                key={uniqueKey} 
                                 className={`answer-option-label ${isSelected ? 'selected' : ''}`}
                                 style={{
                                     padding: '15px',
-                                    background: isSelected ? '#3f51b5' : '#333',
+                                    background: isSelected ? '#444' : '#333',
                                     borderRadius: '5px',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     color: '#fff',
-                                    transition: 'background 0.2s',
-                                    border: '1px solid #444'
+                                    transition: 'all 0.2s',
+                                    border: isSelected ? '1px solid #fff' : '1px solid #444',
+                                    boxShadow: isSelected ? '0 0 5px rgba(255,255,255,0.2)' : 'none'
                                 }}
                             >
                                 <input
                                     type="radio"
-                                    name={`q-${qId}`}
+                                    name={`q-index-${currentQuestionIndex}`}
                                     value={optId}
                                     checked={isSelected}
-                                    onChange={() => handleAnswerChange(qId, optId)}
-                                    style={{ marginRight: '15px', transform: 'scale(1.2)' }}
+                                    onChange={() => handleAnswerChange(currentQuestionIndex, optId)}
+                                    style={{ marginRight: '15px', transform: 'scale(1.2)', cursor: 'pointer' }}
                                 />
                                 {optText}
                             </label>

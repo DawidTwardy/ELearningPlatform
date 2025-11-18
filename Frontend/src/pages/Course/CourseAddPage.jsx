@@ -61,32 +61,27 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
     
     const sectionsToSave = sections.map((section, index) => {
         
-        // Lekcje
         const lessonsToSave = section.lessons.map(lesson => {
             let finalContent = "";
-            // KLUCZOWA POPRAWKA: Weryfikujemy, czy content jest obiektem, i wyciągamy właściwy string
+            
             if (typeof lesson.content === 'object' && lesson.content !== null) {
-                // Jeśli jest obiektem z polem 'url' (wideo/plik), to URL jest treścią
                 if (lesson.content.url) {
                     finalContent = lesson.content.url;
                 } 
-                // Jeśli jest obiektem z polem 'text' (edytor Quill), to text jest treścią
                 else if (lesson.content.text) {
                     finalContent = lesson.content.text;
                 }
             } else {
-                // Jeśli jest już prostym stringiem (np. z domyślnej wartości), używamy go
                 finalContent = lesson.content || "";
             }
 
             return {
                 title: lesson.title,
                 type: lesson.type,
-                content: finalContent, // Teraz jest to zawsze czysty string
+                content: finalContent,
             };
         });
         
-        // Quiz
         const hasQuizQuestions = section.quiz && section.quiz.questions && section.quiz.questions.length > 0;
         
         const quizToSave = hasQuizQuestions ? {
@@ -119,9 +114,11 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
     const newCourseData = { 
         title: title, 
         description: description || "", 
-        imageSrc: thumbnailUrl || "/src/course/placeholder_default.png", 
-        instructor: "Instruktor Mock", 
-        rating: 5.0, 
+        imageUrl: thumbnailUrl || "/src/course/placeholder_default.png", 
+        price: 0,
+        category: "Ogólny",
+        level: "Początkujący",
+        rating: 0, 
         sections: sectionsToSave
     };
 

@@ -51,6 +51,18 @@ const fetchCourseProgress = async (courseId) => {
     return handleResponse(response);
 };
 
+// NOWA FUNKCJA: Pobiera listę ukończonych lekcji
+const fetchCompletedLessons = async (courseId) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Progress/course/${courseId}/completed-lessons`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+    return handleResponse(response);
+};
+
 const markLessonCompleted = async (lessonId) => {
     const token = getAuthToken();
     const response = await fetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/complete`, {
@@ -146,6 +158,7 @@ export {
     markLessonCompleted,
     fetchUserEnrollment,
     fetchCourseProgress,
+    fetchCompletedLessons, // Eksportujemy nową funkcję
     fetchComments,
     createComment,
     updateComment,

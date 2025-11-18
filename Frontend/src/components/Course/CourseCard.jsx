@@ -1,11 +1,21 @@
 import React from 'react';
 import { FavoriteHeart } from './FavoriteHeart';
-// Importujemy StarRating jako domyślny export
 import StarRating from './StarRating';
 
 export const CourseCard = ({ course, onClick, isFavorite, onFavoriteToggle, showInstructor = true, onEdit, showFavoriteButton = true, progress, onShowCertificate, children }) => {
     const isCompleted = progress === 100;
     
+    const getInstructorName = () => {
+        if (!course.instructor) return "";
+        if (typeof course.instructor === 'object') {
+            return course.instructor.name || course.instructor.userName || "Instruktor";
+        }
+        return course.instructor;
+    };
+
+    // POPRAWKA: Wyświetlamy pasek zawsze, gdy progress jest zdefiniowany (nawet jeśli wynosi 0)
+    const showProgress = progress !== null && progress !== undefined;
+
     return (
         <div 
             className={`course-card ${isCompleted ? 'completed' : ''}`} 
@@ -17,7 +27,7 @@ export const CourseCard = ({ course, onClick, isFavorite, onFavoriteToggle, show
                 style={{ backgroundColor: course.iconColor }} 
             >
                 <img 
-                    src={course.imageSrc} 
+                    src={course.imageSrc || course.imageUrl} 
                     alt={course.title} 
                     className="card-image" 
                     onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/250x140/1B1B1B/FFFFFF?text=Kurs' }}
@@ -33,22 +43,19 @@ export const CourseCard = ({ course, onClick, isFavorite, onFavoriteToggle, show
 
             <div className="card-info">
                 <h3 className="course-title">{course.title}</h3>
-                {showInstructor && <p className="course-instructor">{course.instructor}</p>}
+                {showInstructor && <p className="course-instructor">{getInstructorName()}</p>}
                 
-                {/* POPRAWKA:
-                  Renderujemy 'children' (gwiazdki) w tym miejscu TYLKO wtedy, 
-                  gdy NIE są to przyciski admina (czyli onEdit NIE jest równe null).
-                */}
                 { onEdit !== null && children } 
             </div>
             
-            {progress > 0 && (
+            {showProgress && (
                 <div className="progress-bar-container">
                     <div 
                         className={`progress-bar-fill ${isCompleted ? 'completed' : ''}`}
                         style={{ width: `${progress}%` }}
                     ></div>
-                    <span className="progress-bar-text">{progress}%</span>
+                    {/* POPRAWKA: Tekst procentowy zawsze widoczny na pasku */}
+                    <span className="progress-bar-text">{Math.round(progress)}%</span>
                 </div>
             )}
             
@@ -64,10 +71,6 @@ export const CourseCard = ({ course, onClick, isFavorite, onFavoriteToggle, show
                 </button>
             )}
             
-            {/* TA LINIA JEST POPRAWNA:
-              Renderuje 'children' (przyciski admina) na dole karty, 
-              gdy 'onEdit' jest jawnie ustawione na 'null'.
-            */}
             { (onEdit === null) && !onShowCertificate && children }
         </div>
     );

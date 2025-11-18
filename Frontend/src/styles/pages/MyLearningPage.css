@@ -1,24 +1,25 @@
-.learning-page-title {
-    font-size: 1.6em;
-    margin-bottom: 25px;
-    font-weight: bold;
+.card-continue-button {
+    margin-top: 12px;
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    font-size: 0.9rem;
 }
 
-.learning-section {
-    margin-bottom: 40px;
+.card-continue-button:hover {
+    background-color: #0056b3;
 }
 
-.learning-section-title {
-    font-size: 1.3em;
-    color: #E0E0E0;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #333;
-}
-
+/* Style paska postępu */
 .progress-bar-container {
-    width: 90%;
-    margin: 15px auto 0 auto;
+    width: 100%;
+    margin: 12px 0 0 0;
     background-color: #333;
     border-radius: 10px;
     height: 16px;
@@ -34,6 +35,7 @@
     transition: width 0.4s ease;
 }
 
+/* Styl tekstu na pasku - wycentrowany i biały */
 .progress-bar-text {
     position: absolute;
     width: 100%;
@@ -41,11 +43,13 @@
     left: 50%;
     transform: translate(-50%, -50%);
     color: white;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: bold;
     text-align: center;
     line-height: 16px;
     text-shadow: 0 0 2px rgba(0,0,0,0.8);
+    pointer-events: none; /* Aby tekst nie blokował kliknięć */
+    z-index: 2;
 }
 
 .progress-bar-fill.completed {
@@ -53,9 +57,41 @@
 }
 
 .course-card.completed .card-image {
-    opacity: 0.7;
+    opacity: 0.6;
+    filter: grayscale(40%);
 }
 
 .course-card.completed {
-    background-color: #181818;
+    background-color: #1e1e1e;
+    border-color: #333;
+}
+
+.empty-favorites-container {
+    text-align: center;
+    padding: 60px;
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    margin-top: 20px;
+    border: 1px solid #333;
+}
+
+.empty-favorites-container h3 {
+    font-size: 1.2em;
+    color: #aaa;
+    margin-bottom: 20px;
+}
+
+.browse-courses-button {
+    padding: 12px 24px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.browse-courses-button:hover {
+    background-color: #45a049;
 }
