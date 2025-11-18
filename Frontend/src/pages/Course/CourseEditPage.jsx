@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../../styles/pages/CourseEditPage.css';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -8,6 +8,7 @@ const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
 
     const parsedSections = course.sections.map(section => {
+        // 1. Parsowanie Lekcji (istniejąca logika)
         if (section.lessons) {
             section.lessons = section.lessons.map(lesson => {
                 let parsedContent = lesson.content;
@@ -39,6 +40,17 @@ const deepParseCourseContent = (course) => {
                 };
             });
         }
+
+        // 2. Parsowanie Quizu (NOWA LOGIKA NAPRAWIAJĄCA RADIO BUTTONY)
+        if (section.quiz && section.quiz.questions) {
+            section.quiz.questions = section.quiz.questions.map(q => ({
+                ...q,
+                // Backend zwraca 'questionType' lub 'QuestionType', frontend używa 'type'.
+                // Jeśli 'type' jest pusty, bierzemy z API, a jeśli nic nie ma - domyślnie 'single'.
+                type: q.type || q.questionType || q.QuestionType || 'single'
+            }));
+        }
+
         return section;
     });
 
@@ -94,12 +106,12 @@ export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
   }
 };
 
-export const OptionEditor = ({ option, questionType, onOptionChange, onCorrectChange }) => {
+export const OptionEditor = ({ option, questionType, onOptionChange, onCorrectChange, onDeleteOption }) => {
   return (
     <div className="option-item">
       <input 
         type={questionType === 'single' ? 'radio' : 'checkbox'}
-        name={`correct-option-${option.questionId}`}
+        name={`correct-option-${option.questionId}`} // Grupowanie radio buttonów per pytanie
         checked={option.isCorrect || false}
         onChange={(e) => onCorrectChange(e.target.checked)}
         className="option-checkbox"
@@ -111,11 +123,20 @@ export const OptionEditor = ({ option, questionType, onOptionChange, onCorrectCh
         onChange={(e) => onOptionChange('text', e.target.value)}
         className="edit-input-option"
       />
+      <button 
+        type="button" 
+        className="edit-btn-delete-small" 
+        onClick={onDeleteOption}
+        title="Usuń opcję"
+        style={{ marginLeft: '10px', background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}
+      >
+        ✕
+      </button>
     </div>
   );
 };
 
-export const QuestionEditor = ({ question, onQuestionChange, onOptionChange, onAddOption, onCorrectOptionChange }) => {
+export const QuestionEditor = ({ question, onQuestionChange, onOptionChange, onAddOption, onCorrectOptionChange, onDeleteQuestion, onDeleteOption }) => {
   return (
     <div className="question-item">
       <div className="question-item-header">
@@ -134,6 +155,14 @@ export const QuestionEditor = ({ question, onQuestionChange, onOptionChange, onA
           <option value="single">Jednokrotny wybór</option>
           <option value="multiple">Wielokrotny wybór</option>
         </select>
+        <button 
+            type="button" 
+            className="edit-btn-secondary" 
+            onClick={onDeleteQuestion}
+            style={{ marginLeft: '10px', padding: '5px 10px', backgroundColor: '#ff4444', color: 'white', borderColor: '#ff4444' }}
+        >
+            Usuń pytanie
+        </button>
       </div>
       
       <div className="options-list">
@@ -141,9 +170,10 @@ export const QuestionEditor = ({ question, onQuestionChange, onOptionChange, onA
           <OptionEditor 
             key={option.id}
             option={{...option, questionId: question.id}}
-            questionType={question.type}
+            questionType={question.type} // Przekazujemy typ pytania do opcji
             onOptionChange={(field, value) => onOptionChange(option.id, field, value)}
             onCorrectChange={(isChecked) => onCorrectOptionChange(option.id, isChecked)}
+            onDeleteOption={() => onDeleteOption(option.id)}
           />
         ))}
       </div>
@@ -183,8 +213,10 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
       if (q.id === questionId) {
         let newOptions;
         if (q.type === 'single') {
+          // Dla Single Choice: zaznacz klikniętą, odznacz pozostałe
           newOptions = q.options.map(o => ({ ...o, isCorrect: o.id === optionId }));
         } else {
+          // Dla Multiple Choice: po prostu zmień stan klikniętej
           newOptions = q.options.map(o => 
             o.id === optionId ? { ...o, isCorrect: isChecked } : o
           );
@@ -212,6 +244,13 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
       questions: [...(quiz?.questions || []), newQuestion] 
     });
   };
+
+  const deleteQuestion = (questionId) => {
+      if (window.confirm("Czy na pewno chcesz usunąć to pytanie?")) {
+        const newQuestions = quiz.questions.filter(q => q.id !== questionId);
+        onQuizChange({ ...quiz, questions: newQuestions });
+      }
+  };
   
   const addOption = (questionId) => {
      const newQuestions = quiz.questions.map(q => {
@@ -227,6 +266,19 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
     });
     onQuizChange({ ...quiz, questions: newQuestions });
   };
+
+  const deleteOption = (questionId, optionId) => {
+    const newQuestions = quiz.questions.map(q => {
+        if (q.id === questionId) {
+            return {
+                ...q,
+                options: q.options.filter(o => o.id !== optionId)
+            };
+        }
+        return q;
+    });
+    onQuizChange({ ...quiz, questions: newQuestions });
+  };
   
   return (
     <div className="quiz-editor-wrapper">
@@ -238,6 +290,8 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
           onOptionChange={(optionId, field, value) => updateOption(q.id, optionId, field, value)}
           onAddOption={() => addOption(q.id)}
           onCorrectOptionChange={(optionId, isChecked) => handleCorrectChange(q.id, optionId, isChecked)}
+          onDeleteQuestion={() => deleteQuestion(q.id)}
+          onDeleteOption={(optionId) => deleteOption(q.id, optionId)}
         />
       ))}
       <button type="button" className="edit-btn-add-question" onClick={addQuestion}>
@@ -349,7 +403,7 @@ const CourseEditPage = ({ course, onBack }) => {
                      return { 
                          Id: qId,
                          Text: q.text,
-                         QuestionType: q.type,
+                         QuestionType: q.type || 'single', // Zabezpieczenie przy zapisie
                          Options: options
                      };
                  });
@@ -510,6 +564,12 @@ const CourseEditPage = ({ course, onBack }) => {
     };
     setSections([...sections, newSection]);
   };
+
+  const deleteSection = (sectionId) => {
+      if(window.confirm("Czy na pewno chcesz usunąć całą sekcję wraz z lekcjami i quizem?")) {
+          setSections(prevSections => prevSections.filter(s => s.id !== sectionId));
+      }
+  };
   
   const addLesson = (sectionId) => {
      setSections(prevSections =>
@@ -529,6 +589,22 @@ const CourseEditPage = ({ course, onBack }) => {
         return section;
       })
     );
+  };
+
+  const deleteLesson = (sectionId, lessonId) => {
+      if(window.confirm("Czy na pewno chcesz usunąć tę lekcję?")) {
+        setSections(prevSections =>
+            prevSections.map(section => {
+              if (section.id === sectionId) {
+                return {
+                  ...section,
+                  lessons: section.lessons.filter(l => l.id !== lessonId)
+                };
+              }
+              return section;
+            })
+          );
+      }
   };
 
   return (
@@ -606,12 +682,23 @@ const CourseEditPage = ({ course, onBack }) => {
               
               return (
                 <div key={section.id} className="section-item">
-                  <input
-                    type="text"
-                    className="edit-input-section"
-                    value={section.title}
-                    onChange={(e) => updateSectionField(section.id, 'title', e.target.value)} 
-                  />
+                   <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                        <input
+                            type="text"
+                            className="edit-input-section"
+                            value={section.title}
+                            onChange={(e) => updateSectionField(section.id, 'title', e.target.value)} 
+                            style={{ flex: 1, margin: 0 }}
+                        />
+                        <button 
+                            type="button" 
+                            className="edit-btn-secondary" 
+                            onClick={() => deleteSection(section.id)}
+                            style={{ backgroundColor: '#ff4444', color: 'white', borderColor: '#ff4444' }}
+                        >
+                            Usuń Sekcję
+                        </button>
+                  </div>
                   
                   <h4 
                     className={`collapsible-header ${areLessonsOpen ? 'open' : ''}`}
@@ -640,6 +727,14 @@ const CourseEditPage = ({ course, onBack }) => {
                               <option value="pdf">PDF</option>
                               <option value="text">Tekst</option>
                             </select>
+                             <button 
+                                type="button" 
+                                className="edit-btn-secondary" 
+                                onClick={() => deleteLesson(section.id, lesson.id)}
+                                style={{ backgroundColor: '#ff4444', color: 'white', borderColor: '#ff4444', padding: '5px 10px', marginLeft: '10px', fontSize: '12px' }}
+                            >
+                                Usuń
+                            </button>
                           </div>
                           <LessonContentInput 
                             lesson={lesson}

@@ -62,64 +62,56 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
     const sectionsToSave = sections.map((section, index) => {
         
         const lessonsToSave = section.lessons.map(lesson => {
-            let finalContent = "";
+            let contentStr = "";
             
             if (typeof lesson.content === 'object' && lesson.content !== null) {
-                if (lesson.content.url) {
-                    finalContent = lesson.content.url;
-                } 
-                else if (lesson.content.text) {
-                    finalContent = lesson.content.text;
-                }
+                contentStr = JSON.stringify(lesson.content);
             } else {
-                finalContent = lesson.content || "";
+                contentStr = lesson.content || "";
             }
 
             return {
-                title: lesson.title,
-                type: lesson.type,
-                content: finalContent,
+                Title: lesson.title,
+                Content: contentStr,
             };
         });
         
         const hasQuizQuestions = section.quiz && section.quiz.questions && section.quiz.questions.length > 0;
         
         const quizToSave = hasQuizQuestions ? {
-            title: section.quiz.title || `Test: ${section.title}` || "Test podsumowujący",
-            questions: (section.quiz.questions || []).map(question => {
+            Title: section.quiz.title || `Test: ${section.title}` || "Test podsumowujący",
+            Questions: (section.quiz.questions || []).map(question => {
                 const optionsToSave = (question.options || question.answers || []).map(option => ({
-                    text: option.text, 
-                    isCorrect: option.isCorrect
+                    Text: option.text, 
+                    IsCorrect: option.isCorrect
                 }));
                 
                 return {
-                    text: question.text,
-                    questionType: question.questionType, 
-                    options: optionsToSave 
+                    Text: question.text,
+                    QuestionType: question.questionType || 'single', 
+                    Options: optionsToSave 
                 };
             })
         } : null;
 
 
-        const sectionObject = {
-            title: section.title, 
-            order: index + 1,
-            lessons: lessonsToSave,
-            ...(quizToSave && { quiz: quizToSave })
+        return {
+            Title: section.title, 
+            Order: index + 1,
+            Lessons: lessonsToSave,
+            Quiz: quizToSave
         };
-        
-        return sectionObject;
     });
 
     const newCourseData = { 
-        title: title, 
-        description: description || "", 
-        imageUrl: thumbnailUrl || "/src/course/placeholder_default.png", 
-        price: 0,
-        category: "Ogólny",
-        level: "Początkujący",
-        rating: 0, 
-        sections: sectionsToSave
+        Title: title, 
+        Description: description || "", 
+        ImageUrl: thumbnailUrl || "/src/course/placeholder_default.png", 
+        Price: 0,
+        Category: "Ogólny",
+        Level: "Początkujący",
+        Rating: 0, 
+        Sections: sectionsToSave
     };
 
     const apiUrl = 'http://localhost:7115/api/Courses';
@@ -271,6 +263,12 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
       [`quiz-${newSection.id}`]: true,
     }));
   };
+
+  const deleteSection = (sectionId) => {
+      if(window.confirm("Czy na pewno chcesz usunąć tę sekcję?")) {
+          setSections(prevSections => prevSections.filter(s => s.id !== sectionId));
+      }
+  };
   
   const addLesson = (sectionId) => {
     setSections(prevSections =>
@@ -290,6 +288,22 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
         return section;
       })
     );
+  };
+
+  const deleteLesson = (sectionId, lessonId) => {
+      if(window.confirm("Czy na pewno chcesz usunąć tę lekcję?")) {
+        setSections(prevSections =>
+            prevSections.map(section => {
+              if (section.id === sectionId) {
+                return {
+                  ...section,
+                  lessons: section.lessons.filter(l => l.id !== lessonId)
+                };
+              }
+              return section;
+            })
+          );
+      }
   };
 
   return (
@@ -367,12 +381,23 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
               
               return (
                 <div key={section.id} className="section-item">
-                  <input
-                    type="text"
-                    className="edit-input-section"
-                    value={section.title}
-                    onChange={(e) => updateSectionField(section.id, 'title', e.target.value)}
-                  />
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                        <input
+                            type="text"
+                            className="edit-input-section"
+                            value={section.title}
+                            onChange={(e) => updateSectionField(section.id, 'title', e.target.value)}
+                            style={{ flex: 1, margin: 0 }}
+                        />
+                        <button 
+                            type="button" 
+                            className="edit-btn-secondary" 
+                            onClick={() => deleteSection(section.id)}
+                            style={{ backgroundColor: '#ff4444', color: 'white', borderColor: '#ff4444' }}
+                        >
+                            Usuń Sekcję
+                        </button>
+                  </div>
                   
                   <h4 
                     className={`collapsible-header ${areLessonsOpen ? 'open' : ''}`}
@@ -401,6 +426,14 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
                               <option value="pdf">PDF</option>
                               <option value="text">Tekst</option>
                             </select>
+                            <button 
+                                type="button" 
+                                className="edit-btn-secondary" 
+                                onClick={() => deleteLesson(section.id, lesson.id)}
+                                style={{ backgroundColor: '#ff4444', color: 'white', borderColor: '#ff4444', padding: '5px 10px', marginLeft: '10px', fontSize: '12px' }}
+                            >
+                                Usuń
+                            </button>
                           </div>
                           <LessonContentInput 
                             lesson={lesson}

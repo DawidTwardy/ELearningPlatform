@@ -18,34 +18,8 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 7,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "CoursesController.cs",
-              "DocumentMoniker": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\CoursesController.cs",
-              "RelativeDocumentMoniker": "Controllers\\CoursesController.cs",
-              "ToolTip": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\CoursesController.cs",
-              "RelativeToolTip": "Controllers\\CoursesController.cs",
-              "ViewState": "AgIAAAABAAAAAAAAAAAwwBsBAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-18T21:53:29.109Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "Lesson.cs",
-              "DocumentMoniker": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Models\\CourseContent\\Lesson.cs",
-              "RelativeDocumentMoniker": "Models\\CourseContent\\Lesson.cs",
-              "ToolTip": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Models\\CourseContent\\Lesson.cs",
-              "RelativeToolTip": "Models\\CourseContent\\Lesson.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAIAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-18T20:49:37.071Z",
-              "EditorCaption": ""
-            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
@@ -73,6 +47,31 @@
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{eefa5220-e298-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "CoursesController.cs",
+              "DocumentMoniker": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\CoursesController.cs",
+              "RelativeDocumentMoniker": "Controllers\\CoursesController.cs",
+              "ToolTip": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\CoursesController.cs",
+              "RelativeToolTip": "Controllers\\CoursesController.cs",
+              "ViewState": "AgIAADEBAAAAAAAAAAAwwEYBAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-18T21:53:29.109Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Lesson.cs",
+              "DocumentMoniker": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Models\\CourseContent\\Lesson.cs",
+              "RelativeDocumentMoniker": "Models\\CourseContent\\Lesson.cs",
+              "ToolTip": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Models\\CourseContent\\Lesson.cs",
+              "RelativeToolTip": "Models\\CourseContent\\Lesson.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-18T20:49:37.071Z"
             }
           ]
         },

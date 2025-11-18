@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchCourseDetails, markLessonCompleted, fetchCompletedLessons } from '../../services/api';
+import { fetchCourseDetails, markLessonCompleted, fetchCompletedLessons, fetchCompletedQuizzes } from '../../services/api';
 import QuizView from './QuizView';
 import DiscussionThread from './DiscussionThread';
 import '../../styles/pages/CourseView.css';
@@ -13,7 +13,8 @@ const CourseView = ({ course: courseProp, onBack }) => {
     const [currentContent, setCurrentContent] = useState(null);
     const [loading, setLoading] = useState(true);
     const [expandedSections, setExpandedSections] = useState({});
-    const [completedLessonIds, setCompletedLessonIds] = useState([]); // Stan przechowujący ID ukończonych lekcji
+    const [completedLessonIds, setCompletedLessonIds] = useState([]); 
+    const [completedQuizIds, setCompletedQuizIds] = useState([]); 
     const [error, setError] = useState(null);
 
     const getCourseId = () => {
@@ -34,16 +35,17 @@ const CourseView = ({ course: courseProp, onBack }) => {
             try {
                 setLoading(true);
                 
-                // Pobieramy szczegóły kursu ORAZ listę ukończonych lekcji równolegle
-                const [courseData, completedIds] = await Promise.all([
+                const [courseData, completedIds, completedQuizzes] = await Promise.all([
                     fetchCourseDetails(courseId),
-                    fetchCompletedLessons(courseId).catch(() => []) // Jeśli failnie, zwróć pustą tablicę
+                    fetchCompletedLessons(courseId).catch(() => []), 
+                    fetchCompletedQuizzes(courseId).catch(() => [])
                 ]);
                 
                 if (!courseData) throw new Error("Brak danych");
                 
                 setCourse(courseData);
                 setCompletedLessonIds(completedIds);
+                setCompletedQuizIds(completedQuizzes);
                 
                 const sections = courseData.sections || courseData.Sections || [];
                 if (sections.length > 0) {
@@ -80,7 +82,6 @@ const CourseView = ({ course: courseProp, onBack }) => {
             const lessonId = lesson.id || lesson.Id;
             if (lessonId) {
                 await markLessonCompleted(lessonId);
-                // Aktualizuj lokalny stan ukończonych lekcji, aby odświeżyć UI (sekcja completed)
                 if (!completedLessonIds.includes(lessonId)) {
                     setCompletedLessonIds(prev => [...prev, lessonId]);
                 }
@@ -90,6 +91,12 @@ const CourseView = ({ course: courseProp, onBack }) => {
 
     const handleQuizSelect = (quiz) => {
         setCurrentContent({ ...quiz, contentType: 'quiz' });
+    };
+
+    const handleQuizPassed = (quizId) => {
+        if (!completedQuizIds.includes(quizId)) {
+            setCompletedQuizIds(prev => [...prev, quizId]);
+        }
     };
 
     const handleBack = () => {
@@ -103,7 +110,11 @@ const CourseView = ({ course: courseProp, onBack }) => {
         if (currentContent.contentType === 'quiz') {
             return (
                 <div className="notes-container">
-                    <QuizView quiz={currentContent} courseId={courseId} />
+                    <QuizView 
+                        quiz={currentContent} 
+                        courseId={courseId} 
+                        onQuizPassed={handleQuizPassed}
+                    />
                 </div>
             );
         }
@@ -173,8 +184,9 @@ const CourseView = ({ course: courseProp, onBack }) => {
                         const lessons = section.lessons || section.Lessons || [];
                         const quiz = section.quiz || section.Quiz;
 
-                        // Sprawdź, czy wszystkie lekcje w tej sekcji są ukończone
-                        const isSectionCompleted = lessons.length > 0 && lessons.every(l => completedLessonIds.includes(l.id || l.Id));
+                        const isSectionCompleted = 
+                            (lessons.length === 0 || lessons.every(l => completedLessonIds.includes(l.id || l.Id))) &&
+                            (!quiz || completedQuizIds.includes(quiz.id || quiz.Id));
 
                         return (
                             <div key={secId}>
@@ -214,10 +226,13 @@ const CourseView = ({ course: courseProp, onBack }) => {
                                         {quiz && (
                                             <p
                                                 className={`quiz-item ${currentContent?.id === (quiz.id || quiz.Id) && currentContent?.contentType === 'quiz' ? 'active-quiz' : ''}`}
-                                                style={{ color: '#ffeb3b', fontWeight: 'bold', cursor: 'pointer' }} 
+                                                style={{ color: '#ffeb3b', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} 
                                                 onClick={() => handleQuizSelect(quiz)}
                                             >
-                                                📝 Test: {quiz.title || quiz.Title}
+                                                <span>📝 Test: {quiz.title || quiz.Title}</span>
+                                                {completedQuizIds.includes(quiz.id || quiz.Id) && (
+                                                    <span style={{ color: '#4CAF50', fontSize: '0.8em' }}>✔</span>
+                                                )}
                                             </p>
                                         )}
                                     </div>

@@ -3,7 +3,7 @@ import '../../styles/pages/QuizView.css';
 
 const API_BASE_URL = 'http://localhost:7115/api/quizzes';
 
-const QuizView = ({ quiz, courseId }) => {
+const QuizView = ({ quiz, courseId, onQuizPassed }) => {
     if (!quiz) return <div className="quiz-view-container">Brak danych quizu.</div>;
 
     const quizId = quiz.id || quiz.Id;
@@ -74,6 +74,11 @@ const QuizView = ({ quiz, courseId }) => {
 
             const data = await response.json();
             setResult(data);
+            
+            if (data.isPassed && onQuizPassed) {
+                onQuizPassed(quizId);
+            }
+
         } catch (err) {
             console.error(err);
             setError('Nie udało się przesłać quizu. Spróbuj ponownie.');

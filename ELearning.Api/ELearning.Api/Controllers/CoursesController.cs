@@ -218,6 +218,7 @@ namespace ELearning.Api.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
+            // 1. Pobierz istniejący kurs ze wszystkimi zależnościami
             var existingCourse = await _context.Courses
                 .Include(c => c.Sections)
                     .ThenInclude(s => s.Lessons)
@@ -234,6 +235,7 @@ namespace ELearning.Api.Controllers
                 return Forbid();
             }
 
+            // 2. Aktualizacja podstawowych pól kursu
             existingCourse.Title = course.Title;
             existingCourse.Description = course.Description;
             existingCourse.Category = course.Category;
@@ -245,39 +247,159 @@ namespace ELearning.Api.Controllers
                 existingCourse.ImageUrl = course.ImageUrl;
             }
 
-            _context.CourseSections.RemoveRange(existingCourse.Sections);
+            // 3. Inteligentna synchronizacja Sekcji (zamiast usuwania wszystkiego)
 
-            if (course.Sections != null && course.Sections.Any())
+            // A. Usuń sekcje, których nie ma w przychodzącym modelu
+            // Jeśli ID sekcji z bazy nie znajduje się w liście ID przychodzących (tych > 0), usuń ją.
+            var incomingSectionIds = course.Sections.Where(s => s.Id > 0).Select(s => s.Id).ToList();
+            var sectionsToDelete = existingCourse.Sections.Where(s => !incomingSectionIds.Contains(s.Id)).ToList();
+
+            foreach (var sectionToDelete in sectionsToDelete)
             {
-                foreach (var section in course.Sections)
+                // Tutaj można dodać logikę usuwania powiązanych postępów jeśli FK blokują usuwanie,
+                // ale zazwyczaj Cascade Delete w bazie powinno to obsłużyć.
+                _context.CourseSections.Remove(sectionToDelete);
+            }
+
+            // B. Aktualizuj istniejące lub Dodaj nowe sekcje
+            foreach (var sectionDto in course.Sections)
+            {
+                if (sectionDto.Id > 0)
                 {
-                    section.Id = 0;
-                    section.CourseId = id;
-
-                    if (section.Lessons != null)
+                    // Aktualizacja istniejącej sekcji
+                    var existingSection = existingCourse.Sections.FirstOrDefault(s => s.Id == sectionDto.Id);
+                    if (existingSection != null)
                     {
-                        foreach (var lesson in section.Lessons)
-                        {
-                            lesson.Id = 0;
-                        }
-                    }
+                        existingSection.Title = sectionDto.Title;
+                        existingSection.Order = sectionDto.Order;
 
-                    if (section.Quiz != null)
-                    {
-                        section.Quiz.Id = 0;
-                        if (section.Quiz.Questions != null)
+                        // --- Synchronizacja Lekcji w Sekcji ---
+                        var incomingLessonIds = sectionDto.Lessons.Where(l => l.Id > 0).Select(l => l.Id).ToList();
+                        var lessonsToDelete = existingSection.Lessons.Where(l => !incomingLessonIds.Contains(l.Id)).ToList();
+
+                        // Usuń lekcje
+                        foreach (var l in lessonsToDelete) _context.Lessons.Remove(l);
+
+                        // Dodaj/Edytuj lekcje
+                        foreach (var lessonDto in sectionDto.Lessons)
                         {
-                            foreach (var q in section.Quiz.Questions)
+                            if (lessonDto.Id == 0)
                             {
-                                q.Id = 0;
-                                if (q.Options != null)
+                                // Nowa lekcja w istniejącej sekcji
+                                existingSection.Lessons.Add(new Lesson
                                 {
-                                    foreach (var o in q.Options) o.Id = 0;
+                                    Title = lessonDto.Title,
+                                    Content = lessonDto.Content,
+                                    VideoUrl = lessonDto.VideoUrl
+                                });
+                            }
+                            else
+                            {
+                                // Edycja istniejącej lekcji
+                                var existingLesson = existingSection.Lessons.FirstOrDefault(l => l.Id == lessonDto.Id);
+                                if (existingLesson != null)
+                                {
+                                    existingLesson.Title = lessonDto.Title;
+                                    existingLesson.Content = lessonDto.Content;
+                                    existingLesson.VideoUrl = lessonDto.VideoUrl;
                                 }
                             }
                         }
+
+                        // --- Synchronizacja Quizu (Uproszczona: jeśli istnieje, aktualizuj; jeśli null w DTO, usuń) ---
+                        if (sectionDto.Quiz != null)
+                        {
+                            if (existingSection.Quiz == null)
+                            {
+                                // Dodaj nowy quiz
+                                sectionDto.Quiz.Id = 0; // Reset ID na wszelki wypadek
+                                // Reset ID pytań/opcji
+                                if (sectionDto.Quiz.Questions != null)
+                                {
+                                    foreach (var q in sectionDto.Quiz.Questions)
+                                    {
+                                        q.Id = 0;
+                                        if (q.Options != null) foreach (var o in q.Options) o.Id = 0;
+                                    }
+                                }
+                                existingSection.Quiz = sectionDto.Quiz;
+                            }
+                            else
+                            {
+                                // Aktualizuj istniejący quiz
+                                existingSection.Quiz.Title = sectionDto.Quiz.Title;
+
+                                // Sync pytań w quizie
+                                var incomingQIds = sectionDto.Quiz.Questions.Where(q => q.Id > 0).Select(q => q.Id).ToList();
+                                var questionsToDelete = existingSection.Quiz.Questions.Where(q => !incomingQIds.Contains(q.Id)).ToList();
+                                foreach (var q in questionsToDelete) _context.Questions.Remove(q);
+
+                                foreach (var qDto in sectionDto.Quiz.Questions)
+                                {
+                                    if (qDto.Id == 0)
+                                    {
+                                        if (qDto.Options != null) foreach (var o in qDto.Options) o.Id = 0;
+                                        existingSection.Quiz.Questions.Add(qDto);
+                                    }
+                                    else
+                                    {
+                                        var existingQ = existingSection.Quiz.Questions.FirstOrDefault(q => q.Id == qDto.Id);
+                                        if (existingQ != null)
+                                        {
+                                            existingQ.Text = qDto.Text;
+                                            existingQ.QuestionType = qDto.QuestionType;
+
+                                            // Sync opcji
+                                            var incomingOIds = qDto.Options.Where(o => o.Id > 0).Select(o => o.Id).ToList();
+                                            var optionsToDelete = existingQ.Options.Where(o => !incomingOIds.Contains(o.Id)).ToList();
+                                            foreach (var o in optionsToDelete) _context.AnswerOptions.Remove(o); // Zakładam, że DbSet to AnswerOptions
+
+                                            foreach (var oDto in qDto.Options)
+                                            {
+                                                if (oDto.Id == 0) existingQ.Options.Add(oDto);
+                                                else
+                                                {
+                                                    var existingO = existingQ.Options.FirstOrDefault(o => o.Id == oDto.Id);
+                                                    if (existingO != null)
+                                                    {
+                                                        existingO.Text = oDto.Text;
+                                                        existingO.IsCorrect = oDto.IsCorrect;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else if (existingSection.Quiz != null)
+                        {
+                            // Użytkownik usunął quiz z sekcji
+                            _context.Quizzes.Remove(existingSection.Quiz);
+                        }
                     }
-                    existingCourse.Sections.Add(section);
+                }
+                else
+                {
+                    // Nowa sekcja (ID == 0)
+                    // Musimy upewnić się, że wszystkie dzieci też mają ID = 0, aby EF je wstawił
+                    if (sectionDto.Lessons != null)
+                    {
+                        foreach (var l in sectionDto.Lessons) l.Id = 0;
+                    }
+                    if (sectionDto.Quiz != null)
+                    {
+                        sectionDto.Quiz.Id = 0;
+                        if (sectionDto.Quiz.Questions != null)
+                        {
+                            foreach (var q in sectionDto.Quiz.Questions)
+                            {
+                                q.Id = 0;
+                                if (q.Options != null) foreach (var o in q.Options) o.Id = 0;
+                            }
+                        }
+                    }
+                    existingCourse.Sections.Add(sectionDto);
                 }
             }
 
@@ -298,6 +420,10 @@ namespace ELearning.Api.Controllers
             }
             catch (Exception ex)
             {
+                // Logowanie szczegółów błędu może pomóc w debugowaniu
+                Console.WriteLine($"Błąd zapisu: {ex.Message}");
+                if (ex.InnerException != null) Console.WriteLine($"Inner: {ex.InnerException.Message}");
+
                 return StatusCode(500, new { title = $"Błąd podczas zapisu kursu: {ex.Message}" });
             }
 

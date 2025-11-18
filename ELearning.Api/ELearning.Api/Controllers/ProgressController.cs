@@ -62,7 +62,6 @@ namespace ELearning.Api.Controllers
             return Ok(currentProgress);
         }
 
-        // NOWA METODA: Zwraca listê ID ukoñczonych lekcji w kursie
         [HttpGet("course/{courseId}/completed-lessons")]
         public async Task<ActionResult<IEnumerable<int>>> GetCompletedLessons(int courseId)
         {
@@ -77,6 +76,23 @@ namespace ELearning.Api.Controllers
                 .ToListAsync();
 
             return Ok(completedLessonIds);
+        }
+
+        [HttpGet("course/{courseId}/completed-quizzes")]
+        public async Task<ActionResult<IEnumerable<int>>> GetCompletedQuizzes(int courseId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var passedQuizIds = await _context.UserQuizAttempts
+                .Include(qa => qa.Quiz)
+                .ThenInclude(q => q.Section)
+                .Where(qa => qa.UserId == userId && qa.Quiz.Section.CourseId == courseId && qa.IsPassed)
+                .Select(qa => qa.QuizId)
+                .Distinct()
+                .ToListAsync();
+
+            return Ok(passedQuizIds);
         }
 
         [HttpPost("lesson/{lessonId}/complete")]

@@ -3,8 +3,8 @@
   "WorkspaceRootPath": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\CoursesController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Controllers\\CoursesController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\ProgressController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Controllers\\ProgressController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Models\\CourseContent\\Lesson.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -51,14 +51,14 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "CoursesController.cs",
-              "DocumentMoniker": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\CoursesController.cs",
-              "RelativeDocumentMoniker": "Controllers\\CoursesController.cs",
-              "ToolTip": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\CoursesController.cs",
-              "RelativeToolTip": "Controllers\\CoursesController.cs",
-              "ViewState": "AgIAADEBAAAAAAAAAAAwwEYBAAAJAAAAAAAAAA==",
+              "Title": "ProgressController.cs",
+              "DocumentMoniker": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\ProgressController.cs",
+              "RelativeDocumentMoniker": "Controllers\\ProgressController.cs",
+              "ToolTip": "C:\\Users\\dawid\\Desktop\\Politechnika\\Praca Dyplomowa\\Kodowanie\\ELearning.Api\\ELearning.Api\\Controllers\\ProgressController.cs",
+              "RelativeToolTip": "Controllers\\ProgressController.cs",
+              "ViewState": "AgIAAKMAAAAAAAAAAAAwwLAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-18T21:53:29.109Z",
+              "WhenOpened": "2025-11-18T23:06:15.368Z",
               "EditorCaption": ""
             },
             {
@@ -71,7 +71,8 @@
               "RelativeToolTip": "Models\\CourseContent\\Lesson.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-18T20:49:37.071Z"
+              "WhenOpened": "2025-11-18T20:49:37.071Z",
+              "EditorCaption": ""
             }
           ]
         },
