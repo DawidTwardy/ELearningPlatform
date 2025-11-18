@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import '../../styles/pages/CourseEditPage.css';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { fetchCourseDetails } from '../../services/api';
 
 const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
@@ -9,14 +10,33 @@ const deepParseCourseContent = (course) => {
     const parsedSections = course.sections.map(section => {
         if (section.lessons) {
             section.lessons = section.lessons.map(lesson => {
+                let parsedContent = lesson.content;
                 try {
                     if (typeof lesson.content === 'string' && lesson.content.trim().startsWith('{')) {
-                        lesson.content = JSON.parse(lesson.content);
+                        parsedContent = JSON.parse(lesson.content);
                     }
                 } catch (e) {
                     console.warn("Błąd parsowania treści lekcji:", e);
                 }
-                return lesson;
+
+                let inferredType = 'video';
+                if (parsedContent) {
+                    if (parsedContent.text !== undefined) {
+                        inferredType = 'text';
+                    } else if (parsedContent.url !== undefined) {
+                        if (parsedContent.fileName && parsedContent.fileName.toLowerCase().endsWith('.pdf')) {
+                            inferredType = 'pdf';
+                        } else {
+                            inferredType = 'video';
+                        }
+                    }
+                }
+
+                return { 
+                    ...lesson, 
+                    content: parsedContent, 
+                    type: lesson.type || inferredType 
+                };
             });
         }
         return section;
@@ -24,7 +44,6 @@ const deepParseCourseContent = (course) => {
 
     return { ...course, sections: parsedSections };
 };
-
 
 export const getEmptyContentForType = (type) => {
   switch (type) {
@@ -39,16 +58,16 @@ export const getEmptyContentForType = (type) => {
 };
 
 export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
-  const contentRef = useRef(null);
+  const content = lesson.content || {};
 
   switch (lesson.type) {
     case 'video':
     case 'pdf':
       return (
         <div className="file-upload-wrapper">
-          {lesson.content?.fileName ? (
+          {content.fileName ? (
             <div className="file-name-display">
-              Wybrany plik: <span>{lesson.content.fileName}</span>
+              Wybrany plik: <span>{content.fileName}</span>
             </div>
           ) : (
             <div className="file-name-display-empty">
@@ -65,13 +84,13 @@ export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
         <div className="text-editor-wrapper-quill">
           <ReactQuill 
             theme="snow" 
-            value={lesson.content?.text || ''} 
+            value={content.text || ''} 
             onChange={(value) => onTextChange('text', value)}
           />
         </div>
       );
     default:
-      return null;
+      return <div>Wybierz typ lekcji, aby edytować treść.</div>;
   }
 };
 
@@ -81,14 +100,14 @@ export const OptionEditor = ({ option, questionType, onOptionChange, onCorrectCh
       <input 
         type={questionType === 'single' ? 'radio' : 'checkbox'}
         name={`correct-option-${option.questionId}`}
-        checked={option.isCorrect}
+        checked={option.isCorrect || false}
         onChange={(e) => onCorrectChange(e.target.checked)}
         className="option-checkbox"
       />
       <input 
         type="text"
         placeholder="Treść opcji"
-        value={option.text}
+        value={option.text || ''}
         onChange={(e) => onOptionChange('text', e.target.value)}
         className="edit-input-option"
       />
@@ -103,12 +122,12 @@ export const QuestionEditor = ({ question, onQuestionChange, onOptionChange, onA
         <input 
           type="text"
           placeholder="Wpisz treść pytania"
-          value={question.text}
+          value={question.text || ''}
           onChange={(e) => onQuestionChange('text', e.target.value)}
           className="edit-input-question"
         />
         <select
-          value={question.type}
+          value={question.type || 'single'}
           onChange={(e) => onQuestionChange('type', e.target.value)}
           className="edit-lesson-type"
         >
@@ -231,13 +250,41 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
 
 const CourseEditPage = ({ course, onBack }) => {
   
-  const initialCourseData = deepParseCourseContent(course);
-
-  const [title, setTitle] = useState(initialCourseData.title);
-  const [description, setDescription] = useState(initialCourseData.description || "");
-  const [thumbnailUrl, setThumbnailUrl] = useState(initialCourseData.imageSrc || "/src/course/placeholder_sql.png");
-  const [sections, setSections] = useState(initialCourseData.sections || []); 
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("/src/course/placeholder_sql.png");
+  const [sections, setSections] = useState([]); 
   const [openItems, setOpenItems] = useState({});
+  const [price, setPrice] = useState(0);
+  const [category, setCategory] = useState("Ogólny");
+  const [level, setLevel] = useState("Początkujący");
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (course && course.id) {
+        try {
+          const fetchedCourse = await fetchCourseDetails(course.id);
+          const data = deepParseCourseContent(fetchedCourse);
+          
+          setTitle(data.title || "");
+          setDescription(data.description || "");
+          setThumbnailUrl(data.imageUrl || data.imageSrc || "/src/course/placeholder_sql.png");
+          setSections(data.sections || []);
+          setPrice(data.price || 0);
+          setCategory(data.category || "Ogólny");
+          setLevel(data.level || "Początkujący");
+        } catch (error) {
+          console.error("Nie udało się pobrać szczegółów kursu:", error);
+          const data = deepParseCourseContent(course);
+          setTitle(data.title || "");
+          setDescription(data.description || "");
+          setThumbnailUrl(data.imageUrl || data.imageSrc || "/src/course/placeholder_sql.png");
+          setSections(data.sections || []);
+        }
+      }
+    };
+    loadData();
+  }, [course]);
 
   const toggleItem = (id) => {
     setOpenItems(prev => ({
@@ -249,31 +296,94 @@ const CourseEditPage = ({ course, onBack }) => {
   const handleSave = (e) => {
     e.preventDefault();
     
-    // POPRAWKA: Ujednolicamy klucz tokenu na 'token' zgodnie z api.js
     const token = localStorage.getItem('token'); 
     if (!token) {
         alert("Błąd: Nie jesteś zalogowany. Zaloguj się ponownie.");
         return; 
     }
 
-    console.log("ID kursu do wysłania (course.id):", course.id);
-    if (!course.id) {
+    if (!course || !course.id) {
         alert("Błąd: ID kursu jest puste lub niepoprawne. Nie można zapisać.");
-        console.error("KRYTYCZNY BŁĄD: course.id jest undefined/null/puste.");
         return; 
     }
+
+    const prepareSectionsForBackend = (secs) => {
+        return secs.map(section => {
+            const safeSectionId = (typeof section.id === 'number' && section.id > 2000000000) ? 0 : section.id;
+
+            const lessons = (section.lessons || []).map(lesson => {
+                const safeLessonId = (typeof lesson.id === 'number' && lesson.id > 2000000000) ? 0 : lesson.id;
+                
+                let contentStr = "";
+                if (typeof lesson.content === 'object' && lesson.content !== null) {
+                    contentStr = JSON.stringify(lesson.content);
+                } else if (typeof lesson.content === 'string') {
+                    contentStr = lesson.content;
+                }
+
+                return {
+                    Id: safeLessonId,
+                    Title: lesson.title,
+                    Content: contentStr,
+                    VideoUrl: "", 
+                    SectionId: safeSectionId 
+                };
+            });
+
+            let quiz = null;
+            if (section.quiz) {
+                 const safeQuizId = (typeof section.quiz.id === 'number' && section.quiz.id > 2000000000) ? 0 : (section.quiz.id || 0);
+                 
+                 const questions = (section.quiz.questions || []).map(q => {
+                     const qId = (typeof q.id === 'string' && q.id.startsWith('q')) ? 0 : q.id;
+                     
+                     const options = (q.options || []).map(o => {
+                         const oId = (typeof o.id === 'string' && o.id.startsWith('o')) ? 0 : o.id;
+                         return { 
+                             Id: oId,
+                             Text: o.text,
+                             IsCorrect: o.isCorrect
+                         };
+                     });
+
+                     return { 
+                         Id: qId,
+                         Text: q.text,
+                         QuestionType: q.type,
+                         Options: options
+                     };
+                 });
+
+                 quiz = { 
+                     Id: safeQuizId,
+                     Title: "Quiz", 
+                     Questions: questions
+                 };
+            }
+
+            return {
+                Id: safeSectionId,
+                Title: section.title,
+                Order: section.order || 0,
+                Lessons: lessons,
+                Quiz: quiz
+            };
+        });
+    };
+
+    const sectionsToSend = prepareSectionsForBackend(sections);
     
-    const updatedCourseData = { 
+    const courseDataToSend = { 
         id: course.id, 
         title: title,
         description: description,
-        imageSrc: thumbnailUrl,
-        instructor: course.instructor, 
-        rating: course.rating,
+        imageUrl: thumbnailUrl, 
+        price: price,
+        category: category,
+        level: level,
+        Sections: sectionsToSend
     };
     
-    // POPRAWKA CORS: Zmieniamy adres API z HTTPS na HTTP,
-    // aby dopasować go do konfiguracji deweloperskiej i uniknąć błędu CORS.
     const apiUrl = `http://localhost:7115/api/Courses/${course.id}`;
 
     fetch(apiUrl, {
@@ -282,7 +392,7 @@ const CourseEditPage = ({ course, onBack }) => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(updatedCourseData)
+        body: JSON.stringify(courseDataToSend)
     })
     .then(response => {
         if (response.status === 204) {
@@ -294,8 +404,7 @@ const CourseEditPage = ({ course, onBack }) => {
              return response.json().then(data => { 
                 if (response.status === 400) {
                      const validationErrors = data.errors || data;
-                     console.error("Błąd walidacji API:", validationErrors);
-                     let message = "Wystąpił błąd walidacji (400 Bad Request). Sprawdź, czy wszystkie pola są poprawnie wypełnione.";
+                     let message = "Wystąpił błąd walidacji (400 Bad Request).";
                      if (validationErrors.errors && Object.keys(validationErrors.errors).length > 0) {
                          message += "\nSzczegóły: " + Object.entries(validationErrors.errors).map(([key, value]) => `${key}: ${value.join(', ')}`).join('; ');
                      }
@@ -524,7 +633,7 @@ const CourseEditPage = ({ course, onBack }) => {
                             />
                             <select
                               className="edit-lesson-type"
-                              value={lesson.type}
+                              value={lesson.type || 'video'}
                               onChange={(e) => handleLessonTypeChange(section.id, lesson.id, e.target.value)}
                             >
                               <option value="video">Wideo</option>

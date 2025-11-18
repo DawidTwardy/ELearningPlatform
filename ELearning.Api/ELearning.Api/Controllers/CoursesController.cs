@@ -111,7 +111,7 @@ namespace ELearning.Api.Controllers
                     AvatarSrc = "/src/icon/usericon.png",
                     Bio = "Instruktor"
                 } : null,
-                Sections = course.Sections.Select(s => new
+                Sections = course.Sections.OrderBy(s => s.Order).Select(s => new
                 {
                     s.Id,
                     s.Title,
@@ -209,15 +209,23 @@ namespace ELearning.Api.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Instructor,Admin,User")]
-        public async Task<IActionResult> UpdateCourse(int id, Course course)
+        public async Task<IActionResult> UpdateCourse(int id, [FromBody] Course course)
         {
             if (id != course.Id)
             {
-                return BadRequest();
+                return BadRequest("ID kursu w URL nie zgadza się z ID w ciele żądania.");
             }
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var existingCourse = await _context.Courses.FindAsync(id);
+
+            var existingCourse = await _context.Courses
+                .Include(c => c.Sections)
+                    .ThenInclude(s => s.Lessons)
+                .Include(c => c.Sections)
+                    .ThenInclude(s => s.Quiz)
+                        .ThenInclude(q => q.Questions)
+                            .ThenInclude(qt => qt.Options)
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (existingCourse == null) return NotFound();
 
@@ -231,9 +239,46 @@ namespace ELearning.Api.Controllers
             existingCourse.Category = course.Category;
             existingCourse.Level = course.Level;
             existingCourse.Price = course.Price;
+
             if (!string.IsNullOrEmpty(course.ImageUrl))
             {
                 existingCourse.ImageUrl = course.ImageUrl;
+            }
+
+            _context.CourseSections.RemoveRange(existingCourse.Sections);
+
+            if (course.Sections != null && course.Sections.Any())
+            {
+                foreach (var section in course.Sections)
+                {
+                    section.Id = 0;
+                    section.CourseId = id;
+
+                    if (section.Lessons != null)
+                    {
+                        foreach (var lesson in section.Lessons)
+                        {
+                            lesson.Id = 0;
+                        }
+                    }
+
+                    if (section.Quiz != null)
+                    {
+                        section.Quiz.Id = 0;
+                        if (section.Quiz.Questions != null)
+                        {
+                            foreach (var q in section.Quiz.Questions)
+                            {
+                                q.Id = 0;
+                                if (q.Options != null)
+                                {
+                                    foreach (var o in q.Options) o.Id = 0;
+                                }
+                            }
+                        }
+                    }
+                    existingCourse.Sections.Add(section);
+                }
             }
 
             try
@@ -250,6 +295,10 @@ namespace ELearning.Api.Controllers
                 {
                     throw;
                 }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { title = $"Błąd podczas zapisu kursu: {ex.Message}" });
             }
 
             return NoContent();
