@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchCourseDetails, markLessonCompleted } from '../../services/api';
 import QuizView from './QuizView';
+import DiscussionThread from './DiscussionThread';
 import '../../styles/pages/CourseView.css';
 
 const CourseView = ({ course: courseProp, onBack }) => {
@@ -49,7 +50,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
                     }
                 }
             } catch (err) {
-                console.error("Błąd:", err);
+                console.error(err);
                 setError("Nie udało się pobrać kursu.");
             } finally {
                 setLoading(false);
@@ -146,6 +147,11 @@ const CourseView = ({ course: courseProp, onBack }) => {
                             <p style={{ color: '#aaa' }}>{course.title || course.Title}</p>
                         </div>
                     )}
+                    
+                    <DiscussionThread 
+                        courseId={courseId} 
+                        isInstructorView={false} 
+                    />
                 </div>
 
                 <div className="course-sections">

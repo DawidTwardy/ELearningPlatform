@@ -1,20 +1,14 @@
 ﻿using ELearning.Api.Models;
 using ELearning.Api.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ELearning.Api.Models.CourseContent;
-using Microsoft.AspNetCore.Authorization;
-using System.Linq;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System;
 using System.Security.Claims;
 
 namespace ELearning.Api.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [ApiController]
     public class CoursesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -24,126 +18,136 @@ namespace ELearning.Api.Controllers
             _context = context;
         }
 
+        // GET: api/Courses
         [HttpGet]
-        [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<Course>>> GetCourses()
+        public async Task<ActionResult<IEnumerable<object>>> GetCourses()
         {
             var courses = await _context.Courses
-                .Include(c => c.Sections)
+                .Include(c => c.Instructor)
                 .ToListAsync();
 
-            if (courses == null)
+            var result = courses.Select(c => new
             {
-                return NotFound();
-            }
+                c.Id,
+                c.Title,
+                c.Description,
+                c.Category,
+                c.Level,
+                c.Price,
+                ImageSrc = c.ImageUrl,
+                ImageUrl = c.ImageUrl,
+                Rating = 0,
+                Instructor = c.Instructor != null ? new { Name = c.Instructor.UserName, Bio = "Instruktor" } : null
+            });
 
-            return Ok(courses);
+            return Ok(result);
         }
 
+        // GET: api/Courses/5
         [HttpGet("{id}")]
-        [AllowAnonymous]
-        public async Task<ActionResult<Course>> GetCourse(int? id)
+        public async Task<ActionResult<object>> GetCourse(int id)
         {
-            if (!id.HasValue)
-            {
-                return BadRequest("Brak identyfikatora kursu.");
-            }
-
             var course = await _context.Courses
-                .AsSplitQuery()
                 .Include(c => c.Sections)
-                    .ThenInclude(s => s.Lessons)
+                .ThenInclude(s => s.Lessons)
                 .Include(c => c.Sections)
-                    .ThenInclude(s => s.Quiz)
-                        .ThenInclude(q => q.Questions)
-                            .ThenInclude(qs => qs.Options)
-                .FirstOrDefaultAsync(c => c.Id == id.Value);
+                .ThenInclude(s => s.Quiz)
+                .Include(c => c.Instructor)
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)
             {
                 return NotFound();
             }
 
-            return Ok(course);
+            var result = new
+            {
+                course.Id,
+                course.Title,
+                course.Description,
+                course.Category,
+                course.Level,
+                course.Price,
+                ImageSrc = course.ImageUrl,
+                ImageUrl = course.ImageUrl,
+                Rating = 0,
+                Instructor = course.Instructor != null ? new
+                {
+                    Name = course.Instructor.UserName,
+                    AvatarSrc = "/src/icon/usericon.png",
+                    Bio = "Instruktor"
+                } : null,
+                Sections = course.Sections.Select(s => new
+                {
+                    s.Id,
+                    s.Title,
+                    Lessons = s.Lessons.Select(l => new
+                    {
+                        l.Id,
+                        l.Title,
+                        l.Content,
+                        l.VideoUrl
+                    }),
+                    Quiz = s.Quiz != null ? new
+                    {
+                        s.Quiz.Id,
+                        s.Quiz.Title
+                    } : null
+                })
+            };
+
+            return Ok(result);
         }
 
-        // NOWY ENDPOINT: USUWANIE WSZYSTKICH KURSÓW I POWIĄZANYCH DANYCH
-        [HttpDelete("all")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteAllCourses()
+        // POST: api/Courses
+        [HttpPost]
+        [Authorize(Roles = "Instructor,Admin")]
+        public async Task<ActionResult<Course>> CreateCourse(Course course)
         {
-            // Usunięcie danych powiązanych
-            _context.UserAnswers.RemoveRange(_context.UserAnswers);
-            _context.UserQuizAttempts.RemoveRange(_context.UserQuizAttempts);
-            _context.LessonCompletions.RemoveRange(_context.LessonCompletions);
-            _context.Enrollments.RemoveRange(_context.Enrollments);
-            _context.AnswerOptions.RemoveRange(_context.AnswerOptions);
-            _context.Questions.RemoveRange(_context.Questions);
-            _context.Quizzes.RemoveRange(_context.Quizzes);
-            _context.Lessons.RemoveRange(_context.Lessons);
-            _context.CourseSections.RemoveRange(_context.CourseSections);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // Usunięcie kursów
-            _context.Courses.RemoveRange(_context.Courses);
+            course.InstructorId = userId;
 
+            if (string.IsNullOrEmpty(course.ImageUrl))
+            {
+                course.ImageUrl = "/src/course/placeholder_ai.png";
+            }
+
+            _context.Courses.Add(course);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return CreatedAtAction("GetCourse", new { id = course.Id }, course);
         }
 
-        [HttpPost]
-        [Authorize(Roles = "Admin,Instructor")]
-        public async Task<ActionResult<Course>> CreateCourse([FromBody] Course course)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            try
-            {
-                course.InstructorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                course.Instructor = User.Identity!.Name ?? "Nieznany Instruktor";
-
-                _context.Courses.Add(course);
-
-                await _context.SaveChangesAsync();
-
-                return CreatedAtAction(nameof(GetCourse), new { id = course.Id }, course);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"\n==================== BŁĄD ZAPISU KURSU (500) ====================");
-                Console.WriteLine($"PEŁNY WYJĄTEK: {ex.ToString()}");
-                Console.WriteLine($"=================================================================\n");
-
-                return StatusCode(500, new { Message = "Wewnętrzny błąd serwera podczas zapisu kursu. Sprawdź logi serwera.", Details = ex.Message, InnerDetails = ex.InnerException?.Message });
-            }
-        }
-
+        // PUT: api/Courses/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Instructor")]
-        public async Task<IActionResult> UpdateCourse(int id, [FromBody] Course course)
+        [Authorize(Roles = "Instructor,Admin")]
+        public async Task<IActionResult> UpdateCourse(int id, Course course)
         {
             if (id != course.Id)
             {
                 return BadRequest();
             }
 
-            var existingCourse = await _context.Courses
-                .Include(c => c.Sections)
-                .FirstOrDefaultAsync(c => c.Id == id);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var existingCourse = await _context.Courses.FindAsync(id);
 
-            if (existingCourse == null)
+            if (existingCourse == null) return NotFound();
+
+            if (existingCourse.InstructorId != userId && !User.IsInRole("Admin"))
             {
-                return NotFound();
+                return Forbid();
             }
 
             existingCourse.Title = course.Title;
             existingCourse.Description = course.Description;
-            existingCourse.ImageSrc = course.ImageSrc;
-            existingCourse.Instructor = course.Instructor;
-            existingCourse.Rating = course.Rating;
+            existingCourse.Category = course.Category;
+            existingCourse.Level = course.Level;
+            existingCourse.Price = course.Price;
+            if (!string.IsNullOrEmpty(course.ImageUrl))
+            {
+                existingCourse.ImageUrl = course.ImageUrl;
+            }
 
             try
             {
@@ -151,7 +155,7 @@ namespace ELearning.Api.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.Courses.Any(e => e.Id == id))
+                if (!CourseExists(id))
                 {
                     return NotFound();
                 }
@@ -164,8 +168,9 @@ namespace ELearning.Api.Controllers
             return NoContent();
         }
 
+        // DELETE: api/Courses/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Instructor,Admin")]
         public async Task<IActionResult> DeleteCourse(int id)
         {
             var course = await _context.Courses.FindAsync(id);
@@ -174,10 +179,21 @@ namespace ELearning.Api.Controllers
                 return NotFound();
             }
 
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (course.InstructorId != userId && !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
             _context.Courses.Remove(course);
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        private bool CourseExists(int id)
+        {
+            return _context.Courses.Any(e => e.Id == id);
         }
     }
 }

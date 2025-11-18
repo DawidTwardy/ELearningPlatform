@@ -3,15 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using System.Threading.Tasks;
-using System;
-using ELearning.Api.Models;
-using System.Linq;
 
 namespace ELearning.Api.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     [Authorize]
     public class ProgressController : ControllerBase
     {
@@ -22,97 +18,98 @@ namespace ELearning.Api.Controllers
             _context = context;
         }
 
-        [HttpPost("lesson/{lessonId}/complete")]
-        public async Task<IActionResult> MarkLessonCompleted(int lessonId)
+        [HttpGet("course/{courseId}")]
+        public async Task<ActionResult<decimal>> GetCourseProgress(int courseId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
 
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
+            var enrollment = await _context.Enrollments
+                .FirstOrDefaultAsync(e => e.CourseId == courseId && e.UserId == userId);
 
-            var lessonExists = await _context.Lessons.AnyAsync(l => l.Id == lessonId);
-            if (!lessonExists)
-            {
-                return NotFound(new { Message = "Lekcja o podanym ID nie istnieje." });
-            }
+            if (enrollment == null) return NotFound("Nie jesteœ zapisany na ten kurs.");
 
-            var alreadyCompleted = await _context.Set<LessonCompletion>()
-                .AnyAsync(lc => lc.LessonId == lessonId && lc.ApplicationUserId == userId);
-
-            if (alreadyCompleted)
-            {
-                return Ok(new { Message = "Lekcja zosta³a ju¿ ukoñczona.", Status = "completed" });
-            }
-
-            var completion = new LessonCompletion
-            {
-                ApplicationUserId = userId,
-                LessonId = lessonId,
-                CompletedDate = DateTime.Now
-            };
-
-            _context.Add(completion);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { Message = "Pomyœlnie oznaczono lekcjê jako ukoñczon¹.", Status = "newly_completed" });
+            return Ok(enrollment.Progress);
         }
 
-        [HttpGet("course/{courseId}")]
-        public async Task<ActionResult<object>> GetCourseProgress(int courseId)
+        [HttpPost("lesson/{lessonId}/complete")]
+        public async Task<IActionResult> MarkLessonAsCompleted(int lessonId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
 
-            if (string.IsNullOrEmpty(userId))
+            var lesson = await _context.Lessons
+                .Include(l => l.Section)
+                .ThenInclude(s => s.Course)
+                .FirstOrDefaultAsync(l => l.Id == lessonId);
+
+            if (lesson == null) return NotFound("Lekcja nie istnieje.");
+
+            // SprawdŸ czy lekcja jest ju¿ ukoñczona
+            var existingCompletion = await _context.LessonCompletions
+                .FirstOrDefaultAsync(lc => lc.LessonId == lessonId && lc.UserId == userId);
+
+            if (existingCompletion != null) return Ok(new { message = "Lekcja ju¿ ukoñczona" });
+
+            var completion = new Models.LessonCompletion
             {
-                return Unauthorized();
+                LessonId = lessonId,
+                UserId = userId,
+                CompletedAt = DateTime.UtcNow
+            };
+
+            _context.LessonCompletions.Add(completion);
+            await _context.SaveChangesAsync();
+
+            // Aktualizuj postêp kursu w Enrollment
+            await UpdateEnrollmentProgress(userId, lesson.Section.Course.Id);
+
+            return Ok(new { success = true });
+        }
+
+        [HttpGet("lesson/{lessonId}/completion")]
+        public async Task<ActionResult<bool>> CheckLessonCompletion(int lessonId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Ok(false);
+
+            var isCompleted = await _context.LessonCompletions
+                .AnyAsync(lc => lc.LessonId == lessonId && lc.UserId == userId);
+
+            return Ok(isCompleted);
+        }
+
+        private async Task UpdateEnrollmentProgress(string userId, int courseId)
+        {
+            var enrollment = await _context.Enrollments
+                .FirstOrDefaultAsync(e => e.UserId == userId && e.CourseId == courseId);
+
+            if (enrollment == null) return;
+
+            // Policz wszystkie lekcje w kursie
+            var totalLessons = await _context.Lessons
+                .Where(l => l.Section.CourseId == courseId)
+                .CountAsync();
+
+            if (totalLessons == 0) return;
+
+            // Policz ukoñczone lekcje dla tego kursu
+            var completedLessons = await _context.LessonCompletions
+                .Include(lc => lc.Lesson)
+                .ThenInclude(l => l.Section)
+                .Where(lc => lc.UserId == userId && lc.Lesson.Section.CourseId == courseId)
+                .CountAsync();
+
+            int progressPercentage = (int)((double)completedLessons / totalLessons * 100);
+
+            // Zapisz postêp
+            enrollment.Progress = progressPercentage;
+            if (progressPercentage == 100)
+            {
+                enrollment.IsCompleted = true;
             }
 
-            var course = await _context.Courses
-                .Include(c => c.Sections)
-                .ThenInclude(s => s.Lessons)
-                .FirstOrDefaultAsync(c => c.Id == courseId);
-
-            if (course == null)
-            {
-                return NotFound();
-            }
-
-            // === KRYTYCZNA POPRAWKA DLA SPRAWDZENIA ZAPISU ===
-            var isEnrolled = await _context.Set<Enrollment>()
-                .AnyAsync(e => e.CourseId == courseId && e.ApplicationUserId == userId);
-
-            if (!isEnrolled)
-            {
-                // To wymusi 404 (Not Found), które front-end poprawnie zinterpretuje jako brak zapisu
-                return NotFound(new { Message = "U¿ytkownik nie jest zapisany na ten kurs." });
-            }
-            // ===============================================
-
-            var allLessonIdsInCourse = course.Sections
-                .SelectMany(s => s.Lessons)
-                .Select(l => l.Id)
-                .ToList();
-
-            var completedLessons = await _context.Set<LessonCompletion>()
-                .Where(lc => lc.ApplicationUserId == userId && allLessonIdsInCourse.Contains(lc.LessonId))
-                .Select(lc => lc.LessonId)
-                .ToListAsync();
-
-            var totalLessons = allLessonIdsInCourse.Count;
-            var completedCount = completedLessons.Count;
-            var progressPercentage = totalLessons > 0 ? (int)Math.Round((double)completedCount / totalLessons * 100) : 0;
-
-
-            return Ok(new
-            {
-                CourseId = courseId,
-                TotalLessons = totalLessons,
-                CompletedLessonsCount = completedCount,
-                ProgressPercentage = progressPercentage,
-                CompletedLessonIds = completedLessons
-            });
+            await _context.SaveChangesAsync();
         }
     }
 }

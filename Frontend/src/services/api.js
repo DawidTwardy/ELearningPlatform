@@ -53,7 +53,6 @@ const fetchCourseProgress = async (courseId) => {
 
 const markLessonCompleted = async (lessonId) => {
     const token = getAuthToken();
-    // POPRAWKA: Zmieniono URL, aby pasował do ProgressController: api/Progress/lesson/{id}/complete
     const response = await fetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/complete`, {
         method: 'POST',
         headers: {
@@ -70,12 +69,72 @@ const markLessonCompleted = async (lessonId) => {
 
 const fetchLessonCompletion = async (lessonId) => {
     const token = getAuthToken();
-    // Uwaga: Ten endpoint (lesson/{id}/completion) nie istnieje w Twoim obecnym ProgressController.
-    // Jeśli chcesz go używać, musisz dodać odpowiednią metodę GET w kontrolerze.
     const response = await fetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/completion`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
+        },
+    });
+    return handleResponse(response);
+};
+
+const fetchComments = async (courseId) => {
+    const response = await fetch(`${API_BASE_URL}/Comments/course/${courseId}`, {
+        method: 'GET',
+    });
+    return handleResponse(response);
+};
+
+const createComment = async (courseId, content, parentCommentId = null) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Comments`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ courseId, content, parentCommentId })
+    });
+    return handleResponse(response);
+};
+
+const updateComment = async (commentId, content) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Comments/${commentId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content })
+    });
+    if (!response.ok) {
+        throw new Error('Błąd podczas edycji');
+    }
+    return true;
+};
+
+const deleteComment = async (commentId) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        }
+    });
+    if (!response.ok) {
+        throw new Error('Błąd podczas usuwania');
+    }
+    return true;
+};
+
+const fetchMyEnrollments = async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Enrollments`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
         },
     });
     return handleResponse(response);
@@ -87,4 +146,9 @@ export {
     markLessonCompleted,
     fetchUserEnrollment,
     fetchCourseProgress,
+    fetchComments,
+    createComment,
+    updateComment,
+    deleteComment,
+    fetchMyEnrollments
 };

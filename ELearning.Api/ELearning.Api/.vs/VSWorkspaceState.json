@@ -1,8 +1,12 @@
 {
   "ExpandedNodes": [
     "",
-    "\\Controllers"
+    "\\Controllers",
+    "\\Data",
+    "\\DTOs\\Discussion",
+    "\\Models",
+    "\\Models\\CourseContent"
   ],
-  "SelectedNode": "\\Controllers\\ProgressController.cs",
+  "SelectedNode": "\\Models\\CourseContent\\Lesson.cs",
   "PreviewInSolutionExplorer": false
 }

@@ -95,30 +95,35 @@ namespace ELearning.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ImageSrc")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Instructor")
+                    b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("InstructorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Level")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<double>("Rating")
-                        .HasColumnType("REAL");
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("InstructorId");
 
                     b.ToTable("Courses");
                 });
@@ -144,6 +149,40 @@ namespace ELearning.Api.Migrations
                     b.HasIndex("QuestionId");
 
                     b.ToTable("AnswerOptions");
+                });
+
+            modelBuilder.Entity("ELearning.Api.Models.CourseContent.Comment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ParentCommentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("ParentCommentId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Comments");
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.CourseContent.CourseSection", b =>
@@ -179,9 +218,6 @@ namespace ELearning.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("SectionId")
                         .HasColumnType("INTEGER");
 
@@ -189,7 +225,7 @@ namespace ELearning.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Type")
+                    b.Property<string>("VideoUrl")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -314,21 +350,27 @@ namespace ELearning.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("CourseId")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("EnrollmentDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Progress")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ApplicationUserId");
-
                     b.HasIndex("CourseId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Enrollments");
                 });
@@ -339,21 +381,21 @@ namespace ELearning.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CompletedDate")
+                    b.Property<DateTime>("CompletedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("LessonId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ApplicationUserId");
-
                     b.HasIndex("LessonId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("LessonCompletions");
                 });
@@ -486,6 +528,15 @@ namespace ELearning.Api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("ELearning.Api.Models.Course", b =>
+                {
+                    b.HasOne("ApplicationUser", "Instructor")
+                        .WithMany()
+                        .HasForeignKey("InstructorId");
+
+                    b.Navigation("Instructor");
+                });
+
             modelBuilder.Entity("ELearning.Api.Models.CourseContent.AnswerOption", b =>
                 {
                     b.HasOne("ELearning.Api.Models.CourseContent.Question", "Question")
@@ -495,6 +546,32 @@ namespace ELearning.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("ELearning.Api.Models.CourseContent.Comment", b =>
+                {
+                    b.HasOne("ELearning.Api.Models.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ELearning.Api.Models.CourseContent.Comment", "ParentComment")
+                        .WithMany("Replies")
+                        .HasForeignKey("ParentCommentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("ParentComment");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.CourseContent.CourseSection", b =>
@@ -589,40 +666,40 @@ namespace ELearning.Api.Migrations
 
             modelBuilder.Entity("ELearning.Api.Models.Enrollment", b =>
                 {
-                    b.HasOne("ApplicationUser", "ApplicationUser")
-                        .WithMany()
-                        .HasForeignKey("ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("ELearning.Api.Models.Course", "Course")
-                        .WithMany()
+                        .WithMany("Enrollments")
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("ApplicationUser");
+                    b.HasOne("ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Course");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.LessonCompletion", b =>
                 {
-                    b.HasOne("ApplicationUser", "ApplicationUser")
-                        .WithMany()
-                        .HasForeignKey("ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("ELearning.Api.Models.CourseContent.Lesson", "Lesson")
                         .WithMany()
                         .HasForeignKey("LessonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("ApplicationUser");
+                    b.HasOne("ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Lesson");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -678,7 +755,14 @@ namespace ELearning.Api.Migrations
 
             modelBuilder.Entity("ELearning.Api.Models.Course", b =>
                 {
+                    b.Navigation("Enrollments");
+
                     b.Navigation("Sections");
+                });
+
+            modelBuilder.Entity("ELearning.Api.Models.CourseContent.Comment", b =>
+                {
+                    b.Navigation("Replies");
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.CourseContent.CourseSection", b =>

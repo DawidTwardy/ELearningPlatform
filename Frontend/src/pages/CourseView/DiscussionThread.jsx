@@ -1,45 +1,19 @@
-import React, { useState } from 'react';
-import '../../styles/pages/DiscussionThread.css'; // ZMIENIONA ŚCIEŻKA
+import React, { useState, useEffect, useContext } from 'react';
+import '../../styles/pages/DiscussionThread.css';
+import { fetchComments, createComment, updateComment, deleteComment } from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
 
-const MOCK_COMMENTS_DATA = [
-  {
-    id: 1,
-    userId: "user_jan",
-    author: "Jan Kowalski",
-    avatar: "/src/icon/usericon.png",
-    text: "Mam problem z zapytaniami JOIN. Czy ktoś mógłby wyjaśnić różnicę między INNER JOIN a LEFT JOIN w prostszy sposób?",
-    timestamp: "2 dni temu",
-    replies: [
-      {
-        id: 101,
-        userId: "instructor_michal",
-        author: "Michał Nowak (Instruktor)",
-        avatar: "/src/AvatarInstructor/usericon_large.png",
-        text: "Cześć Jan! Mówiąc najprościej: INNER JOIN bierze tylko te wiersze, które mają dopasowanie w obu tabelach. LEFT JOIN bierze WSZYSTKIE wiersze z lewej tabeli i dopasowuje do nich wiersze z prawej (jeśli istnieją).",
-        timestamp: "1 dzień temu",
-        replies: []
-      }
-    ]
-  },
-  {
-    id: 2,
-    userId: "user_anna",
-    author: "Anna Zając",
-    avatar: "/src/icon/usericon.png",
-    text: "Dzięki za ten materiał PDF! Bardzo przydatne.",
-    timestamp: "3 dni temu",
-    replies: []
-  },
-  {
-    id: 3,
-    userId: "user_marek",
-    author: "Marek B",
-    avatar: "/src/icon/usericon.png",
-    text: "To jest nieodpowiedni komentarz!",
-    timestamp: "1 godzinę temu",
-    replies: []
-  }
-];
+const formatTimestamp = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return 'Przed chwilą';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min temu`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} godz. temu`;
+    return `${Math.floor(diffInSeconds / 86400)} dni temu`;
+};
 
 const CommentReplyForm = ({ onCancel, onSubmit, isInstructorView }) => {
   const [replyText, setReplyText] = useState("");
@@ -52,7 +26,7 @@ const CommentReplyForm = ({ onCancel, onSubmit, isInstructorView }) => {
   };
 
   const avatarSrc = isInstructorView ? "/src/AvatarInstructor/usericon_large.png" : "/src/icon/usericon.png";
-  const placeholder = isInstructorView ? "Napisz odpowiedź jako instruktor..." : "Napisz odpowiedź...";
+  const placeholder = "Napisz odpowiedź...";
 
   return (
     <form onSubmit={handleSubmit} className="comment-form-wrapper reply-form">
@@ -96,7 +70,11 @@ const CommentItem = ({
   editingCommentId
 }) => {
   
-  const isOwner = comment.userId === currentUser.userId;
+  // Logika sprawdzająca właściciela - obsługuje różne formaty zapisu ID (userId/UserId) oraz typy (string/int)
+  const commentUserId = comment.userId || comment.UserId;
+  const currentUserId = currentUser?.userId || currentUser?.id;
+  
+  const isOwner = currentUser && commentUserId && currentUserId && (String(commentUserId) === String(currentUserId));
 
   const handleUpdate = () => {
     onUpdate(comment.id, editingText);
@@ -118,7 +96,7 @@ const CommentItem = ({
       <div className="comment-content">
         <div className="comment-header">
           <span className="comment-author">{comment.author}</span>
-          <span className="comment-timestamp">{comment.timestamp}</span>
+          <span className="comment-timestamp">{formatTimestamp(comment.createdAt)}</span>
         </div>
 
         {isEditing ? (
@@ -140,11 +118,13 @@ const CommentItem = ({
 
         {!isEditing && (
           <div className="comment-actions-wrapper">
-            <button className="comment-action-btn" onClick={() => onStartReply(comment.id)}>
-              Odpowiedz
-            </button>
+             {currentUser && (
+                <button className="comment-action-btn" onClick={() => onStartReply(comment.id)}>
+                Odpowiedz
+                </button>
+             )}
             
-            {(isOwner || isInstructorView) ? (
+            {isOwner ? (
               <>
                 <span className="comment-action-divider">·</span>
                 <button className="comment-action-btn" onClick={() => onStartEdit(comment)}>
@@ -204,64 +184,98 @@ const CommentItem = ({
   );
 };
 
-const DiscussionThread = ({ isInstructorView }) => {
-  const [comments, setComments] = useState(MOCK_COMMENTS_DATA);
+const DiscussionThread = ({ isInstructorView, courseId }) => {
+  const [comments, setComments] = useState([]);
   const [newCommentText, setNewCommentText] = useState("");
   const [replyingToCommentId, setReplyingToCommentId] = useState(null);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingCommentText, setEditingCommentText] = useState("");
+  const [loading, setLoading] = useState(true);
+  
+  const authContext = useContext(AuthContext);
+  
+  // Funkcja pomocnicza do wyciągania danych z tokena JWT
+  const parseJwt = (token) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      return null;
+    }
+  };
 
-  const currentUser = {
-    name: isInstructorView ? "Michał Nowak (Instruktor)" : "Anna Zając",
+  let contextUser = authContext?.user;
+  
+  // Jeśli w context.user jest pusto, próbujemy odzyskać dane z tokena
+  if (!contextUser && authContext?.token) {
+     const decoded = parseJwt(authContext.token);
+     if (decoded) {
+         contextUser = {
+             id: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"],
+             userName: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || "Użytkownik",
+             email: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"]
+         };
+     }
+  }
+
+  useEffect(() => {
+    if (courseId) {
+        loadComments();
+    }
+  }, [courseId]);
+
+  const loadComments = async () => {
+      try {
+          setLoading(true);
+          const data = await fetchComments(courseId);
+          setComments(data);
+      } catch (error) {
+          console.error("Failed to load comments", error);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  const currentUser = contextUser ? {
+    name: contextUser.userName || contextUser.name || contextUser.email || "Użytkownik",
     avatar: isInstructorView ? "/src/AvatarInstructor/usericon_large.png" : "/src/icon/usericon.png",
-    userId: isInstructorView ? "instructor_michal" : "user_anna"
-  };
+    userId: contextUser.id || contextUser.userId
+  } : null;
 
-  const handleCommentSubmit = (e) => {
+  const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    if (newCommentText.trim() === "") return;
+    if (newCommentText.trim() === "" || !currentUser) return;
 
-    const newComment = {
-      id: Date.now(),
-      userId: currentUser.userId,
-      author: currentUser.name,
-      avatar: currentUser.avatar,
-      text: newCommentText,
-      timestamp: "Przed chwilą",
-      replies: []
-    };
-
-    setComments([newComment, ...comments]);
-    setNewCommentText("");
+    try {
+        await createComment(courseId, newCommentText, null);
+        setNewCommentText("");
+        await loadComments();
+    } catch (error) {
+        console.error("Failed to add comment", error);
+        alert("Nie udało się dodać komentarza.");
+    }
   };
 
-  const addReplyRecursive = (nodes, parentId, newReply) => {
-    return nodes.map(node => {
-      if (node.id === parentId) {
-        return { ...node, replies: [...node.replies, newReply] };
-      }
-      if (node.replies && node.replies.length > 0) {
-        return { ...node, replies: addReplyRecursive(node.replies, parentId, newReply) };
-      }
-      return node;
-    });
-  };
-
-  const handleReplySubmit = (commentId, replyText) => {
-    const newReply = {
-      id: Date.now(),
-      userId: currentUser.userId,
-      author: currentUser.name,
-      avatar: currentUser.avatar,
-      text: replyText,
-      timestamp: "Przed chwilą",
-      replies: []
-    };
-    setComments(prev => addReplyRecursive(prev, commentId, newReply));
-    setReplyingToCommentId(null);
+  const handleReplySubmit = async (parentId, replyText) => {
+    try {
+        await createComment(courseId, replyText, parentId);
+        setReplyingToCommentId(null);
+        await loadComments();
+    } catch (error) {
+        console.error("Failed to add reply", error);
+        alert("Nie udało się dodać odpowiedzi.");
+    }
   };
   
   const handleStartReply = (commentId) => {
+    if (!currentUser) {
+        alert("Musisz być zalogowany, aby odpowiedzieć.");
+        return;
+    }
     setReplyingToCommentId(commentId);
     setEditingCommentId(null);
   };
@@ -277,53 +291,52 @@ const DiscussionThread = ({ isInstructorView }) => {
     setEditingCommentText("");
   };
   
-  const deleteRecursive = (nodes, idToDelete) => {
-    return nodes.filter(node => node.id !== idToDelete).map(node => {
-      if (node.replies && node.replies.length > 0) {
-        return { ...node, replies: deleteRecursive(node.replies, idToDelete) };
-      }
-      return node;
-    });
+  const handleDelete = async (idToDelete) => {
+    try {
+        await deleteComment(idToDelete);
+        await loadComments();
+    } catch (error) {
+        console.error("Failed to delete comment", error);
+        alert("Nie udało się usunąć komentarza.");
+    }
+  };
+  
+  const handleUpdate = async (idToUpdate, newText) => {
+    try {
+        await updateComment(idToUpdate, newText);
+        handleCancelEdit();
+        await loadComments();
+    } catch (error) {
+        console.error("Failed to update comment", error);
+        alert("Nie udało się zaktualizować komentarza.");
+    }
   };
 
-  const handleDelete = (idToDelete) => {
-    setComments(prev => deleteRecursive(prev, idToDelete));
-  };
-  
-  const updateRecursive = (nodes, idToUpdate, newText) => {
-    return nodes.map(node => {
-      if (node.id === idToUpdate) {
-        return { ...node, text: newText };
-      }
-      if (node.replies && node.replies.length > 0) {
-        return { ...node, replies: updateRecursive(node.replies, idToUpdate, newText) };
-      }
-      return node;
-    });
-  };
-  
-  const handleUpdate = (idToUpdate, newText) => {
-    setComments(prev => updateRecursive(prev, idToUpdate, newText));
-    handleCancelEdit();
-  };
+  if (loading) return <div>Ładowanie komentarzy...</div>;
 
   return (
     <div className="discussion-container">
       <h3 className="discussion-title">Dyskusja ({comments.length})</h3>
       
-      <form onSubmit={handleCommentSubmit} className="comment-form-wrapper">
-        <img src={currentUser.avatar} alt="Twój awatar" className="comment-avatar" />
-        <textarea
-          className="comment-form-textarea"
-          value={newCommentText}
-          onChange={(e) => setNewCommentText(e.target.value)}
-          placeholder="Masz pytanie? Podziel się swoją opinią..."
-          rows="3"
-        />
-        <button type="submit" className="comment-form-submit-btn">
-          Dodaj
-        </button>
-      </form>
+      {currentUser ? (
+        <form onSubmit={handleCommentSubmit} className="comment-form-wrapper">
+            <img src={currentUser.avatar} alt="Twój awatar" className="comment-avatar" />
+            <textarea
+            className="comment-form-textarea"
+            value={newCommentText}
+            onChange={(e) => setNewCommentText(e.target.value)}
+            placeholder="Masz pytanie? Podziel się swoją opinią..."
+            rows="3"
+            />
+            <button type="submit" className="comment-form-submit-btn">
+            Dodaj
+            </button>
+        </form>
+      ) : (
+        <div className="login-prompt">
+            Zaloguj się, aby dołączyć do dyskusji.
+        </div>
+      )}
 
       <div className="comment-list">
         {comments.map(comment => (
@@ -351,4 +364,4 @@ const DiscussionThread = ({ isInstructorView }) => {
   );
 };
 
-export default DiscussionThread;
+export default DiscussionThread;  

@@ -1,15 +1,23 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace ELearning.Api.Models.CourseContent
 {
     public class Lesson
     {
+        [Key]
         public int Id { get; set; }
-        public int SectionId { get; set; }
+
+        [Required]
         public string Title { get; set; } = string.Empty;
-        public int Order { get; set; }
-        public string Type { get; set; } = "video";
+
         public string Content { get; set; } = string.Empty;
 
+        public string VideoUrl { get; set; } = string.Empty;
 
-        public CourseSection? Section { get; set; }
+        public int SectionId { get; set; }
+
+        [ForeignKey("SectionId")]
+        public CourseSection Section { get; set; }
     }
 }

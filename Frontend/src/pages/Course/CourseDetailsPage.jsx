@@ -17,26 +17,26 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
   const [enrollmentStatus, setEnrollmentStatus] = useState('not_enrolled'); 
 
   useEffect(() => {
-    
     if (isAuthenticated && course.id) {
       checkEnrollmentStatus(course.id);
+    } else if (!isAuthenticated) {
+      setEnrollmentStatus('not_enrolled');
     }
   }, [course.id, isAuthenticated]);
 
   const checkEnrollmentStatus = async (courseId) => {
-    
     setEnrollmentStatus('loading');
     try {
-      const response = await axios.get(`${API_BASE_URL}/Enrollments`, {
+      const response = await axios.get(`${API_BASE_URL}/Enrollments/check/${courseId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      const isEnrolled = response.data.some(c => c.id === courseId);
+      
+      const isEnrolled = response.data;
       setEnrollmentStatus(isEnrolled ? 'enrolled' : 'not_enrolled');
     } catch (error) {
       console.error("Błąd sprawdzania zapisu:", error);
-      
       setEnrollmentStatus('not_enrolled');
     }
   };
@@ -44,7 +44,6 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
   const handleEnroll = async () => {
     if (!isAuthenticated) {
       alert("Musisz być zalogowany, aby zapisać się na kurs.");
-      
       return;
     }
 
@@ -59,7 +58,9 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
       setEnrollmentStatus('success');
       alert("Pomyślnie zapisano na kurs! Możesz go znaleźć w sekcji Moja Nauka.");
       
-      onEnroll(course.id); 
+      if (onEnroll) {
+          onEnroll(course.id); 
+      }
     } catch (error) {
       if (error.response && error.response.status === 409) {
         setEnrollmentStatus('enrolled');
@@ -127,10 +128,9 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
         <div className="details-sidebar">
           <div className="details-image-container">
             <img 
-              src={course.imageSrc} 
+              src={course.imageSrc || "/src/course/placeholder_ai.png"} 
               alt={course.title} 
               className="details-image"
-              
             />
           </div>
           <div className="details-sidebar-info">

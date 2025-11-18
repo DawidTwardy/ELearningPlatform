@@ -1,22 +1,30 @@
-using ELearning.Api.Persistence;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System;
 
 namespace ELearning.Api.Models
 {
-	public class Enrollment
-	{
-		public int Id { get; set; }
+    public class Enrollment
+    {
+        [Key]
+        public int Id { get; set; }
 
-		public int CourseId { get; set; }
-		// U¿ycie operatora '!' informuje kompilator, ¿e ta w³aœciwoœæ zostanie zainicjalizowana przez EF Core.
-		public Course Course { get; set; } = null!;
+        [Required]
+        public string UserId { get; set; } // To pole jest kluczowe!
 
-		public string ApplicationUserId { get; set; } = null!;
-		// U¿ycie operatora '!'
-		public ApplicationUser ApplicationUser { get; set; } = null!;
+        [ForeignKey("UserId")]
+        public ApplicationUser User { get; set; }
 
-		public DateTime EnrollmentDate { get; set; }
-	}
+        [Required]
+        public int CourseId { get; set; }
+
+        [ForeignKey("CourseId")]
+        public Course Course { get; set; }
+
+        public DateTime EnrollmentDate { get; set; } = DateTime.UtcNow;
+
+        public int Progress { get; set; } = 0; // To pole te¿ musi byæ
+
+        public bool IsCompleted { get; set; } = false; // I to
+    }
 }

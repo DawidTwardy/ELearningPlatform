@@ -1,17 +1,27 @@
 using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using ELearning.Api.Models.CourseContent;
 
 namespace ELearning.Api.Models
 {
-	public class LessonCompletion
-	{
-		public int Id { get; set; }
+    public class LessonCompletion
+    {
+        [Key]
+        public int Id { get; set; }
 
-		public string ApplicationUserId { get; set; } = null!;
-		public ApplicationUser ApplicationUser { get; set; } = null!;
+        [Required]
+        public string UserId { get; set; }
 
-		public int LessonId { get; set; }
-		public CourseContent.Lesson Lesson { get; set; } = null!;
+        [ForeignKey("UserId")]
+        public ApplicationUser User { get; set; }
 
-		public DateTime CompletedDate { get; set; }
-	}
+        [Required]
+        public int LessonId { get; set; }
+
+        [ForeignKey("LessonId")]
+        public Lesson Lesson { get; set; }
+
+        public DateTime CompletedAt { get; set; } = DateTime.UtcNow;
+    }
 }

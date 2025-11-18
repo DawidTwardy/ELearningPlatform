@@ -4,15 +4,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
 
 namespace ELearning.Api.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     [Authorize]
     public class EnrollmentsController : ControllerBase
     {
@@ -23,6 +19,55 @@ namespace ELearning.Api.Controllers
             _context = context;
         }
 
+        [HttpGet("check/{courseId}")]
+        public async Task<ActionResult<bool>> CheckEnrollment(int courseId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Ok(false);
+
+            var exists = await _context.Enrollments
+                .AnyAsync(e => e.UserId == userId && e.CourseId == courseId);
+
+            return Ok(exists);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<object>>> GetMyEnrollments()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("Nie rozpoznano u¿ytkownika.");
+            }
+
+            var enrollments = await _context.Enrollments
+                .Include(e => e.Course)
+                .ThenInclude(c => c.Instructor) // WA¯NE: Pobieramy dane instruktora
+                .Where(e => e.UserId == userId)
+                .Select(e => new
+                {
+                    e.Id,
+                    e.EnrollmentDate,
+                    e.Progress,
+                    Course = new
+                    {
+                        e.Course.Id,
+                        e.Course.Title,
+                        e.Course.Description,
+                        e.Course.Price,
+                        e.Course.Category,
+                        e.Course.Level,
+                        ImageUrl = !string.IsNullOrEmpty(e.Course.ImageUrl) ? e.Course.ImageUrl : "/src/course/placeholder_ai.png",
+                        // Teraz Instructor nie bêdzie nullem, jeœli jest przypisany w bazie
+                        InstructorName = e.Course.Instructor != null ? e.Course.Instructor.UserName : "Instruktor"
+                    }
+                })
+                .ToListAsync();
+
+            return Ok(enrollments);
+        }
+
         [HttpPost("{courseId}")]
         public async Task<IActionResult> Enroll(int courseId)
         {
@@ -30,61 +75,36 @@ namespace ELearning.Api.Controllers
 
             if (string.IsNullOrEmpty(userId))
             {
-                return Unauthorized(new { Message = "Nie mo¿na zidentyfikowaæ u¿ytkownika." });
+                return Unauthorized("Musisz byæ zalogowany.");
             }
 
-            var courseExists = await _context.Courses.AnyAsync(c => c.Id == courseId);
-            if (!courseExists)
+            var course = await _context.Courses.FindAsync(courseId);
+            if (course == null)
             {
-                return NotFound(new { Message = "Kurs o podanym ID nie istnieje." });
+                return NotFound("Kurs nie istnieje.");
             }
 
-            var alreadyEnrolled = await _context.Set<Enrollment>()
-                .AnyAsync(e => e.CourseId == courseId && e.ApplicationUserId == userId);
+            var existingEnrollment = await _context.Enrollments
+                .FirstOrDefaultAsync(e => e.UserId == userId && e.CourseId == courseId);
 
-            if (alreadyEnrolled)
+            if (existingEnrollment != null)
             {
-                return Conflict(new { Message = "U¿ytkownik jest ju¿ zapisany na ten kurs." });
+                return Conflict(new { message = "Jesteœ ju¿ zapisany na ten kurs." });
             }
 
             var enrollment = new Enrollment
             {
+                UserId = userId,
                 CourseId = courseId,
-                ApplicationUserId = userId,
-                EnrollmentDate = DateTime.Now
+                EnrollmentDate = DateTime.UtcNow,
+                Progress = 0,
+                IsCompleted = false
             };
 
-            _context.Add(enrollment);
+            _context.Enrollments.Add(enrollment);
             await _context.SaveChangesAsync();
 
-            return Ok(new { Message = "Pomyœlnie zapisano na kurs." });
-        }
-
-        [HttpGet]
-        public async Task<ActionResult> GetMyCourses()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized(new { Message = "Nie mo¿na zidentyfikowaæ u¿ytkownika." });
-            }
-
-            var myCourses = await _context.Set<Enrollment>()
-                .Where(e => e.ApplicationUserId == userId)
-                .Select(e => new
-                {
-                    id = e.Course.Id,
-                    title = e.Course.Title,
-                    description = e.Course.Description,
-                    imageSrc = e.Course.ImageSrc,
-                    instructor = e.Course.Instructor,
-                    rating = e.Course.Rating,
-                    sections = new List<object>()
-                })
-                .ToListAsync();
-
-            return Ok(myCourses);
+            return Ok(new { message = "Zapisano na kurs pomyœlnie.", enrollmentId = enrollment.Id });
         }
     }
 }

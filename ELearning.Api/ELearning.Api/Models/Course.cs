@@ -1,20 +1,36 @@
-﻿using ELearning.Api.Models.CourseContent;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using ELearning.Api.Models.CourseContent;
+
 namespace ELearning.Api.Models
 {
     public class Course
     {
+        [Key]
         public int Id { get; set; }
+
+        [Required]
         public string Title { get; set; } = string.Empty;
 
-
-        public string InstructorId { get; set; } = string.Empty;
-      
-        public string Instructor { get; set; } = string.Empty;
-        public double Rating { get; set; }
-        public string ImageSrc { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
 
+        // Nowe pola wymagane przez frontend
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal Price { get; set; } = 0.00m;
 
-        public List<CourseSection> Sections { get; set; } = new List<CourseSection>();
+        public string Category { get; set; } = "Ogólny";
+
+        public string Level { get; set; } = "Początkujący";
+
+        public string ImageUrl { get; set; } = "/src/course/placeholder_ai.png";
+
+        public string? InstructorId { get; set; }
+
+        [ForeignKey("InstructorId")]
+        public ApplicationUser? Instructor { get; set; }
+
+        public ICollection<CourseSection> Sections { get; set; } = new List<CourseSection>();
+        public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
     }
 }
