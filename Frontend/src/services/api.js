@@ -53,7 +53,8 @@ const fetchCourseProgress = async (courseId) => {
 
 const markLessonCompleted = async (lessonId) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Progress/completeLesson/${lessonId}`, {
+    // POPRAWKA: Zmieniono URL, aby pasował do ProgressController: api/Progress/lesson/{id}/complete
+    const response = await fetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/complete`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -69,6 +70,8 @@ const markLessonCompleted = async (lessonId) => {
 
 const fetchLessonCompletion = async (lessonId) => {
     const token = getAuthToken();
+    // Uwaga: Ten endpoint (lesson/{id}/completion) nie istnieje w Twoim obecnym ProgressController.
+    // Jeśli chcesz go używać, musisz dodać odpowiednią metodę GET w kontrolerze.
     const response = await fetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/completion`, {
         method: 'GET',
         headers: {

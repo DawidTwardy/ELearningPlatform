@@ -1,171 +1,201 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext'; // Zakładam, że masz AuthContext
+import React, { useState } from 'react';
+import '../../styles/pages/QuizView.css'; 
 
-// Zmienna dla łatwego zarządzania adresem API
-const API_BASE_URL = 'https://localhost:7001/api/quizzes'; // Użyj poprawnego adresu URL (HTTPS lub HTTP)
+const API_BASE_URL = 'http://localhost:7115/api/quizzes';
 
-const QuizView = () => {
-    const { quizId } = useParams();
-    const navigate = useNavigate();
-    const { isAuthenticated } = useAuth(); // Zakładam, że używasz tego do weryfikacji
+const QuizView = ({ quiz, courseId }) => {
+    if (!quiz) return <div className="quiz-view-container">Brak danych quizu.</div>;
 
-    const [quizData, setQuizData] = useState(null); 
-    // Przechowujemy odpowiedzi w formacie { QuestionId: AnswerOptionId }
-    const [userAnswers, setUserAnswers] = useState({}); 
-    const [result, setResult] = useState(null); 
-    const [loading, setLoading] = useState(true);
+    const quizId = quiz.id || quiz.Id;
+    const title = quiz.title || quiz.Title;
+    const questions = quiz.questions || quiz.Questions || [];
+
+    const [userAnswers, setUserAnswers] = useState({});
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [result, setResult] = useState(null);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Pobieranie danych quizu
-    const fetchQuiz = useCallback(async () => {
-        if (!isAuthenticated) return;
-
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('token'); 
-            const response = await fetch(`${API_BASE_URL}/${quizId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            if (response.status === 404) {
-                 setError('Quiz o podanym ID nie istnieje lub nie ma danych.');
-                 setLoading(false);
-                 return;
-            }
-
-            if (!response.ok) {
-                // To wyłapie 401 Unauthorized (brak tokena) lub 500 Internal Server Error
-                throw new Error(`Błąd serwera: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            setQuizData(data);
-            setLoading(false);
-        } catch (err) {
-            console.error("Błąd podczas pobierania quizu:", err);
-            setError(`Wystąpił błąd sieci lub serwera. Sprawdź, czy backend działa. (${err.message})`);
-            setLoading(false);
-        }
-    }, [quizId, isAuthenticated]);
-
-    useEffect(() => {
-        fetchQuiz();
-    }, [fetchQuiz]);
-
-    // Obsługa zmiany odpowiedzi (użycie QuestionId i AnswerOptionId)
     const handleAnswerChange = (questionId, answerOptionId) => {
-        // Konwersja na liczby całkowite, ponieważ QuestionId i AnswerOptionId są intami w DTO
-        const qId = parseInt(questionId);
-        const aId = parseInt(answerOptionId);
-
-        setUserAnswers(prevAnswers => ({
-            ...prevAnswers,
-            [qId]: aId,
+        setUserAnswers(prev => ({
+            ...prev,
+            [questionId]: answerOptionId
         }));
     };
 
-    // Obsługa przesyłania quizu
-    const handleSubmitQuiz = async () => {
-        if (Object.keys(userAnswers).length !== quizData.questions.length) {
-            alert("Musisz odpowiedzieć na wszystkie pytania przed zakończeniem.");
+    const handleNext = () => {
+        if (currentQuestionIndex < questions.length - 1) {
+            setCurrentQuestionIndex(prev => prev + 1);
+        }
+    };
+
+    const handlePrev = () => {
+        if (currentQuestionIndex > 0) {
+            setCurrentQuestionIndex(prev => prev - 1);
+        }
+    };
+
+    const handleSubmit = async () => {
+        if (Object.keys(userAnswers).length < questions.length) {
+            alert("Proszę odpowiedzieć na wszystkie pytania przed zakończeniem.");
             return;
         }
 
         setLoading(true);
         setError(null);
 
-        // Mapowanie stanu userAnswers na strukturę SubmitQuizDto
+        const token = localStorage.getItem('token');
+
         const submitDto = {
-            quizId: parseInt(quizId),
-            answers: Object.entries(userAnswers).map(([questionId, answerOptionId]) => ({
-                // Klucze DTO z backendu: QuestionId, AnswerOptionId
-                questionId: parseInt(questionId), 
-                answerOptionId: parseInt(answerOptionId),
-            })),
+            quizId: quizId,
+            answers: Object.entries(userAnswers).map(([qId, aId]) => ({
+                questionId: parseInt(qId),
+                answerOptionId: parseInt(aId)
+            }))
         };
 
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/submit`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(submitDto),
+                body: JSON.stringify(submitDto)
             });
 
             if (!response.ok) {
-                throw new Error(`Błąd serwera: ${response.status} ${response.statusText}`);
+                throw new Error('Błąd podczas przesyłania odpowiedzi.');
             }
-            
-            const resultData = await response.json();
-            setResult(resultData); 
-            setQuizData(null); // Ukrycie pytań
-            setLoading(false);
+
+            const data = await response.json();
+            setResult(data);
         } catch (err) {
-            console.error("Błąd podczas przesyłania quizu:", err);
-            setError(`Wystąpił błąd sieci lub serwera. Sprawdź, czy backend działa. (${err.message})`);
+            console.error(err);
+            setError('Nie udało się przesłać quizu. Spróbuj ponownie.');
+        } finally {
             setLoading(false);
         }
     };
 
-    if (loading && !error) return <div className="quiz-view-container">Ładowanie quizu...</div>;
-    if (error) return <div className="quiz-view-container error">Błąd: {error}</div>;
-
-    // Wyświetlanie wyniku po przesłaniu
     if (result) {
         return (
             <div className="quiz-view-container result-view">
-                <h2>Wynik Quizu: {quizData?.title || 'Quiz'}</h2>
-                <p>Twój wynik: {result.score} / {result.maxScore}</p>
-                <p className={result.isPassed ? 'passed' : 'failed'}>
-                    Status: {result.isPassed ? 'ZALICZONY 🎉' : 'NIEZALICZONY 😔'}
-                </p>
-                <p>Liczba prób: {result.attemptsCount}</p>
-                {/* Załóżmy, że potrzebujesz sectionId do powrotu do widoku kursu */}
-                <button onClick={() => navigate(`/course-view/${quizData?.sectionId || 'default'}/content`)}>Wróć do kursu</button> 
+                <h2 style={{ color: '#fff' }}>Wynik: {title}</h2>
+                
+                <div className={`result-box ${result.isPassed ? 'passed' : 'failed'}`} style={{
+                    padding: '20px', 
+                    backgroundColor: result.isPassed ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                    border: result.isPassed ? '1px solid #4caf50' : '1px solid #f44336',
+                    borderRadius: '8px',
+                    marginTop: '20px'
+                }}>
+                    <h3 style={{ marginTop: 0 }}>
+                        {result.isPassed ? '🎉 Gratulacje! Zdałeś!' : '😔 Niestety, nie udało się.'}
+                    </h3>
+                    <p style={{ fontSize: '18px' }}>Twój wynik: <strong>{result.score} / {result.maxScore}</strong></p>
+                    <p>Podejście numer: {result.attemptsCount}</p>
+                </div>
+
+                <button 
+                    className="rate-course-button" 
+                    style={{ marginTop: '20px' }}
+                    onClick={() => { setResult(null); setUserAnswers({}); setCurrentQuestionIndex(0); }}
+                >
+                    Spróbuj ponownie
+                </button>
             </div>
         );
     }
 
-    // Wyświetlanie pytań quizu
+    const currentQuestion = questions[currentQuestionIndex];
+    const qId = currentQuestion.id || currentQuestion.Id || currentQuestion.questionId || currentQuestion.QuestionId;
+    const qText = currentQuestion.text || currentQuestion.Text;
+    const options = currentQuestion.options || currentQuestion.Options || [];
+    const isLastQuestion = currentQuestionIndex === questions.length - 1;
+
     return (
         <div className="quiz-view-container">
-            <h1>{quizData.title}</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h1 style={{ color: '#fff', margin: 0, fontSize: '24px' }}>{title}</h1>
+                <span style={{ color: '#aaa' }}>Pytanie {currentQuestionIndex + 1} / {questions.length}</span>
+            </div>
             
-            {quizData.questions.map((question, qIndex) => (
-                <div key={question.questionId} className="question-block">
-                    {/* Ważne: używamy .questionId i .options z DTO */}
-                    <h3>{qIndex + 1}. {question.text}</h3>
-                    <div className="answer-options">
-                        {question.options.map(option => (
-                            <label key={option.answerOptionId} className="answer-option-label">
+            <div className="question-block" style={{ marginBottom: '30px', background: '#2a2a2a', padding: '20px', borderRadius: '8px', minHeight: '200px' }}>
+                <h3 style={{ color: '#ddd', marginTop: 0, fontSize: '20px' }}>{qText}</h3>
+                <div className="answer-options" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+                    {options.map(opt => {
+                        const optId = opt.id || opt.Id || opt.answerOptionId || opt.AnswerOptionId;
+                        const optText = opt.text || opt.Text;
+                        const isSelected = userAnswers[qId] === optId;
+
+                        return (
+                            <label 
+                                key={optId} 
+                                className={`answer-option-label ${isSelected ? 'selected' : ''}`}
+                                style={{
+                                    padding: '15px',
+                                    background: isSelected ? '#3f51b5' : '#333',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    color: '#fff',
+                                    transition: 'background 0.2s',
+                                    border: '1px solid #444'
+                                }}
+                            >
                                 <input
                                     type="radio"
-                                    name={`question-${question.questionId}`}
-                                    value={option.answerOptionId}
-                                    // Używamy .questionId i .answerOptionId
-                                    checked={userAnswers[question.questionId] === option.answerOptionId}
-                                    onChange={() => handleAnswerChange(question.questionId, option.answerOptionId)}
+                                    name={`q-${qId}`}
+                                    value={optId}
+                                    checked={isSelected}
+                                    onChange={() => handleAnswerChange(qId, optId)}
+                                    style={{ marginRight: '15px', transform: 'scale(1.2)' }}
                                 />
-                                {option.text}
+                                {optText}
                             </label>
-                        ))}
-                    </div>
+                        );
+                    })}
                 </div>
-            ))}
-            
-            <button 
-                onClick={handleSubmitQuiz} 
-                disabled={loading || Object.keys(userAnswers).length !== quizData.questions.length}
-                className="submit-quiz-button"
-            >
-                {loading ? 'Przesyłanie...' : 'Zakończ i sprawdź wynik'}
-            </button>
+            </div>
+
+            {error && <p style={{ color: 'red' }}>{error}</p>}
+
+            <div className="quiz-navigation" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+                <button 
+                    onClick={handlePrev}
+                    className="back-button"
+                    disabled={currentQuestionIndex === 0}
+                    style={{ 
+                        width: 'auto', 
+                        padding: '10px 20px', 
+                        opacity: currentQuestionIndex === 0 ? 0.5 : 1,
+                        cursor: currentQuestionIndex === 0 ? 'not-allowed' : 'pointer'
+                    }}
+                >
+                    Poprzednie
+                </button>
+
+                {isLastQuestion ? (
+                    <button 
+                        onClick={handleSubmit} 
+                        className="rate-course-button"
+                        disabled={loading}
+                        style={{ width: 'auto', padding: '10px 30px', opacity: loading ? 0.7 : 1 }}
+                    >
+                        {loading ? 'Przesyłanie...' : 'Zakończ Quiz'}
+                    </button>
+                ) : (
+                    <button 
+                        onClick={handleNext} 
+                        className="rate-course-button"
+                        style={{ width: 'auto', padding: '10px 30px' }}
+                    >
+                        Następne
+                    </button>
+                )}
+            </div>
         </div>
     );
 };

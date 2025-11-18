@@ -1,244 +1,203 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchCourseDetails, markLessonCompleted, fetchUserEnrollment, fetchCourseProgress } from '../../services/api';
-import { AuthContext } from '../../context/AuthContext';
-import { Clock, BookOpen, Layers, CheckCircle } from 'lucide-react';
-import '../../styles/pages/CourseView.css';
+import { fetchCourseDetails, markLessonCompleted } from '../../services/api';
 import QuizView from './QuizView';
+import '../../styles/pages/CourseView.css';
 
-const CourseView = ({ course: courseIdProp }) => {
-    const { id: idFromUrl } = useParams();
+const CourseView = ({ course: courseProp, onBack }) => {
+    const { courseId: paramId } = useParams();
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useContext(AuthContext);
     
-    const id = idFromUrl || courseIdProp;
-
     const [course, setCourse] = useState(null);
-    const [progress, setProgress] = useState(null);
-    const [selectedLesson, setSelectedLesson] = useState(null);
-    const [selectedQuiz, setSelectedQuiz] = useState(null);
+    const [currentContent, setCurrentContent] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [expandedSections, setExpandedSections] = useState({});
     const [error, setError] = useState(null);
 
-    const isEnrolled = progress !== null;
-    const totalLessons = course?.sections?.flatMap(s => s.lessons).length || 0;
-    const completedLessons = progress?.completedLessonIds?.length || 0;
-    const courseCompletionPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-    const isCourseCompleted = courseCompletionPercentage === 100;
+    const getCourseId = () => {
+        if (paramId) return paramId;
+        if (courseProp && typeof courseProp === 'object') return courseProp.id;
+        return courseProp;
+    };
 
-    const loadCourse = useCallback(async () => {
-        setError(null);
-        
-        if (!id) {
-            setLoading(false);
-            setError("Brak identyfikatora kursu w adresie URL.");
-            return;
-        }
+    const courseId = getCourseId();
 
-        try {
-            setLoading(true);
-            const courseData = await fetchCourseDetails(id);
-            setCourse(courseData);
-
-            if (isAuthenticated) {
-                const progressData = await fetchCourseProgress(id);
-                setProgress(progressData); 
-            } else {
-                setProgress(null);
+    useEffect(() => {
+        const loadCourseData = async () => {
+            if (!courseId) {
+                setLoading(false);
+                return;
             }
 
-        } catch (err) {
-            console.error("Błąd ładowania kursu:", err);
-            setProgress(null); 
-            setError("Nie udało się załadować kursu lub wystąpił błąd komunikacji. Spróbuj odświeżyć stronę.");
-        } finally {
-            setLoading(false);
-        }
-    }, [id, isAuthenticated]);
-
-    useEffect(() => {
-        loadCourse();
-    }, [loadCourse]);
-
-    useEffect(() => {
-        if (course && progress && !selectedLesson && !selectedQuiz) {
-            const firstUncompletedLesson = course.sections
-                .flatMap(s => s.lessons || [])
-                .find(lesson => !progress.completedLessonIds.includes(lesson.id));
-
-            if (firstUncompletedLesson) {
-                setSelectedLesson(firstUncompletedLesson);
-            } else if (course.sections && course.sections.length > 0) {
-                const firstSection = course.sections[0];
-                if (firstSection.lessons && firstSection.lessons.length > 0) {
-                    setSelectedLesson(firstSection.lessons[0]);
-                } else if (firstSection.quiz) {
-                    setSelectedQuiz(firstSection.quiz);
+            try {
+                setLoading(true);
+                const data = await fetchCourseDetails(courseId);
+                
+                if (!data) throw new Error("Brak danych");
+                
+                setCourse(data);
+                
+                const sections = data.sections || data.Sections || [];
+                if (sections.length > 0) {
+                    const firstSection = sections[0];
+                    const fSecId = firstSection.id || firstSection.Id;
+                    setExpandedSections({ [fSecId]: true });
+                    
+                    const lessons = firstSection.lessons || firstSection.Lessons || [];
+                    if (lessons.length > 0) {
+                        setCurrentContent({ ...lessons[0], contentType: 'lesson' });
+                    }
                 }
+            } catch (err) {
+                console.error("Błąd:", err);
+                setError("Nie udało się pobrać kursu.");
+            } finally {
+                setLoading(false);
             }
-        }
-    }, [course, progress, selectedLesson, selectedQuiz]);
+        };
 
-    const handleLessonClick = (lesson) => {
-        setSelectedQuiz(null);
-        setSelectedLesson(lesson);
+        loadCourseData();
+    }, [courseId]);
+
+    const toggleSection = (sectionId) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [sectionId]: !prev[sectionId]
+        }));
     };
 
-    const handleQuizClick = (quiz) => {
-        setSelectedLesson(null);
-        setSelectedQuiz(quiz);
-    };
-
-    const handleCompleteLesson = async (lessonId) => {
-        if (!isAuthenticated) return;
+    const handleLessonSelect = async (lesson) => {
+        setCurrentContent({ ...lesson, contentType: 'lesson' });
         try {
-            await markLessonCompleted(lessonId);
-            setProgress(prev => ({
-                ...prev,
-                completedLessonIds: [...prev.completedLessonIds, lessonId]
-            }));
-        } catch (error) {
-            console.error("Błąd oznaczania lekcji jako ukończonej:", error);
-            alert("Nie udało się oznaczyć lekcji jako ukończonej."); 
-        }
+            const lessonId = lesson.id || lesson.Id;
+            if (lessonId) await markLessonCompleted(lessonId);
+        } catch (e) { console.error(e); }
     };
 
-    const handleEnroll = async () => {
-        if (!isAuthenticated) {
-            navigate('/login');
-            return;
-        }
-        
-        try {
-            await fetchUserEnrollment(id); 
-            alert("Pomyślnie zapisano na kurs!");
-            await loadCourse(); 
-        } catch (error) {
-            console.error("Błąd zapisania na kurs:", error);
-            alert(`Nie udało się zapisać na kurs. Spróbuj ponownie. Szczegóły: ${error.message}`); 
-        }
+    const handleQuizSelect = (quiz) => {
+        setCurrentContent({ ...quiz, contentType: 'quiz' });
     };
 
-    if (loading) return <div className="loading-container">Ładowanie kursu...</div>;
-    
-    if (error) return <div className="error-message">{error}</div>; 
-    if (!course) return <div className="error-message">Kurs nie znaleziony.</div>;
+    const handleBack = () => {
+        if (onBack) onBack();
+        else navigate(-1);
+    };
 
-    const currentContent = selectedLesson || selectedQuiz;
+    const renderMainWindow = () => {
+        if (!currentContent) return <div className="video-placeholder">Wybierz element z listy</div>;
 
-    const renderContent = () => {
-        if (!currentContent) {
-            return <div className="course-view-placeholder">Wybierz lekcję lub test z panelu bocznego.</div>;
-        }
-
-        if (selectedQuiz) {
-            return <QuizView quiz={selectedQuiz} courseId={course.id} />;
-        }
-
-        if (selectedLesson) {
-            const isCompleted = progress?.completedLessonIds?.includes(selectedLesson.id);
-            const isVideo = selectedLesson.type === 'video' && selectedLesson.content.startsWith('http');
-
+        if (currentContent.contentType === 'quiz') {
             return (
-                <div className="lesson-content-container">
-                    <div className="lesson-header">
-                        <h2>{selectedLesson.title}</h2>
-                        {!isCompleted ? (
-                            <button onClick={() => handleCompleteLesson(selectedLesson.id)} className="complete-button">
-                                Oznacz jako ukończone <CheckCircle size={20} />
-                            </button>
-                        ) : (
-                            <span className="completed-tag"><CheckCircle size={16} /> Ukończono</span>
-                        )}
-                    </div>
-
-                    <div className="lesson-body">
-                        {isVideo ? (
-                            <div className="video-player">
-                                <iframe
-                                    src={selectedLesson.content}
-                                    title={selectedLesson.title}
-                                    frameBorder="0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen
-                                ></iframe>
-                            </div>
-                        ) : (
-                            <div className="text-content" dangerouslySetInnerHTML={{ __html: selectedLesson.content }} />
-                        )}
-                    </div>
+                <div className="notes-container">
+                    <QuizView quiz={currentContent} courseId={courseId} />
                 </div>
+            );
+        }
+
+        const videoUrl = currentContent.videoUrl || currentContent.VideoUrl;
+        const content = currentContent.content || currentContent.Content;
+        
+        const hasVideo = videoUrl && videoUrl.length > 5;
+
+        if (hasVideo) {
+            return (
+                <video 
+                    key={videoUrl} 
+                    className="video-frame" 
+                    controls 
+                    src={videoUrl}
+                >
+                    Twoja przeglądarka nie obsługuje wideo.
+                </video>
+            );
+        } else {
+            if (content && content.includes('.pdf')) {
+                 return (
+                    <div className="pdf-container">
+                        <iframe src={content} title="PDF"></iframe>
+                    </div>
+                );
+            }
+            return (
+                <div className="notes-container" dangerouslySetInnerHTML={{ __html: content || "<p>Brak treści.</p>" }} />
             );
         }
     };
 
+    if (loading) return <div className="loading-spinner" style={{color:'white', padding:'50px', textAlign:'center'}}>Ładowanie...</div>;
+    if (error) return <div className="error-message">{error}</div>;
+    if (!course) return <div className="error-message">Nie znaleziono kursu.</div>;
+
+    const courseSections = course.sections || course.Sections || [];
+
     return (
-        <div className="course-view-page">
-            <div className="course-view-header">
-                <h1>{course.title}</h1>
-                <div className="course-progress-bar">
-                    <p>Postęp: {courseCompletionPercentage}%</p>
-                    <div className="progress-bar-inner">
-                        <div style={{ width: `${courseCompletionPercentage}%` }}></div>
-                    </div>
-                </div>
-            </div>
-
+        <div className="course-view-container">
             <div className="course-view-content">
-                <div className="course-sidebar">
-                    <h2>Spis Treści ({course.sections.length} sekcji)</h2>
-                    <div className="section-list">
-                        {course.sections.map((section, index) => (
-                            <div key={section.id} className="course-section">
-                                <h3 className="section-title">
-                                    <Layers size={18} /> Sekcja {index + 1}: {section.title}
-                                </h3>
-                                <ul className="section-content-list">
-                                    {(section.lessons || []).map(lesson => {
-                                        const isCompleted = progress?.completedLessonIds?.includes(lesson.id);
-                                        return (
-                                            <li
-                                                key={lesson.id}
-                                                className={`content-item lesson-item ${isCompleted ? 'completed' : ''} ${selectedLesson?.id === lesson.id ? 'active' : ''}`}
-                                                onClick={() => handleLessonClick(lesson)}
-                                            >
-                                                <BookOpen size={16} />
-                                                <span>{lesson.title}</span>
-                                                {isCompleted && <CheckCircle size={16} className="completion-icon" />}
-                                            </li>
-                                        );
-                                    })}
-                                    {section.quiz && (
-                                        <li
-                                            key={section.quiz.id}
-                                            className={`content-item quiz-item ${selectedQuiz?.id === section.quiz.id ? 'active' : ''}`}
-                                            onClick={() => handleQuizClick(section.quiz)}
-                                        >
-                                            <Clock size={16} />
-                                            <span>{section.quiz.title}</span>
-                                        </li>
-                                    )}
-                                </ul>
-                            </div>
-                        ))}
+                
+                <div className="lesson-content-wrapper">
+                    <div className="video-section">
+                        {renderMainWindow()}
                     </div>
-                </div>
-
-                <div className="course-main-content">
-                    {!isEnrolled && (
-                        <div className="enrollment-overlay">
-                            <p>Musisz zapisać się na kurs, aby zobaczyć jego zawartość.</p>
-                            <button onClick={handleEnroll} className="enroll-button">Zapisz się na kurs</button>
+                    {currentContent?.contentType !== 'quiz' && (
+                        <div style={{ marginTop: '20px', padding: '0 20px' }}>
+                            <h2 style={{ fontSize: '24px', marginBottom: '10px', color: '#fff' }}>
+                                {currentContent?.title || currentContent?.Title}
+                            </h2>
+                            <p style={{ color: '#aaa' }}>{course.title || course.Title}</p>
                         </div>
                     )}
-                    {isEnrolled && renderContent()}
+                </div>
+
+                <div className="course-sections">
+                    {courseSections.map((section) => {
+                        const secId = section.id || section.Id;
+                        const lessons = section.lessons || section.Lessons || [];
+                        const quiz = section.quiz || section.Quiz;
+
+                        return (
+                            <div key={secId}>
+                                <div 
+                                    className={`section-title ${expandedSections[secId] ? 'active' : ''}`}
+                                    onClick={() => toggleSection(secId)}
+                                >
+                                    {section.title || section.Title}
+                                </div>
+
+                                {expandedSections[secId] && (
+                                    <div className="section-lessons">
+                                        {lessons.map((lesson) => {
+                                            const lId = lesson.id || lesson.Id;
+                                            const isActive = currentContent?.id === lId && currentContent?.contentType === 'lesson';
+                                            return (
+                                                <p 
+                                                    key={lId}
+                                                    className={isActive ? 'active' : ''}
+                                                    onClick={() => handleLessonSelect(lesson)}
+                                                >
+                                                    {lesson.title || lesson.Title}
+                                                </p>
+                                            );
+                                        })}
+
+                                        {quiz && (
+                                            <p
+                                                className={`quiz-item ${currentContent?.id === (quiz.id || quiz.Id) && currentContent?.contentType === 'quiz' ? 'active-quiz' : ''}`}
+                                                style={{ color: '#ffeb3b', fontWeight: 'bold', cursor: 'pointer' }} 
+                                                onClick={() => handleQuizSelect(quiz)}
+                                            >
+                                                📝 Test: {quiz.title || quiz.Title}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    <button className="rate-course-button">Oceń ten kurs</button>
+                    <button className="back-button" onClick={handleBack}>Powrót</button>
                 </div>
             </div>
-            {isCourseCompleted && (
-                <button className="certificate-button" onClick={() => navigate(`/course/${course.id}/certificate`)}>
-                    Pobierz Certyfikat
-                </button>
-            )}
         </div>
     );
 };
