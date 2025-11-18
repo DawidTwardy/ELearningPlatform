@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
-// Importy stylów
 import './styles/components/App.css'; 
 import './styles/components/Actions.css';
 
-// Importy komponentów
 import Header from './components/Layout/Header.jsx';
 import Footer from './components/Layout/Footer.jsx';
 
-// Importy stron (Pages)
 import HomePage from './pages/Home/HomePage.jsx';
 import InstructorsPage from './pages/Instructor/InstructorsPage.jsx'; 
 import InstructorProfilePage from './pages/Instructor/InstructorProfilePage.jsx';
@@ -27,7 +24,6 @@ import CourseRatingForm from './pages/Course/CourseRatingForm.jsx';
 import CertificatePage from './pages/Course/CertificatePage.jsx';
 import AdminDashboard from './pages/Admin/AdminDashboard.jsx';
 
-// Importy stylów stron (aby Vite je załadował)
 import './styles/pages/AdminDashboard.css';
 import './styles/pages/CertificatePage.css';
 import './styles/pages/CourseDetailsPage.css';
@@ -47,7 +43,6 @@ import './styles/pages/SearchResultsPage.css';
 import './styles/components/NotificationsDropdown.css';
 
 
-// Eksportujemy stałe, aby Header i inne pliki mogły z nich korzystać
 export const PAGE_HOME = 'home';
 export const PAGE_INSTRUCTORS = 'instruktors';
 export const PAGE_INSTRUCTOR_PROFILE = 'instructor_profile';
@@ -60,7 +55,6 @@ export const PAGE_LOGIN = 'login';
 export const PAGE_REGISTER = 'register';
 export const PAGE_ADMIN = 'admin';
 
-// Dane kursów potrzebne do wyszukiwania i profili instruktorów
 const coursesData = [
     { id: 1, title: "Kurs Nauki SQL", instructor: "Michał Nowak", rating: 5, imageSrc: "/src/course/placeholder_sql.png", description: "Poznaj podstawy i zaawansowane techniki SQL. Ten kurs nauczy Cię, jak efektywnie zarządzać bazami danych i pisać złożone zapytania."},
     { id: 2, title: "Kurs Pythona", instructor: "Jan Kowalski", rating: 4.5, imageSrc: "/src/course/placeholder_python.png", description: "Zacznij swoją przygodę z programowaniem w Pythonie. Kurs obejmuje wszystko od podstawowej składni po tworzenie aplikacji webowych."},
@@ -72,9 +66,8 @@ const coursesData = [
 const App = () => {
     const [currentPage, setCurrentPage] = useState(PAGE_HOME); 
     
-    // NOWE STANY: Autoryzacja
-    const [authToken, setAuthToken] = useState(localStorage.getItem('authToken')); // Token JWT
-    const [user, setUser] = useState(null); // Obiekt { username, role, firstName, lastName }
+    const [authToken, setAuthToken] = useState(localStorage.getItem('token'));
+    const [user, setUser] = useState(null);
 
     const [viewingCourse, setViewingCourse] = useState(null);
     const [detailsCourse, setDetailsCourse] = useState(null);
@@ -86,15 +79,12 @@ const App = () => {
     const [selectedInstructor, setSelectedInstructor] = useState(null);
     const [isInstructorView, setIsInstructorView] = useState(false);
     
-    // LOGIKA ROLI I STATUSU ZALOGOWANIA
     const isLoggedIn = !!authToken;
-    // MOCK ROLI ADMINA (W przyszłości wyciągane z tokenu/użytkownika)
     const isAdmin = isLoggedIn && user?.role === 'Admin';
-    // MOCK ROLI INSTRUKTORA (W przyszłości wyciągane z tokenu/użytkownika)
     const isInstructor = isLoggedIn && user?.role === 'Instructor';
 
-    // FUNKCJA: Ustawianie tokenu i danych użytkownika po logowaniu/rejestracji
     const handleLoginSuccess = (token, userData) => {
+        localStorage.setItem('token', token);
         localStorage.setItem('authToken', token);
         setAuthToken(token);
         setUser(userData); 
@@ -115,8 +105,8 @@ const App = () => {
         setCurrentPage(page);
     };
 
-    // FUNKCJA: Logout usuwa token
     const handleLogout = () => {
+        localStorage.removeItem('token');
         localStorage.removeItem('authToken');
         localStorage.removeItem('lastUsername');
         localStorage.removeItem('lastFirstName');
@@ -126,11 +116,8 @@ const App = () => {
         navigateToPage(PAGE_HOME);
     };
 
-    // EFFECT: Symulacja pobierania danych użytkownika po odświeżeniu (gdy token istnieje)
     useEffect(() => {
         if (authToken && !user) {
-            // W prawdziwej aplikacji to byłoby żądanie GET /api/user/me z nagłówkiem Authorization
-            // Na potrzeby mocka: próbujemy użyć lokalnego storage (zapisane przy logowaniu)
             const storedUsername = localStorage.getItem('lastUsername');
             const storedFirstName = localStorage.getItem('lastFirstName');
             const storedLastName = localStorage.getItem('lastName');
@@ -150,8 +137,8 @@ const App = () => {
                     lastName: storedLastName || 'Anonim' 
                 });
             } else {
-                 // Jeśli token jest, ale nie ma danych użytkownika, trzeba go usunąć
-                 localStorage.removeItem('authToken');
+                 localStorage.removeItem('token');
+                 localStorage.removeItem('authToken'); 
                  setAuthToken(null);
             }
         }
@@ -181,7 +168,7 @@ const App = () => {
         } else if (currentPage === PAGE_PROFILE) {
             navigateToPage(PAGE_HOME);
         } else {
-             navigateToPage(PAGE_HOME); // Domyślny powrót
+             navigateToPage(PAGE_HOME);
         }
     };
 
@@ -229,19 +216,19 @@ const App = () => {
         navigateToPage(PAGE_MY_LEARNING);
     };
 
-    const handleViewCourseAsStudent = (course) => {
+    const handleViewCourseAsStudent = (courseId) => {
         setIsInstructorView(false);
-        setViewingCourse(course);
+        setViewingCourse(courseId);
     };
 
     const handleViewCourseAsInstructor = (course) => {
         setIsInstructorView(true);
-        setViewingCourse(course);
+        setViewingCourse(course.id);
     };
 
     const handleAdminViewCourse = (course) => {
       setIsInstructorView(true); 
-      setViewingCourse(course);
+      setViewingCourse(course.id);
     };
     
     const handleShowCertificate = (course) => {
@@ -324,13 +311,11 @@ const App = () => {
 
         switch(currentPage) {
             case PAGE_LOGIN:
-                // PRZEKAZUJEMY onLoginSuccess
                 return <LoginPage 
                             setCurrentPage={navigateToPage} 
                             onLoginSuccess={handleLoginSuccess}
                        />;
             case PAGE_REGISTER:
-                // PRZEKAZUJEMY onRegisterSuccess
                 return <RegisterPage 
                             setCurrentPage={navigateToPage} 
                             onRegisterSuccess={handleLoginSuccess}
@@ -386,9 +371,9 @@ const App = () => {
         <div className="app">
             <Header 
                 currentPage={currentPage} 
-                isLoggedIn={isLoggedIn} // Używa nowego logicznego stanu
+                isLoggedIn={isLoggedIn}
                 handleLogout={handleLogout} 
-                isAdmin={isAdmin} // Używa nowego logicznego stanu
+                isAdmin={isAdmin}
                 navigateToPage={navigateToPage}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}

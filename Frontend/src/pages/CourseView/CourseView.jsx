@@ -6,10 +6,14 @@ import { Clock, BookOpen, Layers, CheckCircle } from 'lucide-react';
 import '../../styles/pages/CourseView.css';
 import QuizView from './QuizView';
 
-const CourseView = () => {
-    const { id } = useParams();
+const CourseView = ({ course: courseIdProp }) => {
+    // OK: Używamy ID z URL (idFromUrl) lub ID przekazanego jako prop (courseIdProp).
+    const { id: idFromUrl } = useParams();
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);
+    
+    // Obiekt 'viewingCourse' w App.jsx zawiera ID, które jest teraz używane jako fallback.
+    const id = idFromUrl || courseIdProp;
 
     const [course, setCourse] = useState(null);
     const [progress, setProgress] = useState(null);
