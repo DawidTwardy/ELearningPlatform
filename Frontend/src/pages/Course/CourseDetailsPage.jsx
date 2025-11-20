@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import StarRating from '../../components/Course/StarRating';
 import FavoriteHeart from '../../components/Course/FavoriteHeart';
-import { fetchCourseDetails } from '../../services/api';
+import { fetchCourseDetails, fetchUserEnrollment } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import '../../styles/pages/CourseDetailsPage.css';
 
 const CourseDetailsPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,8 +31,23 @@ const CourseDetailsPage = () => {
     getCourseDetails();
   }, [id]);
 
-  const handleStartCourse = () => {
-    console.log("Rozpocznij naukę kliknięto dla:", id);
+  const handleStartCourse = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      await fetchUserEnrollment(id);
+      navigate(`/course-view/${id}`);
+    } catch (err) {
+      if (err.message && (err.message.includes("zapisany") || err.message.includes("enrolled"))) {
+          navigate(`/course-view/${id}`);
+      } else {
+          console.error("Błąd zapisu:", err);
+          navigate(`/course-view/${id}`);
+      }
+    }
   };
 
   const toggleSection = (sectionId) => {
@@ -168,28 +186,6 @@ const CourseDetailsPage = () => {
                   <button className="btn-primary full-width" onClick={handleStartCourse}>
                     Rozpocznij naukę
                   </button>
-                  
-                  <div className="course-includes">
-                    <h4>Ten kurs zawiera:</h4>
-                    <ul>
-                      <li>
-                        <span className="icon">📄</span>
-                        {totalLessonsCount} lekcji
-                      </li>
-                      <li>
-                        <span className="icon">∞</span>
-                        Dożywotni dostęp
-                      </li>
-                      <li>
-                        <span className="icon">📱</span>
-                        Dostęp na urządzeniach mobilnych
-                      </li>
-                      <li>
-                        <span className="icon">🏆</span>
-                        Certyfikat ukończenia
-                      </li>
-                    </ul>
-                  </div>
                   
                   <div className="sidebar-actions">
                      <button className="btn-text">Udostępnij</button>

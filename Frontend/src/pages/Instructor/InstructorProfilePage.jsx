@@ -1,10 +1,25 @@
 import React from 'react';
-import '../../styles/components/App.css'; // ZMIENIONA ŚCIEŻKA
-import '../../styles/pages/InstructorProfilePage.css'; // ZMIENIONA ŚCIEŻKA
-import { CourseCard } from '../../components/Course/CourseCard'; // ZMIENIONA ŚCIEŻKA
-import StarRating from '../../components/Course/StarRating'; // ZMIENIONA ŚCIEŻKA
+import '../../styles/components/App.css';
+import '../../styles/pages/InstructorProfilePage.css';
+import { CourseCard } from '../../components/Course/CourseCard';
+import StarRating from '../../components/Course/StarRating';
 
-const InstructorProfilePage = ({ instructor, courses, onCourseClick, onBack }) => {
+const InstructorProfilePage = ({ instructor, courses = [], onCourseClick, onBack }) => {
+  // ZABEZPIECZENIE: Jeśli instructor jest null/undefined, wyświetlamy stosowny komunikat.
+  // Zapobiega to błędowi "instructor is undefined" przy odświeżaniu lub ładowaniu.
+  if (!instructor) {
+    return (
+      <main className="main-content">
+         <div className="profile-header-container" style={{ justifyContent: 'center', flexDirection: 'column', alignItems: 'center', padding: '50px' }}>
+            <h2>Nie wybrano instruktora lub dane są niedostępne.</h2>
+            <button className="profile-back-button" onClick={onBack} style={{ position: 'static', marginTop: '20px' }}>
+              &larr; Wróć do listy instruktorów
+            </button>
+         </div>
+      </main>
+    );
+  }
+
   return (
     <main className="main-content">
       <div className="profile-header-container">
@@ -43,17 +58,21 @@ const InstructorProfilePage = ({ instructor, courses, onCourseClick, onBack }) =
       <div className="profile-courses-container">
         <h2 className="profile-courses-title">Kursy prowadzone przez {instructor.name}</h2>
         <div className="courses-list">
-          {courses.map((course) => (
-            <CourseCard 
-              key={course.id} 
-              course={course}
-              onClick={() => onCourseClick(course)}
-              showInstructor={false}
-              showFavoriteButton={true}
-            >
-                <StarRating rating={course.rating} /> 
-            </CourseCard>
-          ))}
+          {courses && courses.length > 0 ? (
+            courses.map((course) => (
+              <CourseCard 
+                key={course.id} 
+                course={course}
+                onClick={() => onCourseClick(course)}
+                showInstructor={false}
+                showFavoriteButton={true}
+              >
+                  <StarRating rating={course.rating} /> 
+              </CourseCard>
+            ))
+          ) : (
+            <p style={{ color: '#aaa', fontStyle: 'italic' }}>Ten instruktor nie udostępnił jeszcze żadnych kursów.</p>
+          )}
         </div>
       </div>
     </main>

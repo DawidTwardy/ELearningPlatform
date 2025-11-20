@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import '../../styles/pages/CourseEditPage.css';
@@ -7,7 +8,7 @@ import {
   LessonContentInput,
   QuizEditor,
 } from './CourseEditPage.jsx';
-import { uploadFile } from '../../services/api'; // DODANO: Import funkcji uploadu
+import { uploadFile } from '../../services/api';
 
 const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
@@ -20,7 +21,7 @@ const deepParseCourseContent = (course) => {
                         lesson.content = JSON.parse(lesson.content);
                     }
                 } catch (e) {
-                    console.warn("Błąd parsowania treści lekcji:", e);
+                    console.warn(e);
                 }
                 return lesson;
             });
@@ -31,14 +32,14 @@ const deepParseCourseContent = (course) => {
     return { ...course, sections: parsedSections };
 };
 
-
 const CourseAddPage = ({ onBack, onCourseCreate }) => {
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [sections, setSections] = useState([]);
   const [openItems, setOpenItems] = useState({});
-  const [uploading, setUploading] = useState(false); // DODANO: Stan do blokowania przycisku
+  const [uploading, setUploading] = useState(false);
 
   const toggleItem = (id) => {
     setOpenItems(prev => ({
@@ -72,7 +73,6 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
             let contentStr = "";
             
             if (typeof lesson.content === 'object' && lesson.content !== null) {
-                // Zapisujemy treść lekcji jako JSON (dla plików i tekstu)
                 contentStr = JSON.stringify(lesson.content);
             } else {
                 contentStr = lesson.content || "";
@@ -155,7 +155,6 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
         
         if (response.status === 400) {
             const validationErrors = data.errors || data;
-            console.error("Błąd walidacji API:", validationErrors);
             let message = "Wystąpił błąd walidacji (400 Bad Request). Sprawdź, czy wszystkie pola są poprawnie wypełnione.";
             if (validationErrors.errors && Object.keys(validationErrors.errors).length > 0) {
                 message += "\nSzczegóły: " + Object.entries(validationErrors.errors).map(([key, value]) => `${key}: ${value.join(', ')}`).join('; ');
@@ -167,11 +166,13 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
     })
     .then(result => {
         const parsedResult = deepParseCourseContent(result); 
-        alert(`Pomyślnie stworzono kurs: ${parsedResult.title} (ID: ${parsedResult.id})`);
-        onCourseCreate(parsedResult);
+        alert(`Pomyślnie stworzono kurs: ${parsedResult.title}`);
+        
+        // Przekierowanie do listy kursów instruktora
+        navigate('/instructor/my-courses');
     })
     .catch(error => {
-        console.error("Błąd podczas tworzenia kursu:", error);
+        console.error(error);
         alert(`Wystąpił błąd: ${error.message}`);
     });
   };
@@ -236,7 +237,6 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
     );
   };
   
-  // ZMODYFIKOWANA FUNKCJA PRZESYŁANIA PLIKU
   const handleFileSelect = async (sectionId, lessonId, file) => {
     if (!file) return;
 
@@ -251,7 +251,6 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
                         ...section,
                         lessons: section.lessons.map(lesson => {
                             if (lesson.id === lessonId) {
-                                // Zapisujemy zwrócony URL i nazwę pliku w content jako obiekt
                                 return { 
                                     ...lesson, 
                                     content: { url: result.url, fileName: file.name, text: '' } 
@@ -266,7 +265,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
         );
         alert("Plik został przesłany.");
     } catch (error) {
-        console.error("Błąd przesyłania pliku:", error);
+        console.error(error);
         alert("Błąd przesyłania pliku: " + error.message);
     } finally {
         setUploading(false);

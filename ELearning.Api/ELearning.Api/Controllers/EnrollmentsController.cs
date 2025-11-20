@@ -89,7 +89,8 @@ namespace ELearning.Api.Controllers
 
             if (existingEnrollment != null)
             {
-                return Conflict(new { message = "Jesteœ ju¿ zapisany na ten kurs." });
+                
+                return Ok(new { message = "Jesteœ ju¿ zapisany na ten kurs.", enrollmentId = existingEnrollment.Id, alreadyEnrolled = true });
             }
 
             var enrollment = new Enrollment

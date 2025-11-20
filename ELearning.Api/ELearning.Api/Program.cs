@@ -10,11 +10,24 @@ using ELearning.Api.Interfaces;
 using ELearning.Api.Services;
 using System.Text.Json.Serialization;
 using QuestPDF.Infrastructure;
-using Microsoft.AspNetCore.Http; // DODANE
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features; // DODANO: Potrzebne do FormOptions
+using Microsoft.AspNetCore.StaticFiles;   // DODANO: Potrzebne do typów plików
 
 var builder = WebApplication.CreateBuilder(args);
 
 QuestPDF.Settings.License = LicenseType.Community;
+
+// 1. KONFIGURACJA LIMITÓW PRZESY£ANIA PLIKÓW (np. 200 MB)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 209715200; // 200 MB
+});
+
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.MaxRequestBodySize = 209715200; // 200 MB
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -43,14 +56,15 @@ builder.Services.AddScoped<IQuizService, QuizService>();
 builder.Services.AddScoped<FileStorageService>();
 builder.Services.AddScoped<CertificateService>();
 
+// KONFIGURACJA CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllDev",
         builder => builder
-            .SetIsOriginAllowed(_ => true)
+            .SetIsOriginAllowed(_ => true) // Pozwala na dowolny Origin (wymagane przy AllowCredentials)
             .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowCredentials());
+            .AllowCredentials()); // Pozwala na wysy³anie ciasteczek/tokenów auth
 });
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -101,6 +115,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// 2. U¯YCIE CORS - MUSI BYÆ PRZED UseStaticFiles i Auth
 app.UseCors("AllowAllDev");
 
 if (app.Environment.IsDevelopment())
@@ -109,18 +124,24 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// KLUCZOWA ZMIANA: Wymuszenie nag³ówków CORS dla plików statycznych, 
-// co naprawia b³¹d OpaqueResponseBlocking
+// 3. KONFIGURACJA PLIKÓW STATYCZNYCH Z OBS£UG¥ WIDEO
+var contentTypeProvider = new FileExtensionContentTypeProvider();
+contentTypeProvider.Mappings[".mp4"] = "video/mp4";
+contentTypeProvider.Mappings[".mov"] = "video/quicktime";
+contentTypeProvider.Mappings[".avi"] = "video/x-msvideo";
+contentTypeProvider.Mappings[".pdf"] = "application/pdf";
+
 app.UseStaticFiles(new StaticFileOptions
 {
+    ContentTypeProvider = contentTypeProvider,
     OnPrepareResponse = ctx =>
     {
-        // U¿ywamy * poniewa¿ 'AllowAllDev' jest ustawione na allow all origins
+        // Nag³ówki dla odtwarzania wideo i pobierania plików
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization, Range");
+        ctx.Context.Response.Headers.Append("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges");
     }
 });
-
 
 app.UseAuthentication();
 app.UseAuthorization();
