@@ -1,162 +1,102 @@
 import React, { useEffect, useState } from 'react';
-import '../../styles/pages/InstructorsPage.css';
 import { useNavigate } from 'react-router-dom';
-import CourseCard from '../../components/Course/CourseCard';
+import { fetchInstructorCourses, deleteCourse } from '../../services/api';
+import CourseCard from '../../components/Course/CourseCard'; // Przywrócono import CourseCard
+import '../../styles/components/MyCoursesPage.css';
 
 const MyCoursesPage = () => {
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+    const [courses, setCourses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchMyCourses = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error("Brak tokenu autoryzacji");
+    useEffect(() => {
+        const getCourses = async () => {
+            try {
+                const data = await fetchInstructorCourses();
+                setCourses(data);
+            } catch (err) {
+                setError("Nie udało się załadować Twoich kursów. Spróbuj ponownie później.");
+                console.error("Error fetching instructor courses:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        getCourses();
+    }, []);
+
+    const handleDelete = async (courseId) => {
+        if (window.confirm('Czy na pewno chcesz usunąć ten kurs? Tej operacji nie można cofnąć.')) {
+            try {
+                await deleteCourse(courseId);
+                setCourses(courses.filter(course => course.id !== courseId));
+            } catch (err) {
+                alert("Nie udało się usunąć kursu. Spróbuj ponownie.");
+                console.error("Error deleting course:", err);
+            }
         }
-
-        const response = await fetch('http://localhost:7115/api/Courses/my-courses', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Błąd pobierania kursów');
-        }
-        const data = await response.json();
-        setCourses(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
     };
 
-    fetchMyCourses();
-  }, []);
+    if (loading) {
+        return <div className="my-courses-container">Ładowanie kursów...</div>;
+    }
 
-  const handleEdit = (courseId) => {
-      navigate(`/edit-course/${courseId}`);
-  };
+    if (error) {
+        return <div className="my-courses-container error-message">{error}</div>;
+    }
 
-  const handleDelete = async (courseId) => {
-      if(!window.confirm("Czy na pewno chcesz usunąć ten kurs?")) return;
+    return (
+        <div className="my-courses-container">
+            <h1 className="my-courses-title">Moje Kursy</h1>
+            
+            <button className="add-new-course-button" onClick={() => navigate('/add-course')}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Dodaj nowy kurs</span>
+            </button>
 
-      try {
-          const token = localStorage.getItem('token');
-          const response = await fetch(`http://localhost:7115/api/Courses/${courseId}`, {
-              method: 'DELETE',
-              headers: {
-                  'Authorization': `Bearer ${token}`
-              }
-          });
-
-          if(response.ok) {
-              setCourses(courses.filter(c => c.id !== courseId));
-          } else {
-              alert("Nie udało się usunąć kursu.");
-          }
-      } catch (e) {
-          console.error(e);
-          alert("Błąd sieci.");
-      }
-  };
-
-  const handleAddCourse = () => {
-      navigate('/add-course');
-  };
-  
-  const handleStats = (courseId) => {
-      navigate(`/instructor/analytics/${courseId}`);
-  };
-
-  if (loading) return <div className="loading">Ładowanie...</div>;
-  if (error) return <div className="error">Błąd: {error}</div>;
-
-  return (
-    <main className="main-content">
-      <div className="instructors-page-header">
-          <h2 className="page-title">Moje Kursy</h2>
-          <button className="add-course-btn" onClick={handleAddCourse}>+ Dodaj nowy kurs</button>
-      </div>
-      
-      {courses.length === 0 ? (
-        <div className="no-courses">
-            <p>Nie masz jeszcze żadnych kursów.</p>
-        </div>
-      ) : (
-        <div className="courses-list">
-          {courses.map(course => (
-            <CourseCard
-                key={course.id}
-                course={course}
-                showInstructor={false}
-                showFavoriteButton={false}
-                onClick={() => handleEdit(course.id)} 
-            >
-                <div style={{ 
-                    display: 'flex', 
-                    gap: '8px', 
-                    marginTop: '10px', 
-                    flexWrap: 'wrap', 
-                    justifyContent: 'center',
-                    width: '100%' 
-                }}>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); handleEdit(course.id); }} 
-                        className="card-action-button"
-                        style={{ 
-                            backgroundColor: '#2196F3', 
-                            color: 'white', 
-                            border: 'none', 
-                            padding: '8px 12px', 
-                            borderRadius: '4px', 
-                            cursor: 'pointer',
-                            flex: 1
-                        }}
-                    >
-                        Edytuj
-                    </button>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); handleStats(course.id); }} 
-                        className="card-action-button"
-                        style={{ 
-                            backgroundColor: '#4CAF50', 
-                            color: 'white', 
-                            border: 'none', 
-                            padding: '8px 12px', 
-                            borderRadius: '4px', 
-                            cursor: 'pointer',
-                            flex: 1
-                        }}
-                    >
-                        Statystyki
-                    </button>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); handleDelete(course.id); }} 
-                        className="card-action-button"
-                        style={{ 
-                            backgroundColor: '#f44336', 
-                            color: 'white', 
-                            border: 'none', 
-                            padding: '8px 12px', 
-                            borderRadius: '4px', 
-                            cursor: 'pointer',
-                            flex: 1
-                        }}
-                    >
-                        Usuń
-                    </button>
+            {courses.length === 0 ? (
+                <p className="no-courses-message">Nie masz jeszcze żadnych kursów. Dodaj swój pierwszy kurs!</p>
+            ) : (
+                <div className="courses-grid">
+                    {courses.map(course => (
+                        <CourseCard
+                            key={course.id}
+                            course={course}
+                            showInstructor={false}
+                            showFavoriteButton={false}
+                            onClick={() => navigate(`/edit-course/${course.id}`)}
+                        >
+                            {/* Przyciski są przekazywane do środka karty */}
+                            <div className="course-card-actions">
+                                <button 
+                                    className="action-button edit-button" 
+                                    onClick={(e) => { e.stopPropagation(); navigate(`/edit-course/${course.id}`); }}
+                                >
+                                    Edytuj
+                                </button>
+                                <button 
+                                    className="action-button stats-button" 
+                                    onClick={(e) => { e.stopPropagation(); navigate(`/instructor/analytics/${course.id}`); }}
+                                >
+                                    Statystyki
+                                </button>
+                                <button 
+                                    className="action-button delete-button" 
+                                    onClick={(e) => { e.stopPropagation(); handleDelete(course.id); }}
+                                >
+                                    Usuń
+                                </button>
+                            </div>
+                        </CourseCard>
+                    ))}
                 </div>
-            </CourseCard>
-          ))}
+            )}
         </div>
-      )}
-    </main>
-  );
+    );
 };
 
 export default MyCoursesPage;

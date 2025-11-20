@@ -1,0 +1,118 @@
+/* Ogólny kontener dla strony "Moje Kursy" */
+.my-courses-container {
+    padding: 30px;
+    color: #e0e0e0;
+    background-color: #1a1a1a;
+    min-height: calc(100vh - 120px);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Tytuł strony */
+.my-courses-title {
+    color: #ffffff;
+    margin-bottom: 30px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 2.2em;
+}
+
+/* Przycisk "Dodaj nowy kurs" */
+.add-new-course-button {
+    background-color: #4a4a4a;
+    color: #ffffff;
+    border: 1px solid #666;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 30px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.add-new-course-button:hover {
+    background-color: #5a5a5a;
+    border-color: #888;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.add-new-course-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.add-new-course-button svg {
+    color: #ffffff;
+}
+
+/* Wiadomość o braku kursów */
+.no-courses-message {
+    text-align: center;
+    color: #aaa;
+    font-size: 1.1em;
+    margin-top: 50px;
+}
+
+/* Siatka dla kart kursów */
+.courses-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    justify-content: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Kontener na przyciski akcji wewnątrz karty */
+.course-card-actions {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 15px;
+    margin-top: auto; /* Dopycha przyciski do dołu, jeśli jest miejsce */
+    width: 100%;
+    gap: 8px;
+}
+
+/* Przyciski akcji */
+.action-button {
+    flex: 1;
+    padding: 8px 5px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap; /* Zapobiega łamaniu tekstu */
+}
+
+/* Kolory przycisków */
+.edit-button {
+    background-color: #007bff;
+}
+.edit-button:hover {
+    background-color: #0056b3;
+}
+
+.stats-button {
+    background-color: #28a745;
+}
+.stats-button:hover {
+    background-color: #218838;
+}
+
+.delete-button {
+    background-color: #dc3545;
+}
+.delete-button:hover {
+    background-color: #c82333;
+}

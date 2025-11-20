@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import HomePage from './pages/Home/HomePage';
@@ -126,10 +126,12 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
+        {/* Dostęp do sekcji instruktorskich dla wszystkich zalogowanych użytkowników */}
         <Route 
           path="/my-courses" 
           element={
-            <ProtectedRoute roles={['Instructor', 'Admin']}>
+            <ProtectedRoute>
               <MyCoursesPage />
             </ProtectedRoute>
           } 
@@ -137,7 +139,7 @@ function App() {
         <Route 
           path="/add-course" 
           element={
-            <ProtectedRoute roles={['Instructor', 'Admin']}>
+            <ProtectedRoute>
               <CourseAddPage />
             </ProtectedRoute>
           } 
@@ -145,7 +147,7 @@ function App() {
         <Route 
             path="/edit-course/:courseId" 
             element={
-                <ProtectedRoute roles={['Instructor', 'Admin']}>
+                <ProtectedRoute>
                     <CourseEditPageWrapper />
                 </ProtectedRoute>
             } 
@@ -153,11 +155,12 @@ function App() {
         <Route 
             path="/instructor/analytics/:courseId" 
             element={
-                <ProtectedRoute roles={['Instructor', 'Admin']}>
+                <ProtectedRoute>
                     <CourseAnalyticsPage />
                 </ProtectedRoute>
             } 
         />
+
         <Route 
           path="/favorites" 
           element={

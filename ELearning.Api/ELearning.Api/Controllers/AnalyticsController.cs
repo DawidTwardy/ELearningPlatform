@@ -9,7 +9,7 @@ namespace ELearning.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Instructor,Admin")]
+    [Authorize] // Zmiana: Usuniêto Roles = "Instructor,Admin", aby ka¿dy twórca kursu mia³ dostêp
     public class AnalyticsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -28,6 +28,8 @@ namespace ELearning.Api.Controllers
                 .FirstOrDefaultAsync(c => c.Id == courseId);
 
             if (course == null) return NotFound();
+
+            // Weryfikacja: czy u¿ytkownik jest w³aœcicielem kursu lub administratorem
             if (course.InstructorId != userId && !User.IsInRole("Admin")) return Forbid();
 
             var enrollments = await _context.Enrollments

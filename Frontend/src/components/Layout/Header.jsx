@@ -68,7 +68,6 @@ const Header = ({
 
     const searchPlaceholder = currentPage === PAGE_INSTRUCTORS ? "Wyszukaj Twórcę" : "Wyszukaj Kurs";
 
-    // WAŻNE: Ta funkcja zapobiega przeładowaniu strony przy kliknięciu w link
     const handleNavClick = (page) => (e) => {
         e.preventDefault();
         navigateToPage(page);

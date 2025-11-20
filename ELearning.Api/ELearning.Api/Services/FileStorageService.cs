@@ -22,7 +22,10 @@ namespace ELearning.Api.Services
                 throw new ArgumentException("Plik jest pusty lub nie istnieje.");
             }
 
-            string uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
+            // POPRAWKA: Zabezpieczenie na wypadek gdyby WebRootPath by³ null (co zdarza siê w API)
+            string webRootPath = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+
+            string uploadsFolder = Path.Combine(webRootPath, "uploads");
             if (!Directory.Exists(uploadsFolder))
             {
                 Directory.CreateDirectory(uploadsFolder);

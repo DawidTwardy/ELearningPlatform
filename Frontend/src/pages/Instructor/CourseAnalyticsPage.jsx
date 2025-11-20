@@ -1,79 +1,90 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchCourseAnalytics } from '../../services/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import '../../styles/pages/InstructorDashboard.css'; 
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import '../../styles/components/CourseAnalyticsPage.css';
 
 const CourseAnalyticsPage = () => {
     const { courseId } = useParams();
     const navigate = useNavigate();
-    const [stats, setStats] = useState(null);
+    const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const loadStats = async () => {
+        const getAnalytics = async () => {
             try {
                 const data = await fetchCourseAnalytics(courseId);
-                setStats(data);
+                setAnalytics(data);
             } catch (err) {
-                setError("Nie udało się pobrać statystyk.");
-                console.error(err);
+                setError("Nie udało się załadować analityki kursu. Spróbuj ponownie później.");
+                console.error("Error fetching course analytics:", err);
             } finally {
                 setLoading(false);
             }
         };
-        loadStats();
+
+        getAnalytics();
     }, [courseId]);
 
-    if (loading) return <div className="loading-container">Ładowanie statystyk...</div>;
-    if (error) return <div className="error-container">{error}</div>;
-    if (!stats) return <div className="error-container">Brak danych.</div>;
+    if (loading) {
+        return <div className="analytics-container">Ładowanie analityki...</div>;
+    }
+
+    if (error) {
+        return <div className="analytics-container error-message">{error}</div>;
+    }
+
+    if (!analytics) {
+        return <div className="analytics-container">Brak danych analitycznych dla tego kursu.</div>;
+    }
 
     return (
-        <main className="main-content">
-            <div className="dashboard-container">
-                <div className="dashboard-header">
-                    <div>
-                        <button onClick={() => navigate(-1)} className="back-btn" style={{marginBottom: '10px', cursor:'pointer'}}>
-                            &larr; Powrót
-                        </button>
-                        <h2 className="page-title">Statystyki Kursu: {stats.courseTitle}</h2>
-                    </div>
-                </div>
+        <div className="analytics-container">
+            <button className="back-button" onClick={() => navigate(-1)}>
+                Powrót
+            </button>
+            
+            <h1 className="analytics-title">Statystyki Kursu: {analytics.courseTitle}</h1>
 
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <h3>Liczba Studentów</h3>
-                        <p className="stat-value">{stats.totalStudents}</p>
-                    </div>
-                    <div className="stat-card">
-                        <h3>Średni Wynik Quizów</h3>
-                        <p className="stat-value">{stats.averageQuizScore}%</p>
-                    </div>
-                    <div className="stat-card">
-                        <h3>Średnie Ukończenie</h3>
-                        <p className="stat-value">{stats.completionRate}%</p>
-                    </div>
+            <div className="analytics-summary-grid">
+                <div className="summary-card">
+                    <h3>Liczba Studentów</h3>
+                    <p>{analytics.totalStudents}</p>
                 </div>
-
-                <div className="chart-section" style={{ marginTop: '40px', background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-                    <h3 style={{ marginBottom: '20px' }}>Przyrost Studentów (Dzienne zapisy)</h3>
-                    <div style={{ width: '100%', height: 400 }}>
-                        <ResponsiveContainer>
-                            <BarChart data={stats.enrollmentGrowth}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="count" name="Nowi studenci" fill="#8884d8" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+                <div className="summary-card">
+                    <h3>Średni Wynik Quizów</h3>
+                    <p>{analytics.averageQuizScore}%</p>
+                </div>
+                <div className="summary-card">
+                    <h3>Średnie Ukończenie</h3>
+                    <p>{analytics.completionRate}%</p>
                 </div>
             </div>
-        </main>
+
+            <div className="analytics-chart-card">
+                <h3>Wzrost Zapisów</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                    <BarChart
+                        data={analytics.enrollmentGrowth}
+                        margin={{
+                            top: 5, right: 30, left: 20, bottom: 5,
+                        }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                        <XAxis dataKey="date" stroke="#ccc" tick={{ fill: '#ccc' }} />
+                        <YAxis allowDecimals={false} stroke="#ccc" tick={{ fill: '#ccc' }} />
+                        <Tooltip 
+                            cursor={{ fill: 'rgba(255,255,255,0.1)' }} 
+                            contentStyle={{ backgroundColor: '#333', borderColor: '#555', color: '#eee' }} 
+                            itemStyle={{ color: '#eee' }}
+                        />
+                        <Legend wrapperStyle={{ color: '#eee' }} />
+                        <Bar dataKey="count" name="Nowi studenci" fill="#8884d8" />
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
     );
 };
 

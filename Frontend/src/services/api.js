@@ -9,6 +9,10 @@ const handleResponse = async (response) => {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
         throw new Error(errorData.message || `API Error: ${response.status}`);
     }
+    // Obsługa odpowiedzi 204 No Content (częste przy DELETE/PUT)
+    if (response.status === 204) {
+        return null;
+    }
     return response.json();
 };
 
@@ -17,6 +21,35 @@ const fetchCourseDetails = async (courseId) => {
         method: 'GET',
     });
     return handleResponse(response);
+};
+
+// NOWE FUNKCJE DLA INSTRUKTORA
+const fetchInstructorCourses = async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Courses/my-courses`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+    });
+    return handleResponse(response);
+};
+
+const deleteCourse = async (courseId) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Courses/${courseId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+    
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || 'Nie udało się usunąć kursu.');
+    }
+    return true; 
 };
 
 const fetchUserEnrollment = async (courseId) => {
@@ -242,6 +275,8 @@ const fetchCourseAnalytics = async (courseId) => {
 
 export {
     fetchCourseDetails,
+    fetchInstructorCourses, // Dodano
+    deleteCourse,           // Dodano
     fetchLessonCompletion,
     markLessonCompleted,
     fetchUserEnrollment,
