@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using ELearning.Api.Interfaces;
 
 namespace ELearning.Api.Controllers
 {
@@ -21,17 +22,20 @@ namespace ELearning.Api.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
+        private readonly IEmailService _emailService;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             RoleManager<IdentityRole> roleManager,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IEmailService emailService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
             _configuration = configuration;
+            _emailService = emailService;
         }
 
         [HttpPost("register")]
@@ -63,6 +67,18 @@ namespace ELearning.Api.Controllers
 
                 await _userManager.AddToRoleAsync(user, defaultRole);
 
+                try
+                {
+                    await _emailService.SendEmailAsync(
+                        user.Email,
+                        "Witamy w ELearning Platform!",
+                        $"<h3>Czeœæ {user.FirstName}!</h3><p>Dziêkujemy za rejestracjê w naszej platformie. ¯yczymy owocnej nauki!</p>"
+                    );
+                }
+                catch
+                {
+                }
+
                 return Ok(new { Token = await GenerateJwtToken(user) });
             }
 
@@ -90,6 +106,65 @@ namespace ELearning.Api.Controllers
             }
 
             return Unauthorized(new { Message = "B³êdny login lub has³o." });
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
+        {
+            if (string.IsNullOrEmpty(model.Email))
+                return BadRequest("Email jest wymagany.");
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                return Ok(new { Message = "Jeœli konto istnieje, wys³aliœmy link resetuj¹cy." });
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+            var message = $"<h3>Reset has³a</h3><p>Twój token do resetu has³a to: <b>{token}</b></p>";
+
+            try
+            {
+                await _emailService.SendEmailAsync(user.Email, "Reset has³a - ELearning Platform", message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Nie uda³o siê wys³aæ emaila." });
+            }
+
+            return Ok(new { Message = "Jeœli konto istnieje, wys³aliœmy link resetuj¹cy." });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                return Ok(new { Message = "Has³o zosta³o pomyœlnie zresetowane." });
+            }
+
+            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
+
+            if (result.Succeeded)
+            {
+                try
+                {
+                    await _emailService.SendEmailAsync(user.Email, "Has³o zmienione", "<p>Twoje has³o do ELearning Platform zosta³o pomyœlnie zmienione.</p>");
+                }
+                catch { }
+
+                return Ok(new { Message = "Has³o zosta³o pomyœlnie zresetowane." });
+            }
+
+            return BadRequest(new
+            {
+                Errors = result.Errors.Select(e => new { Code = e.Code, Description = e.Description })
+            });
         }
 
         private async Task<string> GenerateJwtToken(ApplicationUser user)

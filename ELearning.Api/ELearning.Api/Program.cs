@@ -11,22 +11,21 @@ using ELearning.Api.Services;
 using System.Text.Json.Serialization;
 using QuestPDF.Infrastructure;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features; // DODANO: Potrzebne do FormOptions
-using Microsoft.AspNetCore.StaticFiles;   // DODANO: Potrzebne do typów plików
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.StaticFiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
 QuestPDF.Settings.License = LicenseType.Community;
 
-// 1. KONFIGURACJA LIMITÓW PRZESY£ANIA PLIKÓW (np. 200 MB)
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 209715200; // 200 MB
+    options.MultipartBodyLengthLimit = 209715200;
 });
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    serverOptions.Limits.MaxRequestBodySize = 209715200; // 200 MB
+    serverOptions.Limits.MaxRequestBodySize = 209715200;
 });
 
 builder.Services.AddControllers()
@@ -55,16 +54,16 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 builder.Services.AddScoped<IQuizService, QuizService>();
 builder.Services.AddScoped<FileStorageService>();
 builder.Services.AddScoped<CertificateService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
-// KONFIGURACJA CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllDev",
         builder => builder
-            .SetIsOriginAllowed(_ => true) // Pozwala na dowolny Origin (wymagane przy AllowCredentials)
+            .SetIsOriginAllowed(_ => true)
             .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowCredentials()); // Pozwala na wysy³anie ciasteczek/tokenów auth
+            .AllowCredentials());
 });
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -115,7 +114,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// 2. U¯YCIE CORS - MUSI BYÆ PRZED UseStaticFiles i Auth
 app.UseCors("AllowAllDev");
 
 if (app.Environment.IsDevelopment())
@@ -124,7 +122,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// 3. KONFIGURACJA PLIKÓW STATYCZNYCH Z OBS£UG¥ WIDEO
 var contentTypeProvider = new FileExtensionContentTypeProvider();
 contentTypeProvider.Mappings[".mp4"] = "video/mp4";
 contentTypeProvider.Mappings[".mov"] = "video/quicktime";
@@ -136,7 +133,6 @@ app.UseStaticFiles(new StaticFileOptions
     ContentTypeProvider = contentTypeProvider,
     OnPrepareResponse = ctx =>
     {
-        // Nag³ówki dla odtwarzania wideo i pobierania plików
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization, Range");
         ctx.Context.Response.Headers.Append("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges");
