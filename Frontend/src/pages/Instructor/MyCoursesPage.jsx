@@ -17,7 +17,6 @@ const MyCoursesPage = () => {
             throw new Error("Brak tokenu autoryzacji");
         }
 
-        // Endpoint zwracający kursy tylko zalogowanego instruktora
         const response = await fetch('http://localhost:7115/api/Courses/my-courses', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -94,31 +93,60 @@ const MyCoursesPage = () => {
             <CourseCard
                 key={course.id}
                 course={course}
-                // WAŻNE: Nie przekazujemy onEdit tutaj, aby nie używać wbudowanego przycisku.
-                // Zamiast tego tworzymy własny zestaw przycisków poniżej.
                 showInstructor={false}
                 showFavoriteButton={false}
-                onClick={() => handleEdit(course.id)} // Kliknięcie w kartę też edytuje
+                onClick={() => handleEdit(course.id)} 
             >
-                <div style={{ display: 'flex', gap: '8px', marginTop: '15px', flexWrap: 'wrap' }}>
+                <div style={{ 
+                    display: 'flex', 
+                    gap: '8px', 
+                    marginTop: '10px', 
+                    flexWrap: 'wrap', 
+                    justifyContent: 'center',
+                    width: '100%' 
+                }}>
                     <button 
                         onClick={(e) => { e.stopPropagation(); handleEdit(course.id); }} 
                         className="card-action-button"
-                        style={{ backgroundColor: '#2196F3' }}
+                        style={{ 
+                            backgroundColor: '#2196F3', 
+                            color: 'white', 
+                            border: 'none', 
+                            padding: '8px 12px', 
+                            borderRadius: '4px', 
+                            cursor: 'pointer',
+                            flex: 1
+                        }}
                     >
                         Edytuj
                     </button>
                     <button 
                         onClick={(e) => { e.stopPropagation(); handleStats(course.id); }} 
                         className="card-action-button"
-                        style={{ backgroundColor: '#4CAF50' }}
+                        style={{ 
+                            backgroundColor: '#4CAF50', 
+                            color: 'white', 
+                            border: 'none', 
+                            padding: '8px 12px', 
+                            borderRadius: '4px', 
+                            cursor: 'pointer',
+                            flex: 1
+                        }}
                     >
                         Statystyki
                     </button>
                     <button 
                         onClick={(e) => { e.stopPropagation(); handleDelete(course.id); }} 
                         className="card-action-button"
-                        style={{ backgroundColor: '#f44336' }}
+                        style={{ 
+                            backgroundColor: '#f44336', 
+                            color: 'white', 
+                            border: 'none', 
+                            padding: '8px 12px', 
+                            borderRadius: '4px', 
+                            cursor: 'pointer',
+                            flex: 1
+                        }}
                     >
                         Usuń
                     </button>

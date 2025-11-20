@@ -68,7 +68,8 @@ const Header = ({
 
     const searchPlaceholder = currentPage === PAGE_INSTRUCTORS ? "Wyszukaj Twórcę" : "Wyszukaj Kurs";
 
-    const handleAuthClick = (page) => (e) => {
+    // WAŻNE: Ta funkcja zapobiega przeładowaniu strony przy kliknięciu w link
+    const handleNavClick = (page) => (e) => {
         e.preventDefault();
         navigateToPage(page);
     };
@@ -110,7 +111,7 @@ const Header = ({
                 <nav className="nav-links">
                     <a 
                         href="#" 
-                        onClick={() => navigateToPage(PAGE_INSTRUCTORS)}
+                        onClick={handleNavClick(PAGE_INSTRUCTORS)}
                         className={currentPage === PAGE_INSTRUCTORS ? 'active' : ''}
                     >
                         Instruktorzy
@@ -121,7 +122,7 @@ const Header = ({
                             {isAdmin && (
                                 <a 
                                     href="#" 
-                                    onClick={() => navigateToPage(PAGE_ADMIN)}
+                                    onClick={handleNavClick(PAGE_ADMIN)}
                                     className={currentPage === PAGE_ADMIN ? 'active' : ''}
                                 >
                                     Admin
@@ -129,14 +130,14 @@ const Header = ({
                             )}
                             <a 
                                 href="#" 
-                                onClick={() => navigateToPage(PAGE_MY_LEARNING)}
+                                onClick={handleNavClick(PAGE_MY_LEARNING)}
                                 className={currentPage === PAGE_MY_LEARNING ? 'active' : ''}
                             >
                                 Moja Nauka
                             </a>
                             <a 
                                 href="#" 
-                                onClick={() => navigateToPage(PAGE_MY_COURSES)}
+                                onClick={handleNavClick(PAGE_MY_COURSES)}
                                 className={currentPage === PAGE_MY_COURSES ? 'active' : ''}
                             >
                                 Moje Kursy
@@ -149,14 +150,14 @@ const Header = ({
                             <a 
                                 href="#login" 
                                 className="nav-button" 
-                                onClick={handleAuthClick(PAGE_LOGIN)}
+                                onClick={handleNavClick(PAGE_LOGIN)}
                             >
                                 Zaloguj się
                             </a>
                             <a 
                                 href="#register" 
                                 className="nav-button register-button"
-                                onClick={handleAuthClick(PAGE_REGISTER)}
+                                onClick={handleNavClick(PAGE_REGISTER)}
                             >
                                 Zarejestruj się
                             </a>

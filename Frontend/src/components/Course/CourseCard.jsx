@@ -1,6 +1,5 @@
 import React from 'react';
 import { FavoriteHeart } from './FavoriteHeart';
-import StarRating from './StarRating';
 
 export const CourseCard = ({ course, onClick, isFavorite, onFavoriteToggle, showInstructor = true, onEdit, showFavoriteButton = true, progress, onShowCertificate, children }) => {
     const isCompleted = progress === 100;
@@ -13,14 +12,25 @@ export const CourseCard = ({ course, onClick, isFavorite, onFavoriteToggle, show
         return course.instructor;
     };
 
-    // POPRAWKA: Wyświetlamy pasek zawsze, gdy progress jest zdefiniowany (nawet jeśli wynosi 0)
     const showProgress = progress !== null && progress !== undefined;
+
+    // Logika decydująca, gdzie wyświetlić children (przyciski)
+    // Jeśli jest onEdit (widok admina), children są wewnątrz info.
+    // Jeśli NIE MA onEdit (widok instruktora), children są na dole karty.
+    const renderChildrenAtBottom = !onEdit && children;
 
     return (
         <div 
             className={`course-card ${isCompleted ? 'completed' : ''}`} 
             onClick={onClick} 
-            style={{ cursor: onClick ? 'pointer' : 'default' }}
+            style={{ 
+                cursor: onClick ? 'pointer' : 'default',
+                display: 'flex',
+                flexDirection: 'column',
+                height: 'auto',
+                minHeight: '100%',
+                position: 'relative'
+            }}
         >
             <div 
                 className="card-image-container" 
@@ -34,18 +44,20 @@ export const CourseCard = ({ course, onClick, isFavorite, onFavoriteToggle, show
                 />
             </div>
             
-            {showFavoriteButton && (
+            {/* Zabezpieczenie: wyświetl serce tylko jeśli mamy handler onFavoriteToggle */}
+            {showFavoriteButton && onFavoriteToggle && (
                 <FavoriteHeart 
                     isFavorite={isFavorite}
                     onToggle={onFavoriteToggle}
                 />
             )}
 
-            <div className="card-info">
+            <div className="card-info" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <h3 className="course-title">{course.title}</h3>
                 {showInstructor && <p className="course-instructor">{getInstructorName()}</p>}
                 
-                { onEdit !== null && children } 
+                {/* Jeśli onEdit istnieje, renderuj children tutaj (stary styl) */}
+                {onEdit && children} 
             </div>
             
             {showProgress && (
@@ -54,7 +66,6 @@ export const CourseCard = ({ course, onClick, isFavorite, onFavoriteToggle, show
                         className={`progress-bar-fill ${isCompleted ? 'completed' : ''}`}
                         style={{ width: `${progress}%` }}
                     ></div>
-                    {/* POPRAWKA: Tekst procentowy zawsze widoczny na pasku */}
                     <span className="progress-bar-text">{Math.round(progress)}%</span>
                 </div>
             )}
@@ -71,7 +82,12 @@ export const CourseCard = ({ course, onClick, isFavorite, onFavoriteToggle, show
                 </button>
             )}
             
-            { (onEdit === null) && !onShowCertificate && children }
+            {/* Nowe miejsce dla przycisków w panelu instruktora - na samym dole */}
+            {renderChildrenAtBottom && (
+                <div style={{ marginTop: 'auto', paddingTop: '10px', paddingBottom: '5px' }}>
+                    {children}
+                </div>
+            )}
         </div>
     );
 };
