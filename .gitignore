@@ -1,82 +1,79 @@
 # -----------------------------------------------------------------------------
-# ZALEŻNOŚCI I KOD GENEROWANY
+# ZALEŻNOŚCI I PLIKI TYMCZASOWE (Frontend)
 # -----------------------------------------------------------------------------
 
-# Dependencies - Frontend (Node.js/npm/Yarn)
-# Ignoruje node_modules w folderze głównym (jeśli istnieje)
-/node_modules
-# Ignoruje node_modules w podkatalogu Frontend (Twój przypadek)
+# Node modules (zarówno w głównym jak i w podkatalogach)
+node_modules/
 /Frontend/node_modules
 
-# Pnp/Yarn
-/.pnp
-.pnp.js
-.yarn-cache
-.npm
+# Logi błędów NPM/Yarn
+npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-npm-debug.log*
+.pnp
+.pnp.js
 
-# Production/Build
+# Build produkcji Frontend
 /build
 /dist
 /out
 /Frontend/build
 /Frontend/dist
 /Frontend/out
+.next/
+coverage/
 
 # -----------------------------------------------------------------------------
 # .NET / ASP.NET CORE (Backend)
 # -----------------------------------------------------------------------------
 
-## Build results
+# Wyniki kompilacji (niezależnie od poziomu zagnieżdżenia)
+[Bb]in/
+[Oo]bj/
 [Dd]ebug/
 [Rr]elease/
 x64/
 x86/
-[Bb]in/
-[Oo]bj/
-[Tt]emp/
 
-## Dependency directories
+# Pliki tymczasowe i cache
+[Tt]emp/
+*.suo
+*.user
+*.userosscamp
+*.sln.docstates
+
+# Pakiety NuGet (jeśli nie używasz Package Reference)
 packages/
 *.nupkg
 project.lock.json
 project.assets.json
 
-## Migracje (często lepiej je śledzić, ale usuwam typowe tymczasowe pliki)
-/Migrations/
-!/Migrations/*.cs 
+# Pliki generowane przez Entity Framework / Narzędzia
+# UWAGA: Folder 'Migrations' powinien być w Gicie, więc go NIE ignorujemy.
 
 # -----------------------------------------------------------------------------
-# IDE (Visual Studio / Rider / VS Code) i OS
+# UPLOADS / PLIKI UŻYTKOWNIKA (To co dodaliśmy)
 # -----------------------------------------------------------------------------
+# Ignorujemy zawartość folderu uploads, ale chcemy sam folder (jeśli dodasz .gitkeep)
+**/wwwroot/uploads/*
+!**/wwwroot/uploads/.gitkeep
 
-## VS temporary files
-*.user
-*.userosscamp
-*.vspscc
-*.vssscc
-*.bak
-*.suo
-*.sln.docstates
-.vs/               # Visual Studio 2017+ hidden folder
-
-## Rider / JetBrains IDEs
+# -----------------------------------------------------------------------------
+# IDE i SYSTEM
+# -----------------------------------------------------------------------------
 .idea/
-
-## VS Code
 .vscode/
-
-## Windows / macOS
+.vs/
+*.swp
 Thumbs.db
 .DS_Store
 
 # -----------------------------------------------------------------------------
-# Zmienne Środowiskowe
+# BEZPIECZEŃSTWO (Zmienne środowiskowe)
 # -----------------------------------------------------------------------------
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+
+# Opcjonalnie: ignoruj lokalne ustawienia developerskie .NET (jeśli masz tam hasła)
+appsettings.Development.json
