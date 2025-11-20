@@ -1,28 +1,49 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom'; // Dodano useParams i useNavigate
 import '../../styles/pages/CourseDetailsPage.css';
 import StarRating from '../../components/Course/StarRating'; 
 import { useAuth } from '../../context/AuthContext';
+import { fetchCourseDetails } from '../../services/api'; // Importujemy funkcję z api.js
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:7115/api';
 
-const mockInstructor = {
-  name: "Michał Nowak",
-  avatarSrc: "/src/icon/usericon.png",
-  bio: "Ekspert w dziedzinie baz danych z 10-letnim doświadczeniem. Pasjonat czystego kodu i efektywnych zapytań."
-};
-
-const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
+const CourseDetailsPage = ({ course: propCourse, onBack, onEnroll }) => {
+  const { id } = useParams(); // Pobieramy ID z URL
+  const navigate = useNavigate();
   const { isAuthenticated, token } = useAuth();
+  
+  const [course, setCourse] = useState(propCourse || null);
+  const [loading, setLoading] = useState(!propCourse);
+  const [error, setError] = useState(null);
   const [enrollmentStatus, setEnrollmentStatus] = useState('not_enrolled'); 
 
+  // Pobieranie danych kursu jeśli nie zostały przekazane jako prop
   useEffect(() => {
-    if (isAuthenticated && course.id) {
+    const loadCourse = async () => {
+      if (!course && id) {
+        try {
+          setLoading(true);
+          const data = await fetchCourseDetails(id);
+          setCourse(data);
+        } catch (err) {
+          console.error("Błąd pobierania szczegółów kursu:", err);
+          setError("Nie udało się pobrać szczegółów kursu.");
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    loadCourse();
+  }, [id, course]);
+
+  useEffect(() => {
+    if (isAuthenticated && course?.id) {
       checkEnrollmentStatus(course.id);
     } else if (!isAuthenticated) {
       setEnrollmentStatus('not_enrolled');
     }
-  }, [course.id, isAuthenticated]);
+  }, [course?.id, isAuthenticated]);
 
   const checkEnrollmentStatus = async (courseId) => {
     setEnrollmentStatus('loading');
@@ -44,6 +65,7 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
   const handleEnroll = async () => {
     if (!isAuthenticated) {
       alert("Musisz być zalogowany, aby zapisać się na kurs.");
+      navigate('/login'); // Przekierowanie do logowania
       return;
     }
 
@@ -73,20 +95,19 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
     }
   };
 
-  const mockCurriculum = [
-    { id: 1, title: "Wprowadzenie do SQL", lessons: ["Co to jest SQL?", "Instalacja środowiska"] },
-    { id: 2, title: "Podstawowe Zapytania", lessons: ["SELECT i WHERE", "JOIN", "GROUP BY"] },
-    { id: 3, title: "Funkcje Zaawansowane", lessons: ["Funkcje okna", "Procedury składowane"] }
-  ];
-
   const handleReportCourse = () => {
     alert("Kurs został zgłoszony do administratora. Dziękujemy za Twoją opinię.");
+  };
+
+  const handleBack = () => {
+      if (onBack) onBack();
+      else navigate(-1); // Powrót w historii przeglądarki
   };
 
   const renderEnrollButton = () => {
     if (!isAuthenticated) {
       return (
-        <button className="details-enroll-button disabled" disabled>
+        <button className="details-enroll-button" onClick={() => navigate('/login')}>
           Zaloguj się, aby się zapisać
         </button>
       );
@@ -122,21 +143,33 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
     }
   };
 
+  if (loading) return <div className="loading-container">Ładowanie szczegółów kursu...</div>;
+  if (error) return <div className="error-container">{error}</div>;
+  if (!course) return <div className="error-container">Nie znaleziono kursu.</div>;
+
+  // Przygotowanie danych instruktora (fallback)
+  const instructor = course.instructor || {
+      name: "Nieznany instruktor",
+      avatarSrc: "/src/icon/usericon.png",
+      bio: "Brak informacji o instruktorze."
+  };
+
   return (
     <main className="main-content">
       <div className="details-container">
         <div className="details-sidebar">
           <div className="details-image-container">
             <img 
-              src={course.imageSrc || "/src/course/placeholder_ai.png"} 
+              src={course.imageSrc || course.imageUrl || "/src/course/placeholder_ai.png"} 
               alt={course.title} 
               className="details-image"
+              onError={(e) => { e.target.onerror = null; e.target.src = "/src/course/placeholder_ai.png"; }}
             />
           </div>
           <div className="details-sidebar-info">
             <h1 className="details-title-sidebar">{course.title}</h1>
             <div className="details-rating-sidebar">
-              <StarRating rating={course.rating} />
+              <StarRating rating={course.rating || 0} />
             </div>
             
             {renderEnrollButton()}
@@ -145,8 +178,8 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
               Zgłoś ten kurs
             </button>
 
-            <button className="details-back-button" onClick={onBack}>
-              Powrót do listy
+            <button className="details-back-button" onClick={handleBack}>
+              Powrót
             </button>
           </div>
         </div>
@@ -158,23 +191,31 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
             <h2 className="details-section-title">Opis Kursu</h2>
             <div 
               className="details-description"
-              dangerouslySetInnerHTML={{ __html: course.description || "Ten kurs to kompleksowe wprowadzenie do... [To jest przykładowy, domyślny opis...]" }}
+              dangerouslySetInnerHTML={{ __html: course.description || "Brak opisu." }}
             />
           </section>
 
           <section className="details-section">
             <h2 className="details-section-title">Program Kursu</h2>
             <div className="details-curriculum">
-              {mockCurriculum.map(section => (
-                <div key={section.id} className="curriculum-section">
-                  <h3 className="curriculum-section-title">{section.title}</h3>
-                  <ul className="curriculum-lesson-list">
-                    {section.lessons.map((lesson, index) => (
-                      <li key={index}>{lesson}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+              {course.sections && course.sections.length > 0 ? (
+                  course.sections.map(section => (
+                    <div key={section.id} className="curriculum-section">
+                      <h3 className="curriculum-section-title">{section.title}</h3>
+                      {section.lessons && section.lessons.length > 0 ? (
+                          <ul className="curriculum-lesson-list">
+                            {section.lessons.map((lesson) => (
+                              <li key={lesson.id}>{lesson.title}</li>
+                            ))}
+                          </ul>
+                      ) : (
+                          <p className="no-lessons">Brak lekcji w tej sekcji.</p>
+                      )}
+                    </div>
+                  ))
+              ) : (
+                  <p>Brak zdefiniowanego programu kursu.</p>
+              )}
             </div>
           </section>
 
@@ -182,13 +223,13 @@ const CourseDetailsPage = ({ course, onBack, onEnroll }) => {
             <h2 className="details-section-title">Instruktor</h2>
             <div className="details-instructor">
               <img 
-                src={mockInstructor.avatarSrc} 
-                alt={mockInstructor.name} 
+                src={instructor.avatarSrc || "/src/icon/usericon.png"} 
+                alt={instructor.name} 
                 className="instructor-avatar-details"
               />
               <div className="instructor-info">
-                <h3 className="instructor-name-details">{mockInstructor.name}</h3>
-                <p className="instructor-bio-details">{mockInstructor.bio}</p>
+                <h3 className="instructor-name-details">{instructor.name}</h3>
+                <p className="instructor-bio-details">{instructor.bio}</p>
               </div>
             </div>
           </section>

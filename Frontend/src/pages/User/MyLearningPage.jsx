@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchMyEnrollments } from '../../services/api';
 import { CourseCard } from '../../components/Course/CourseCard'; 
+import { useNavigate } from 'react-router-dom'; // Dodano useNavigate
 import '../../styles/components/App.css';
 import '../../styles/pages/MyLearningPage.css';
 
@@ -8,6 +9,7 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate(); // Hook do nawigacji
 
   useEffect(() => {
     const loadEnrollments = async () => {
@@ -26,11 +28,19 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
     loadEnrollments();
   }, []);
 
-  // POPRAWKA: Używamy onCourseClick przekazanego z App.jsx, aby poprawnie zmienić widok
   const handleContinue = (courseId) => {
     if (onCourseClick) {
         onCourseClick(courseId);
+    } else {
+        // ZMIANA: Jeśli brak onCourseClick (np. z routingu), nawiguj bezpośrednio
+        navigate(`/course-view/${courseId}`);
     }
+  };
+
+  // Obsługa przypadku gdy onNavigateToHome nie jest przekazane
+  const handleNavigateHome = () => {
+      if (onNavigateToHome) onNavigateToHome();
+      else navigate('/');
   };
 
   if (loading) return <main className="main-content"><div className="loading-container">Ładowanie kursów...</div></main>;
@@ -45,7 +55,7 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
       {enrolledCourses.length === 0 ? (
         <div className="empty-favorites-container">
           <h3>Nie jesteś jeszcze zapisany na żaden kurs.</h3>
-          <button onClick={onNavigateToHome} className="browse-courses-button">
+          <button onClick={handleNavigateHome} className="browse-courses-button">
             Przeglądaj kursy
           </button>
         </div>
@@ -64,7 +74,6 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
                 iconColor: '#2a2a2a' 
             };
 
-            // Zabezpieczenie: Pobieramy postęp, domyślnie 0
             const progressValue = item.progress !== undefined ? item.progress : (item.Progress || 0);
 
             return (

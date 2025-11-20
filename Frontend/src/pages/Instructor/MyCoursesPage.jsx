@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import '../../styles/pages/InstructorsPage.css';
 import { useNavigate } from 'react-router-dom';
+import CourseCard from '../../components/Course/CourseCard';
 
 const MyCoursesPage = () => {
   const [courses, setCourses] = useState([]);
@@ -16,6 +17,7 @@ const MyCoursesPage = () => {
             throw new Error("Brak tokenu autoryzacji");
         }
 
+        // Endpoint zwracający kursy tylko zalogowanego instruktora
         const response = await fetch('http://localhost:7115/api/Courses/my-courses', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -87,50 +89,41 @@ const MyCoursesPage = () => {
             <p>Nie masz jeszcze żadnych kursów.</p>
         </div>
       ) : (
-        <div className="instructors-grid">
+        <div className="courses-list">
           {courses.map(course => (
-            <div key={course.id} className="instructor-card">
-              <div className="instructor-image-wrapper">
-                  <img 
-                    src={course.imageSrc || course.imageUrl || "/src/course/placeholder_sql.png"} 
-                    alt={course.title} 
-                    className="instructor-image"
-                    onError={(e) => { e.target.src = "/src/course/placeholder_sql.png"; }}
-                  />
-              </div>
-              <div className="instructor-info">
-                <h3 className="instructor-name">{course.title}</h3>
-                <p className="instructor-title">{course.category}</p>
-                <p className="instructor-bio">{course.description?.substring(0, 100)}...</p>
-                <div className="course-stats">
-                    <span>{course.level}</span>
-                    <span>{course.price} PLN</span>
-                </div>
-                <div className="instructor-actions" style={{marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+            <CourseCard
+                key={course.id}
+                course={course}
+                // WAŻNE: Nie przekazujemy onEdit tutaj, aby nie używać wbudowanego przycisku.
+                // Zamiast tego tworzymy własny zestaw przycisków poniżej.
+                showInstructor={false}
+                showFavoriteButton={false}
+                onClick={() => handleEdit(course.id)} // Kliknięcie w kartę też edytuje
+            >
+                <div style={{ display: 'flex', gap: '8px', marginTop: '15px', flexWrap: 'wrap' }}>
                     <button 
-                        onClick={() => handleEdit(course.id)} 
-                        className="follow-btn"
-                        style={{flex: 1}}
+                        onClick={(e) => { e.stopPropagation(); handleEdit(course.id); }} 
+                        className="card-action-button"
+                        style={{ backgroundColor: '#2196F3' }}
                     >
                         Edytuj
                     </button>
                     <button 
-                        onClick={() => handleStats(course.id)} 
-                        className="follow-btn"
-                        style={{flex: 1, backgroundColor: '#4CAF50', borderColor: '#4CAF50'}}
+                        onClick={(e) => { e.stopPropagation(); handleStats(course.id); }} 
+                        className="card-action-button"
+                        style={{ backgroundColor: '#4CAF50' }}
                     >
                         Statystyki
                     </button>
                     <button 
-                        onClick={() => handleDelete(course.id)} 
-                        className="follow-btn"
-                        style={{flex: 1, backgroundColor: '#ff4444', borderColor: '#ff4444'}}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(course.id); }} 
+                        className="card-action-button"
+                        style={{ backgroundColor: '#f44336' }}
                     >
                         Usuń
                     </button>
                 </div>
-              </div>
-            </div>
+            </CourseCard>
           ))}
         </div>
       )}
