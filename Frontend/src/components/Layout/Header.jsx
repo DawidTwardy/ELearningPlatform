@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import NotificationsDropdown from '../Notifications/NotificationsDropdown';
+import { fetchNotifications } from '../../services/api';
 import { 
   PAGE_HOME, 
   PAGE_INSTRUCTORS, 
@@ -7,11 +8,10 @@ import {
   PAGE_MY_LEARNING, 
   PAGE_MY_COURSES, 
   PAGE_LOGIN, 
-  PAGE_REGISTER,
+  PAGE_REGISTER, 
   PAGE_FAVORITES,
   PAGE_PROFILE
 } from '../../App.jsx'; 
-
 
 const LoggedInMenu = ({ handleLogout, navigateToPage }) => ( 
     <div className="profile-menu">
@@ -22,7 +22,6 @@ const LoggedInMenu = ({ handleLogout, navigateToPage }) => (
         <button className="menu-item logout" onClick={handleLogout}>Wyloguj się</button>
     </div>
 );
-
 
 const Header = ({ 
     currentPage, 
@@ -36,6 +35,23 @@ const Header = ({
 }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const [hasUnread, setHasUnread] = useState(false);
+
+    useEffect(() => {
+        if (isLoggedIn) {
+            checkNotifications();
+        }
+    }, [isLoggedIn, isNotificationsOpen]);
+
+    const checkNotifications = async () => {
+        try {
+            const data = await fetchNotifications();
+            const unread = data.filter(n => !n.isRead).length > 0;
+            setHasUnread(unread);
+        } catch (error) {
+            console.error("Błąd sprawdzania powiadomień", error);
+        }
+    };
 
     const toggleMenu = () => {
         setIsMenuOpen(prev => !prev);
@@ -45,6 +61,9 @@ const Header = ({
     const toggleNotifications = () => {
         setIsNotificationsOpen(prev => !prev);
         setIsMenuOpen(false);
+        if (!isNotificationsOpen) {
+            checkNotifications();
+        }
     };
 
     const searchPlaceholder = currentPage === PAGE_INSTRUCTORS ? "Wyszukaj Twórcę" : "Wyszukaj Kurs";
@@ -162,7 +181,7 @@ const Header = ({
                                     className="action-icon-image notification-icon-image"
                                     onClick={toggleNotifications}
                                 />
-                                <div className="notification-dot"></div>
+                                {hasUnread && <div className="notification-dot"></div>}
                             </div>
                             <img 
                                 src="/src/icon/usericon.png" 
@@ -173,7 +192,14 @@ const Header = ({
                         </>
                     )}
                     {isMenuOpen && isLoggedIn && <LoggedInMenu handleLogout={handleLogout} navigateToPage={navigateToPage} />}
-                    {isNotificationsOpen && isLoggedIn && <NotificationsDropdown onClose={() => setIsNotificationsOpen(false)} />}
+                    {isNotificationsOpen && isLoggedIn && (
+                        <NotificationsDropdown 
+                            onClose={() => {
+                                setIsNotificationsOpen(false);
+                                checkNotifications(); 
+                            }} 
+                        />
+                    )}
                 </div>
             </div>
         </header>

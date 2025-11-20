@@ -22,6 +22,7 @@ namespace ELearning.Api.Persistence
         public DbSet<UserQuizAttempt> UserQuizAttempts { get; set; }
         public DbSet<UserAnswer> UserAnswers { get; set; }
         public DbSet<Comment> Comments { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

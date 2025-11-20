@@ -1,16 +1,19 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import '../../styles/components/NotificationsDropdown.css'; 
+import { fetchNotifications, markNotificationRead } from '../../services/api';
 
-const MOCK_NOTIFICATIONS = [
-  { id: 1, text: "Gratulacje! Ukończyłeś kurs 'Kurs Nauki SQL'.", type: "success", read: false },
-  { id: 2, text: "Jan Kowalski dodał nową lekcję do kursu 'Kurs Pythona'.", type: "update", read: false },
-  { id: 3, text: "Twój instruktor, Michał Nowak, opublikował nowy kurs 'Kurs .Net Core'.", type: "info", read: true },
-  { id: 4, text: "Zbliża się termin testu w 'Kurs AI'. Nie zapomnij go ukończyć!", type: "alert", read: true },
-];
+const NotificationItem = ({ notification, onRead }) => {
+  const handleClick = () => {
+      if (!notification.isRead) {
+          onRead(notification.id);
+      }
+  };
 
-const NotificationItem = ({ notification }) => {
   return (
-    <div className={`notification-item ${notification.read ? 'read' : 'unread'} ${notification.type}`}>
+    <div 
+      className={`notification-item ${notification.isRead ? 'read' : 'unread'} ${notification.type}`}
+      onClick={handleClick}
+    >
       <div className="notification-icon">
         {notification.type === 'success' && '🏆'}
         {notification.type === 'update' && '🔄'}
@@ -18,14 +21,41 @@ const NotificationItem = ({ notification }) => {
         {notification.type === 'alert' && '⚠️'}
       </div>
       <div className="notification-text">
-        {notification.text}
+        {notification.message}
       </div>
     </div>
   );
 };
 
 const NotificationsDropdown = ({ onClose }) => {
-  const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async () => {
+      try {
+          const data = await fetchNotifications();
+          setNotifications(data);
+      } catch (error) {
+          console.error("Błąd pobierania powiadomień", error);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  const handleMarkRead = async (id) => {
+      try {
+          await markNotificationRead(id);
+          setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      } catch (error) {
+          console.error(error);
+      }
+  };
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <div className="notifications-dropdown-menu">
@@ -36,9 +66,19 @@ const NotificationsDropdown = ({ onClose }) => {
         )}
       </div>
       <div className="notifications-list">
-        {MOCK_NOTIFICATIONS.map(notification => (
-          <NotificationItem key={notification.id} notification={notification} />
-        ))}
+        {loading ? (
+            <div style={{padding: '10px', textAlign: 'center'}}>Ładowanie...</div>
+        ) : notifications.length === 0 ? (
+            <div style={{padding: '10px', textAlign: 'center'}}>Brak powiadomień</div>
+        ) : (
+            notifications.map(notification => (
+                <NotificationItem 
+                    key={notification.id} 
+                    notification={notification} 
+                    onRead={handleMarkRead}
+                />
+            ))
+        )}
       </div>
       <div className="notifications-footer">
         <button className="notifications-footer-btn" onClick={onClose}>

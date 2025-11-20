@@ -19,6 +19,7 @@ namespace ELearning.Api.Controllers
             _context = context;
         }
 
+        // GET: api/Courses (Publiczne - wszystkie kursy)
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetCourses()
         {
@@ -43,6 +44,7 @@ namespace ELearning.Api.Controllers
             return Ok(result);
         }
 
+        // GET: api/Courses/my-courses (Prywatne - tylko kursy zalogowanego instruktora)
         [HttpGet("my-courses")]
         [Authorize]
         public async Task<ActionResult<IEnumerable<object>>> GetInstructorCourses()
@@ -54,6 +56,7 @@ namespace ELearning.Api.Controllers
                 return Unauthorized("Nie rozpoznano użytkownika.");
             }
 
+            // FILTROWANIE: Zwracamy tylko kursy, gdzie InstructorId == userId
             var courses = await _context.Courses
                 .Where(c => c.InstructorId == userId)
                 .Include(c => c.Instructor)
@@ -218,7 +221,6 @@ namespace ELearning.Api.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // 1. Pobierz istniejący kurs ze wszystkimi zależnościami
             var existingCourse = await _context.Courses
                 .Include(c => c.Sections)
                     .ThenInclude(s => s.Lessons)
@@ -235,7 +237,6 @@ namespace ELearning.Api.Controllers
                 return Forbid();
             }
 
-            // 2. Aktualizacja podstawowych pól kursu
             existingCourse.Title = course.Title;
             existingCourse.Description = course.Description;
             existingCourse.Category = course.Category;
@@ -247,45 +248,36 @@ namespace ELearning.Api.Controllers
                 existingCourse.ImageUrl = course.ImageUrl;
             }
 
-            // 3. Inteligentna synchronizacja Sekcji (zamiast usuwania wszystkiego)
+            bool hasNewContent = false;
 
-            // A. Usuń sekcje, których nie ma w przychodzącym modelu
-            // Jeśli ID sekcji z bazy nie znajduje się w liście ID przychodzących (tych > 0), usuń ją.
             var incomingSectionIds = course.Sections.Where(s => s.Id > 0).Select(s => s.Id).ToList();
             var sectionsToDelete = existingCourse.Sections.Where(s => !incomingSectionIds.Contains(s.Id)).ToList();
 
             foreach (var sectionToDelete in sectionsToDelete)
             {
-                // Tutaj można dodać logikę usuwania powiązanych postępów jeśli FK blokują usuwanie,
-                // ale zazwyczaj Cascade Delete w bazie powinno to obsłużyć.
                 _context.CourseSections.Remove(sectionToDelete);
             }
 
-            // B. Aktualizuj istniejące lub Dodaj nowe sekcje
             foreach (var sectionDto in course.Sections)
             {
                 if (sectionDto.Id > 0)
                 {
-                    // Aktualizacja istniejącej sekcji
                     var existingSection = existingCourse.Sections.FirstOrDefault(s => s.Id == sectionDto.Id);
                     if (existingSection != null)
                     {
                         existingSection.Title = sectionDto.Title;
                         existingSection.Order = sectionDto.Order;
 
-                        // --- Synchronizacja Lekcji w Sekcji ---
                         var incomingLessonIds = sectionDto.Lessons.Where(l => l.Id > 0).Select(l => l.Id).ToList();
                         var lessonsToDelete = existingSection.Lessons.Where(l => !incomingLessonIds.Contains(l.Id)).ToList();
 
-                        // Usuń lekcje
                         foreach (var l in lessonsToDelete) _context.Lessons.Remove(l);
 
-                        // Dodaj/Edytuj lekcje
                         foreach (var lessonDto in sectionDto.Lessons)
                         {
                             if (lessonDto.Id == 0)
                             {
-                                // Nowa lekcja w istniejącej sekcji
+                                hasNewContent = true;
                                 existingSection.Lessons.Add(new Lesson
                                 {
                                     Title = lessonDto.Title,
@@ -295,7 +287,6 @@ namespace ELearning.Api.Controllers
                             }
                             else
                             {
-                                // Edycja istniejącej lekcji
                                 var existingLesson = existingSection.Lessons.FirstOrDefault(l => l.Id == lessonDto.Id);
                                 if (existingLesson != null)
                                 {
@@ -306,14 +297,11 @@ namespace ELearning.Api.Controllers
                             }
                         }
 
-                        // --- Synchronizacja Quizu (Uproszczona: jeśli istnieje, aktualizuj; jeśli null w DTO, usuń) ---
                         if (sectionDto.Quiz != null)
                         {
                             if (existingSection.Quiz == null)
                             {
-                                // Dodaj nowy quiz
-                                sectionDto.Quiz.Id = 0; // Reset ID na wszelki wypadek
-                                // Reset ID pytań/opcji
+                                sectionDto.Quiz.Id = 0;
                                 if (sectionDto.Quiz.Questions != null)
                                 {
                                     foreach (var q in sectionDto.Quiz.Questions)
@@ -326,10 +314,8 @@ namespace ELearning.Api.Controllers
                             }
                             else
                             {
-                                // Aktualizuj istniejący quiz
                                 existingSection.Quiz.Title = sectionDto.Quiz.Title;
 
-                                // Sync pytań w quizie
                                 var incomingQIds = sectionDto.Quiz.Questions.Where(q => q.Id > 0).Select(q => q.Id).ToList();
                                 var questionsToDelete = existingSection.Quiz.Questions.Where(q => !incomingQIds.Contains(q.Id)).ToList();
                                 foreach (var q in questionsToDelete) _context.Questions.Remove(q);
@@ -349,10 +335,9 @@ namespace ELearning.Api.Controllers
                                             existingQ.Text = qDto.Text;
                                             existingQ.QuestionType = qDto.QuestionType;
 
-                                            // Sync opcji
                                             var incomingOIds = qDto.Options.Where(o => o.Id > 0).Select(o => o.Id).ToList();
                                             var optionsToDelete = existingQ.Options.Where(o => !incomingOIds.Contains(o.Id)).ToList();
-                                            foreach (var o in optionsToDelete) _context.AnswerOptions.Remove(o); // Zakładam, że DbSet to AnswerOptions
+                                            foreach (var o in optionsToDelete) _context.AnswerOptions.Remove(o);
 
                                             foreach (var oDto in qDto.Options)
                                             {
@@ -374,15 +359,13 @@ namespace ELearning.Api.Controllers
                         }
                         else if (existingSection.Quiz != null)
                         {
-                            // Użytkownik usunął quiz z sekcji
                             _context.Quizzes.Remove(existingSection.Quiz);
                         }
                     }
                 }
                 else
                 {
-                    // Nowa sekcja (ID == 0)
-                    // Musimy upewnić się, że wszystkie dzieci też mają ID = 0, aby EF je wstawił
+                    hasNewContent = true;
                     if (sectionDto.Lessons != null)
                     {
                         foreach (var l in sectionDto.Lessons) l.Id = 0;
@@ -406,6 +389,29 @@ namespace ELearning.Api.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+
+                if (hasNewContent)
+                {
+                    var enrolledUserIds = await _context.Enrollments
+                        .Where(e => e.CourseId == id)
+                        .Select(e => e.UserId)
+                        .ToListAsync();
+
+                    if (enrolledUserIds.Any())
+                    {
+                        var notifications = enrolledUserIds.Select(uid => new Notification
+                        {
+                            UserId = uid,
+                            Message = $"Nowa treść została dodana do kursu '{existingCourse.Title}'. Sprawdź co nowego!",
+                            Type = "update",
+                            CreatedAt = DateTime.UtcNow,
+                            RelatedEntityId = id
+                        }).ToList();
+
+                        _context.Notifications.AddRange(notifications);
+                        await _context.SaveChangesAsync();
+                    }
+                }
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -420,7 +426,6 @@ namespace ELearning.Api.Controllers
             }
             catch (Exception ex)
             {
-                // Logowanie szczegółów błędu może pomóc w debugowaniu
                 Console.WriteLine($"Błąd zapisu: {ex.Message}");
                 if (ex.InnerException != null) Console.WriteLine($"Inner: {ex.InnerException.Message}");
 

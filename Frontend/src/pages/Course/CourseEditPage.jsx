@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import '../../styles/pages/CourseEditPage.css';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { fetchCourseDetails } from '../../services/api';
+import { fetchCourseDetails, uploadFile } from '../../services/api';
 
 const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
@@ -41,11 +41,9 @@ const deepParseCourseContent = (course) => {
             });
         }
 
-        
         if (section.quiz && section.quiz.questions) {
             section.quiz.questions = section.quiz.questions.map(q => ({
                 ...q,
-                
                 type: q.type || q.questionType || q.QuestionType || 'single'
             }));
         }
@@ -83,7 +81,6 @@ export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
       e.target.value = null; 
   };
   
-
   switch (lesson.type) {
     case 'video':
     case 'pdf':
@@ -234,10 +231,8 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
       if (q.id === questionId) {
         let newOptions;
         if (q.type === 'single') {
-          
           newOptions = q.options.map(o => ({ ...o, isCorrect: o.id === optionId }));
         } else {
-          
           newOptions = q.options.map(o => 
             o.id === optionId ? { ...o, isCorrect: isChecked } : o
           );
@@ -324,7 +319,6 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
 
 
 const CourseEditPage = ({ course, onBack }) => {
-  
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("/src/course/placeholder_sql.png");
@@ -562,24 +556,7 @@ const CourseEditPage = ({ course, onBack }) => {
     try {
         setUploading(true);
         
-        // --- UWAGA: Tutaj należy dodać import uploadFile z api.js ---
-        // Ponieważ ten plik (CourseEditPage) jest duży, 
-        // a upload powinien działać tak samo jak w CourseAddPage, 
-        // to dla uproszczenia kodu zakłada się, że API jest dostępne
-        // w Twoim Scope'ie. Jeśli nie, dodaj 'import { uploadFile } from "../../services/api";' na górze pliku.
-        
-        // Poniżej mock/placeholder - zastąp go własną funkcją uploadu, jeśli chcesz, 
-        // by edycja też obsługiwała przesyłanie plików
-        const mockUpload = () => new Promise(resolve => {
-            setTimeout(() => {
-                resolve({ url: `/uploads/${file.name}`, fileName: file.name });
-            }, 500);
-        });
-        
-        const result = await mockUpload(file); 
-        // Jeśli masz import uploadFile z api.js:
-        // const result = await uploadFile(file);
-
+        const result = await uploadFile(file); 
 
         setSections(prevSections =>
             prevSections.map(section => {
@@ -588,7 +565,7 @@ const CourseEditPage = ({ course, onBack }) => {
                         ...section,
                         lessons: section.lessons.map(lesson =>
                             lesson.id === lessonId
-                                ? { ...lesson, content: { url: result.url, fileName: file.name, text: '' } }
+                                ? { ...lesson, content: { url: result.dbPath, fileName: file.name, text: '' } }
                                 : lesson
                         ),
                     };

@@ -1,158 +1,138 @@
-import React, { useState, useEffect } from 'react';
-import '../../styles/components/App.css'; 
-import '../../styles/pages/Favorites.css'; 
-import { CourseCard } from '../../components/Course/CourseCard'; 
-import StarRating from '../../components/Course/StarRating'; 
-import '../../styles/pages/InstructorDashboard.css'; 
-import NoCourseImage from '/src/NoCourse.png';
+import React, { useEffect, useState } from 'react';
+import '../../styles/pages/InstructorsPage.css';
+import { useNavigate } from 'react-router-dom';
 
-const InstructorDashboardStats = ({ courses }) => {
-  const totalCourses = courses.length;
-  const averageRating = courses.reduce((acc, course) => acc + course.rating, 0) / totalCourses || 0;
-  const totalStudents = totalCourses * 150; 
-
-  return (
-    <div className="dashboard-stats-container">
-      <div className="stat-card">
-        <span className="stat-card-title">Łączna liczba studentów</span>
-        <span className="stat-card-value">{totalStudents.toLocaleString('pl-PL')}</span>
-      </div>
-      <div className="stat-card">
-        <span className="stat-card-title">Średnia ocena kursów</span>
-        <div className="stat-card-rating">
-          <span className="stat-card-value">{averageRating.toFixed(1)}</span>
-          <StarRating rating={averageRating} />
-        </div>
-      </div>
-      <div className="stat-card">
-        <span className="stat-card-title">Liczba kursów</span>
-        <span className="stat-card-value">{totalCourses}</span>
-      </div>
-    </div>
-  );
-};
-
-
-const EmptyCreatedCoursesMessage = ({ onStartAddCourse }) => {
-  return (
-    <div className="empty-favorites-container">
-      <h3 className="empty-favorites-title">Nie stworzyłeś jeszcze żadnych kursów</h3>
-      <div className="empty-favorites-icon-wrapper">
-        <img 
-            src={NoCourseImage} 
-            alt="Brak kursów"
-            className="nocourse-icon-image"
-            onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/250x250/242424/FFFFFF?text=Brak+Kursów' }}
-        />
-      </div>
-      <button 
-        className="browse-courses-button"
-        style={{ backgroundColor: '#28A745', color: '#FFFFFF' }}
-        onClick={onStartAddCourse}
-      >
-        Stwórz swój pierwszy kurs
-      </button>
-    </div>
-  );
-};
-
-const MyCoursesPage = ({ setSelectedCourse, onNavigateToHome, onStartEdit, onStartAddCourse }) => {
-  const [myCourses, setMyCourses] = useState([]); 
+const MyCoursesPage = () => {
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const fetchMyCourses = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('Błąd: Użytkownik nie jest zalogowany.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // ZMIANA: Używamy nowego endpointu /api/Courses/my-courses
-      const response = await fetch('http://localhost:7115/api/Courses/my-courses', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Nie udało się załadować kursów. Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (Array.isArray(data)) {
-        setMyCourses(data);
-      } else if (Array.isArray(data.courses)) {
-        setMyCourses(data.courses);
-      } else {
-        setMyCourses([]);
-      }
-
-    } catch (err) {
-      console.error("Błąd ładowania kursów:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchMyCourses();
-  }, []); 
+    const fetchMyCourses = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error("Brak tokenu autoryzacji");
+        }
 
-  const handleEditCourse = (course) => {
-    onStartEdit(course);
+        const response = await fetch('http://localhost:7115/api/Courses/my-courses', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Błąd pobierania kursów');
+        }
+        const data = await response.json();
+        setCourses(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMyCourses();
+  }, []);
+
+  const handleEdit = (courseId) => {
+      navigate(`/edit-course/${courseId}`);
   };
 
-  if (loading) {
-    return <main className="main-content"><div className="loading-container">Ładowanie kursów...</div></main>;
-  }
+  const handleDelete = async (courseId) => {
+      if(!window.confirm("Czy na pewno chcesz usunąć ten kurs?")) return;
 
-  if (error) {
-    return <main className="main-content"><div className="error-container">Błąd ładowania kursów: {error}</div></main>;
-  }
+      try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`http://localhost:7115/api/Courses/${courseId}`, {
+              method: 'DELETE',
+              headers: {
+                  'Authorization': `Bearer ${token}`
+              }
+          });
+
+          if(response.ok) {
+              setCourses(courses.filter(c => c.id !== courseId));
+          } else {
+              alert("Nie udało się usunąć kursu.");
+          }
+      } catch (e) {
+          console.error(e);
+          alert("Błąd sieci.");
+      }
+  };
+
+  const handleAddCourse = () => {
+      navigate('/add-course');
+  };
+  
+  const handleStats = (courseId) => {
+      navigate(`/instructor/analytics/${courseId}`);
+  };
+
+  if (loading) return <div className="loading">Ładowanie...</div>;
+  if (error) return <div className="error">Błąd: {error}</div>;
 
   return (
     <main className="main-content">
-      <div className="page-header-actions">
-        <h2 className="page-title" style={{ marginBottom: 0 }}>Panel Instruktora</h2>
-        {myCourses.length > 0 && (
-          <button className="add-course-button" onClick={onStartAddCourse}>
-            Dodaj nowy kurs
-          </button>
-        )}
+      <div className="instructors-page-header">
+          <h2 className="page-title">Moje Kursy</h2>
+          <button className="add-course-btn" onClick={handleAddCourse}>+ Dodaj nowy kurs</button>
       </div>
-
-      {myCourses.length > 0 ? (
-        <>
-          <InstructorDashboardStats courses={myCourses} />
-          
-          <h3 className="learning-section-title" style={{fontSize: '1.3em', marginTop: '40px'}}>
-            Zarządzaj swoimi kursami ({myCourses.length})
-          </h3>
-          
-          <div className="courses-list">
-            {myCourses.map((course) => (
-              <CourseCard 
-                key={course.id} 
-                course={course}
-                onClick={() => setSelectedCourse(course)}
-                showInstructor={false}
-                onEdit={() => handleEditCourse(course)} 
-                showFavoriteButton={false}
-              >
-                <StarRating rating={course.rating} /> 
-              </CourseCard>
-            ))}
-          </div>
-        </>
+      
+      {courses.length === 0 ? (
+        <div className="no-courses">
+            <p>Nie masz jeszcze żadnych kursów.</p>
+        </div>
       ) : (
-        <EmptyCreatedCoursesMessage onNavigateToHome={onNavigateToHome} onStartAddCourse={onStartAddCourse} />
+        <div className="instructors-grid">
+          {courses.map(course => (
+            <div key={course.id} className="instructor-card">
+              <div className="instructor-image-wrapper">
+                  <img 
+                    src={course.imageSrc || course.imageUrl || "/src/course/placeholder_sql.png"} 
+                    alt={course.title} 
+                    className="instructor-image"
+                    onError={(e) => { e.target.src = "/src/course/placeholder_sql.png"; }}
+                  />
+              </div>
+              <div className="instructor-info">
+                <h3 className="instructor-name">{course.title}</h3>
+                <p className="instructor-title">{course.category}</p>
+                <p className="instructor-bio">{course.description?.substring(0, 100)}...</p>
+                <div className="course-stats">
+                    <span>{course.level}</span>
+                    <span>{course.price} PLN</span>
+                </div>
+                <div className="instructor-actions" style={{marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+                    <button 
+                        onClick={() => handleEdit(course.id)} 
+                        className="follow-btn"
+                        style={{flex: 1}}
+                    >
+                        Edytuj
+                    </button>
+                    <button 
+                        onClick={() => handleStats(course.id)} 
+                        className="follow-btn"
+                        style={{flex: 1, backgroundColor: '#4CAF50', borderColor: '#4CAF50'}}
+                    >
+                        Statystyki
+                    </button>
+                    <button 
+                        onClick={() => handleDelete(course.id)} 
+                        className="follow-btn"
+                        style={{flex: 1, backgroundColor: '#ff4444', borderColor: '#ff4444'}}
+                    >
+                        Usuń
+                    </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </main>
   );

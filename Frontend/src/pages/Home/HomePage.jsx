@@ -1,59 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import { CourseCard } from '../../components/Course/CourseCard';
-import { StarRating } from '../../components/Course/StarRating';
+import { useNavigate } from 'react-router-dom';
+import CourseCard from '../../components/Course/CourseCard';
+import '../../styles/pages/InstructorDashboard.css'; // Używamy stylów ogólnych lub stwórz HomePage.css
 
-const HomePage = ({ onShowDetails }) => {
-    
+const HomePage = () => {
     const [courses, setCourses] = useState([]);
-    const [dummyFavorites, setDummyFavorites] = useState({});
-    
-    const toggleDummyFavorite = (title) => {
-        setDummyFavorites(prev => ({
-            ...prev,
-            [title]: !prev[title]
-        }));
-    };
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
-        // POPRAWKA: Endpoint API musi używać HTTP
-        const apiUrl = 'http://localhost:7115/api/Courses';
+        const fetchCourses = async () => {
+            try {
+                // Pobieramy publiczne kursy
+                const response = await fetch('http://localhost:7115/api/Courses');
+                if (!response.ok) {
+                    throw new Error('Błąd pobierania kursów');
+                }
+                const data = await response.json();
+                setCourses(data);
+            } catch (err) {
+                console.error(err);
+                setError('Nie udało się pobrać kursów.');
+            } finally {
+                setLoading(false);
+            }
+        };
 
-        fetch(apiUrl)
-            .then(response => {
-                 if (!response.ok) {
-                    // Wyrzuć błąd, jeśli status nie jest 2xx
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                 }
-                 return response.json();
-            })
-            .then(data => {
-                setCourses(data); // Ustawia kursy pobrane z bazy
-            })
-            .catch(error => {
-                console.error("Błąd podczas pobierania kursów z API:", error);
-                // W środowisku produkcyjnym można użyć lokalnych mocków jako fallback
-                // alert("Nie udało się załadować kursów z API. Sprawdź, czy backend działa.");
-            });
-            
-    }, []); // Pusta tablica oznacza, że efekt uruchomi się tylko raz po zamontowaniu
+        fetchCourses();
+    }, []);
+
+    // Ta funkcja naprawia błąd "onShowDetails is not a function"
+    const handleShowDetails = (courseId) => {
+        navigate(`/courses/${courseId}`);
+    };
+
+    if (loading) return <div className="loading-container">Ładowanie kursów...</div>;
+    if (error) return <div className="error-container">{error}</div>;
 
     return (
         <main className="main-content">
-            <h2 className="page-title">Dostępne Kursy</h2>
+            
             <div className="courses-list">
-                {courses.map((course) => (
-                    <CourseCard 
-                        key={course.id} 
-                        course={course} 
-                        onClick={() => onShowDetails(course)}
-                        isFavorite={!!dummyFavorites[course.title]}
-                        onFavoriteToggle={() => toggleDummyFavorite(course.title)}
-                        showInstructor={true}
-                        showFavoriteButton={true}
-                    >
-                        <StarRating rating={course.rating} /> 
-                    </CourseCard>
-                ))}
+                {courses.length === 0 ? (
+                    <p>Brak dostępnych kursów.</p>
+                ) : (
+                    courses.map(course => (
+                        <CourseCard 
+                            key={course.id} 
+                            course={course} 
+                            onShowDetails={handleShowDetails} // Przekazujemy funkcję tutaj
+                        />
+                    ))
+                )}
             </div>
         </main>
     );

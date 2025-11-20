@@ -3,8 +3,11 @@
     "",
     "\\Controllers",
     "\\Data",
+    "\\DTOs",
+    "\\DTOs\\Analytics",
+    "\\Models",
     "\\Services"
   ],
-  "SelectedNode": "\\Program.cs",
+  "SelectedNode": "\\Controllers\\CoursesController.cs",
   "PreviewInSolutionExplorer": false
 }

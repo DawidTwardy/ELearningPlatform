@@ -1,4 +1,5 @@
 using ELearning.Api.DTOs.Discussion;
+using ELearning.Api.Models;
 using ELearning.Api.Models.CourseContent;
 using ELearning.Api.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -51,6 +52,27 @@ namespace ELearning.Api.Controllers
 
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
+
+            if (dto.ParentCommentId.HasValue)
+            {
+                var parentComment = await _context.Comments
+                    .Include(c => c.User)
+                    .FirstOrDefaultAsync(c => c.Id == dto.ParentCommentId.Value);
+
+                if (parentComment != null && parentComment.UserId != userId)
+                {
+                    var notification = new Notification
+                    {
+                        UserId = parentComment.UserId,
+                        Message = $"Ktoœ odpowiedzia³ na Twój komentarz: \"{dto.Content}\"",
+                        Type = "info",
+                        CreatedAt = DateTime.UtcNow,
+                        RelatedEntityId = dto.CourseId
+                    };
+                    _context.Notifications.Add(notification);
+                    await _context.SaveChangesAsync();
+                }
+            }
 
             var createdComment = await _context.Comments
                 .Include(c => c.User)

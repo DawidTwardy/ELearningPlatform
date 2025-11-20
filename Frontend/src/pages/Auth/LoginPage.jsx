@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import '../../styles/pages/LoginReg.css';
+import { PAGE_HOME, PAGE_REGISTER } from '../../App';
 
+// Komponent ikonki oka (zdefiniowany lokalnie lub importowany)
 const EyeIcon = ({ show, toggle }) => (
     <img 
         src={show ? '/src/icon/eye.png' : '/src/icon/eye-slash.png'} 
@@ -10,140 +14,104 @@ const EyeIcon = ({ show, toggle }) => (
     />
 );
 
-const LoginPage = ({ setCurrentPage, onLoginSuccess }) => {
-    const [login, setLogin] = useState('');
+const LoginPage = ({ navigateToPage }) => { 
+    // Uwaga: navigateToPage przychodzi z propsów (zgodnie z App.jsx), 
+    // ale wewnątrz komponentu lepiej używać hooka useNavigate dla spójności v6.
+    const navigate = useNavigate(); 
+    const { login } = useAuth();
+
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        setError(''); 
+        setIsLoading(true);
+        setError('');
+
+        // Używamy funkcji login z AuthContext, która obsługuje axios i token
+        const result = await login(email, password);
+
+        if (result.success) {
+            // Przekierowanie po udanym logowaniu
+            // Używamy navigate('/') lub navigateToPage(PAGE_HOME) jeśli wolisz
+            navigate('/'); 
+        } else {
+            setError(result.message || 'Błędny login lub hasło.');
+        }
         
-        const loginData = {
-            username: login, // UŻYWAMY username ZGODNIE Z TWOJĄ LOGIKĄ MOCKOWANIA
-            password: password,
-        };
-
-        // POPRAWKA: Używamy HTTP
-        fetch('http://localhost:7115/api/Auth/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(loginData)
-        })
-        .then(response => {
-             // Zawsze próbujemy sparsować JSON, aby uzyskać token lub błędy
-            return response.json().then(data => ({ status: response.status, body: data }));
-        })
-        .then(result => {
-            if (result.status === 200) {
-                // Pomyślne logowanie, otrzymaliśmy token
-                
-                // --- KLUCZOWA POPRAWKA: ZAPIS TOKENU DO LOCAL STORAGE ---
-                if (result.body.token) {
-                    localStorage.setItem('token', result.body.token); 
-                }
-                
-                // MOCK ROLI I DANYCH UŻYTKOWNIKA (na podstawie loginu, dopóki Identity nie obsługuje ról)
-                let userRole = 'Student';
-                let firstName = 'Jan';
-                let lastName = 'Kowalski';
-
-                if (login.toLowerCase() === 'admin') {
-                    userRole = 'Admin';
-                    firstName = 'Admin';
-                    lastName = 'User';
-                } else if (login.toLowerCase() === 'instructor') {
-                    userRole = 'Instructor';
-                    firstName = 'Michał';
-                    lastName = 'Nowak';
-                }
-                
-                // Zapisujemy mockowe dane użytkownika do lokalnego storage, aby App.jsx mogło je odtworzyć po odświeżeniu
-                localStorage.setItem('lastUsername', login);
-                localStorage.setItem('lastFirstName', firstName);
-                localStorage.setItem('lastName', lastName);
-
-                // Przekazanie tokenu i danych do App.jsx
-                onLoginSuccess(result.body.token, { username: login, role: userRole, firstName: firstName, lastName: lastName });
-
-            } else {
-                // Błąd logowania (np. 401 Unauthorized)
-                setError(result.body.message || 'Błędny Login lub Hasło'); 
-            }
-        })
-        .catch(err => {
-            console.error("Błąd sieci/serwera:", err);
-            setError('Błąd połączenia z serwerem. Spróbuj ponownie.');
-        });
+        setIsLoading(false);
     };
 
-    const handleRegisterClick = (e) => {
+    // Helper do nawigacji do rejestracji
+    const goToRegister = (e) => {
         e.preventDefault();
-        setCurrentPage('register');
+        navigate('/register');
     };
-    
+
     return (
+        /* Używamy klasy 'login-container' zamiast 'main-content' aby pasowało do LoginReg.css */
         <main className="login-container">
             <div className="login-content">
-                
+                {/* Sekcja z ilustracją - widoczna na desktopie */}
                 <div className="login-illustration">
                     <div className="login-illustration-wrapper">
                         <img 
                             src="/src/login/illustration.png" 
-                            alt="Bezpieczeństwo konta"
+                            alt="Login Illustration" 
                             className="login-illustration-image"
                         />
                     </div>
                 </div>
 
+                {/* Karta logowania */}
                 <div className="login-form-card">
                     <h2 className="login-title">Zaloguj się</h2>
                     
                     <form onSubmit={handleLogin}>
-                        
                         <div className="form-group">
-                            <label htmlFor="login">Login</label> 
+                            <label htmlFor="email">Email</label>
                             <input 
-                                id="login"
+                                id="email"
                                 type="text" 
-                                placeholder="Login"
-                                value={login}
-                                onChange={(e) => setLogin(e.target.value)}
-                                required
+                                value={email} 
+                                onChange={(e) => setEmail(e.target.value)} 
+                                required 
+                                placeholder="Wpisz swój email"
                             />
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="password">Hasło</label> 
+                            <label htmlFor="password">Hasło</label>
                             <div className="input-container">
                                 <input 
                                     id="password"
                                     type={passwordVisible ? 'text' : 'password'} 
-                                    placeholder="Hasło"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
+                                    value={password} 
+                                    onChange={(e) => setPassword(e.target.value)} 
+                                    required 
+                                    placeholder="Wpisz swoje hasło"
                                 />
                                 <EyeIcon 
                                     show={passwordVisible} 
                                     toggle={() => setPasswordVisible(!passwordVisible)} 
                                 />
                             </div>
-                            
-                            <div className="form-feedback">
-                                {error && <span className="error-message">{error}</span>}
-                                <a href="#forgot-password" className="forgot-password">Przypomnij hasło</a>
-                            </div>
+                            {error && <div className="form-feedback"><span className="error-message">{error}</span></div>}
                         </div>
-
-                        <button type="submit" className="login-button">Zaloguj się</button>
+                        
+                        <button type="submit" className="login-button" disabled={isLoading}>
+                            {isLoading ? 'Logowanie...' : 'Zaloguj się'}
+                        </button>
                     </form>
-                    
+
                     <div className="register-option">
-                        Nie masz Konta? <a href="#register" className="register-link" onClick={handleRegisterClick}>Zarejestruj się</a>
+                        Nie masz konta?{' '}
+                        <a href="#" className="register-link" onClick={goToRegister}>
+                            Zarejestruj się
+                        </a>
                     </div>
                 </div>
             </div>

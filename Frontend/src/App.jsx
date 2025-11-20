@@ -1,389 +1,215 @@
-import React, { useState, useEffect } from 'react';
-
-import './styles/components/App.css'; 
-import './styles/components/Actions.css';
-
-import Header from './components/Layout/Header.jsx';
-import Footer from './components/Layout/Footer.jsx';
-
-import HomePage from './pages/Home/HomePage.jsx';
-import InstructorsPage from './pages/Instructor/InstructorsPage.jsx'; 
-import InstructorProfilePage from './pages/Instructor/InstructorProfilePage.jsx';
-import FavoritesPage from './pages/User/FavoritesPage.jsx'; 
-import MyLearningPage from './pages/User/MyLearningPage.jsx';
-import MyCoursesPage from './pages/Instructor/MyCoursesPage.jsx'; 
-import ProfilePage from './pages/User/ProfilePage.jsx';
-import SearchResultsPage from './pages/Search/SearchResultsPage.jsx';
-import LoginPage from './pages/Auth/LoginPage.jsx'; 
-import RegisterPage from './pages/Auth/RegisterPage.jsx';
-import CourseView from './pages/CourseView/CourseView.jsx';
-import CourseDetailsPage from './pages/Course/CourseDetailsPage.jsx';
-import CourseEditPage from './pages/Course/CourseEditPage.jsx';
-import CourseAddPage from './pages/Course/CourseAddPage.jsx';
-import CourseRatingForm from './pages/Course/CourseRatingForm.jsx';
-import CertificatePage from './pages/Course/CertificatePage.jsx';
-import AdminDashboard from './pages/Admin/AdminDashboard.jsx';
-
-import './styles/pages/AdminDashboard.css';
-import './styles/pages/CertificatePage.css';
-import './styles/pages/CourseDetailsPage.css';
-import './styles/pages/CourseEditPage.css';
-import './styles/pages/CourseRatingForm.css';
-import './styles/pages/CourseView.css';
-import './styles/pages/DiscussionThread.css';
-import './styles/pages/Favorites.css';
-import './styles/pages/InstructorDashboard.css';
-import './styles/pages/InstructorProfilePage.css';
-import './styles/pages/InstructorsPage.css';
-import './styles/pages/LoginReg.css';
-import './styles/pages/MyLearningPage.css';
-import './styles/pages/ProfilePage.css';
-import './styles/pages/QuizView.css';
-import './styles/pages/SearchResultsPage.css';
-import './styles/components/NotificationsDropdown.css';
-
+import React from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import Header from './components/Layout/Header';
+import Footer from './components/Layout/Footer';
+import HomePage from './pages/Home/HomePage';
+import InstructorsPage from './pages/Instructor/InstructorsPage';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import MyLearningPage from './pages/User/MyLearningPage';
+import MyCoursesPage from './pages/Instructor/MyCoursesPage'; 
+import LoginPage from './pages/Auth/LoginPage';
+import RegisterPage from './pages/Auth/RegisterPage';
+import FavoritesPage from './pages/User/FavoritesPage';
+import ProfilePage from './pages/User/ProfilePage';
+import CourseDetailsPage from './pages/Course/CourseDetailsPage';
+import CourseView from './pages/CourseView/CourseView';
+import CourseAddPage from './pages/Course/CourseAddPage';
+import CourseEditPage from './pages/Course/CourseEditPage';
+import InstructorProfilePage from './pages/Instructor/InstructorProfilePage';
+import SearchResultsPage from './pages/Search/SearchResultsPage';
+import CertificatePage from './pages/Course/CertificatePage';
+import CourseAnalyticsPage from './pages/Instructor/CourseAnalyticsPage';
+import { useAuth } from './context/AuthContext';
+import './styles/components/App.css';
 
 export const PAGE_HOME = 'home';
-export const PAGE_INSTRUCTORS = 'instruktors';
-export const PAGE_INSTRUCTOR_PROFILE = 'instructor_profile';
-export const PAGE_FAVORITES = 'favorites'; 
-export const PAGE_MY_COURSES = 'my_courses';
-export const PAGE_MY_LEARNING = 'my_learning';
-export const PAGE_PROFILE = 'profile';
-export const PAGE_SEARCH_RESULTS = 'search_results';
-export const PAGE_LOGIN = 'login'; 
-export const PAGE_REGISTER = 'register';
+export const PAGE_INSTRUCTORS = 'instructors';
 export const PAGE_ADMIN = 'admin';
+export const PAGE_MY_LEARNING = 'my-learning';
+export const PAGE_MY_COURSES = 'my-courses'; 
+export const PAGE_LOGIN = 'login';
+export const PAGE_REGISTER = 'register';
+export const PAGE_FAVORITES = 'favorites';
+export const PAGE_PROFILE = 'profile';
 
-const coursesData = [
-    { id: 1, title: "Kurs Nauki SQL", instructor: "Michał Nowak", rating: 5, imageSrc: "/src/course/placeholder_sql.png", description: "Poznaj podstawy i zaawansowane techniki SQL. Ten kurs nauczy Cię, jak efektywnie zarządzać bazami danych i pisać złożone zapytania."},
-    { id: 2, title: "Kurs Pythona", instructor: "Jan Kowalski", rating: 4.5, imageSrc: "/src/course/placeholder_python.png", description: "Zacznij swoją przygodę z programowaniem w Pythonie. Kurs obejmuje wszystko od podstawowej składni po tworzenie aplikacji webowych."},
-    { id: 3, title: "Kurs AI", instructor: "Michał Nowak", rating: 4, imageSrc: "/src/course/placeholder_ai.png", description: "Wprowadzenie do świata Sztucznej Inteligencji. Dowiedz się, czym są sieci neuronowe, uczenie maszynowe i jak są wykorzystywane w praktyce."},
-    { id: 4, title: "Kurs .Net Core", instructor: "Michał Nowak", rating: 5, imageSrc: "/src/course/placeholder_dotnet.png", description: "Buduj nowoczesne, wieloplatformowe aplikacje z .NET Core. Kurs skupia się na tworzeniu wydajnych API REST oraz aplikacji webowych."},
-];
+function App() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchQuery, setSearchQuery] = React.useState('');
 
+  const isLoggedIn = !!user;
+  const isAdmin = user?.role === 'Admin';
 
-const App = () => {
-    const [currentPage, setCurrentPage] = useState(PAGE_HOME); 
-    
-    const [authToken, setAuthToken] = useState(localStorage.getItem('token'));
-    const [user, setUser] = useState(null);
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
-    const [viewingCourse, setViewingCourse] = useState(null);
-    const [detailsCourse, setDetailsCourse] = useState(null);
-    const [editingCourse, setEditingCourse] = useState(null);
-    const [ratingCourse, setRatingCourse] = useState(null);
-    const [viewingCertificate, setViewingCertificate] = useState(null);
-    const [isAddingCourse, setIsAddingCourse] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedInstructor, setSelectedInstructor] = useState(null);
-    const [isInstructorView, setIsInstructorView] = useState(false);
-    
-    const isLoggedIn = !!authToken;
-    const isAdmin = isLoggedIn && user?.role === 'Admin';
-    const isInstructor = isLoggedIn && user?.role === 'Instructor';
+  const navigateToPage = (page) => {
+    switch (page) {
+      case PAGE_HOME: navigate('/'); break;
+      case PAGE_INSTRUCTORS: navigate('/instructors'); break;
+      case PAGE_ADMIN: navigate('/admin'); break;
+      case PAGE_MY_LEARNING: navigate('/my-learning'); break;
+      case PAGE_MY_COURSES: navigate('/my-courses'); break;
+      case PAGE_LOGIN: navigate('/login'); break;
+      case PAGE_REGISTER: navigate('/register'); break;
+      case PAGE_FAVORITES: navigate('/favorites'); break;
+      case PAGE_PROFILE: navigate('/profile'); break;
+      default: navigate('/');
+    }
+  };
 
-    const handleLoginSuccess = (token, userData) => {
-        localStorage.setItem('token', token);
-        localStorage.setItem('authToken', token);
-        setAuthToken(token);
-        setUser(userData); 
-        navigateToPage(PAGE_HOME);
-    };
+  const handleSearchSubmit = () => {
+      if (searchQuery.trim()) {
+          navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      }
+  };
 
-    const navigateToPage = (page) => {
-        setViewingCourse(null);
-        setDetailsCourse(null);
-        setEditingCourse(null);
-        setIsAddingCourse(false);
-        setSearchQuery('');
-        setSelectedInstructor(null);
-        setRatingCourse(null);
-        setIsInstructorView(false);
-        setViewingCertificate(null);
+  let currentPage = PAGE_HOME;
+  if (location.pathname === '/instructors') currentPage = PAGE_INSTRUCTORS;
+  else if (location.pathname === '/admin') currentPage = PAGE_ADMIN;
+  else if (location.pathname === '/my-learning') currentPage = PAGE_MY_LEARNING;
+  else if (location.pathname === '/my-courses') currentPage = PAGE_MY_COURSES;
+  else if (location.pathname === '/login') currentPage = PAGE_LOGIN;
+  else if (location.pathname === '/register') currentPage = PAGE_REGISTER;
+  else if (location.pathname === '/favorites') currentPage = PAGE_FAVORITES;
+  else if (location.pathname === '/profile') currentPage = PAGE_PROFILE;
+
+  const ProtectedRoute = ({ children, roles }) => {
+    if (!isLoggedIn) {
+      return <Navigate to="/login" replace />;
+    }
+    if (roles && !roles.includes(user.role)) {
+      return <Navigate to="/" replace />;
+    }
+    return children;
+  };
+
+  return (
+    <div className="app-container">
+      <Header 
+        currentPage={currentPage} 
+        isLoggedIn={isLoggedIn} 
+        handleLogout={handleLogout} 
+        isAdmin={isAdmin} 
+        navigateToPage={navigateToPage}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        handleSearchSubmit={handleSearchSubmit}
+      />
+      
+      <Routes>
+        <Route path="/" element={<HomePage navigateToPage={navigateToPage} />} />
+        <Route path="/instructors" element={<InstructorsPage />} />
+        <Route path="/instructor/:id" element={<InstructorProfilePage />} />
+        <Route path="/courses/:id" element={<CourseDetailsPage />} />
+        <Route path="/search" element={<SearchResultsPage />} />
         
-        setCurrentPage(page);
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('lastUsername');
-        localStorage.removeItem('lastFirstName');
-        localStorage.removeItem('lastName');
-        setAuthToken(null);
-        setUser(null);
-        navigateToPage(PAGE_HOME);
-    };
-
-    useEffect(() => {
-        if (authToken && !user) {
-            const storedUsername = localStorage.getItem('lastUsername');
-            const storedFirstName = localStorage.getItem('lastFirstName');
-            const storedLastName = localStorage.getItem('lastName');
-            let userRole = 'Student';
-
-            if (storedUsername?.toLowerCase() === 'admin') {
-                 userRole = 'Admin';
-            } else if (storedUsername?.toLowerCase() === 'instructor') {
-                 userRole = 'Instructor';
-            }
-            
-            if (storedUsername) {
-                setUser({ 
-                    username: storedUsername, 
-                    role: userRole, 
-                    firstName: storedFirstName || 'Anonim', 
-                    lastName: storedLastName || 'Anonim' 
-                });
-            } else {
-                 localStorage.removeItem('token');
-                 localStorage.removeItem('authToken'); 
-                 setAuthToken(null);
-            }
-        }
-    }, [authToken, user]);
-
-
-    const handleStartEdit = (course) => {
-        setEditingCourse(course);
-    };
-    
-    const handleStartAddCourse = () => {
-        setIsAddingCourse(true);
-    };
-
-    const handleBackFromViews = () => {
-        setViewingCourse(null);
-        setDetailsCourse(null);
-        setEditingCourse(null);
-        setIsAddingCourse(false);
-        setSelectedInstructor(null);
-        setRatingCourse(null);
-        setIsInstructorView(false);
-        setViewingCertificate(null);
-
-        if (isAdmin && (currentPage === PAGE_ADMIN || viewingCourse)) {
-            setCurrentPage(PAGE_ADMIN);
-        } else if (currentPage === PAGE_PROFILE) {
-            navigateToPage(PAGE_HOME);
-        } else {
-             navigateToPage(PAGE_HOME);
-        }
-    };
-
-    const handleShowDetails = (course) => {
-        setDetailsCourse(course);
-    };
-    
-    const handleShowInstructorProfile = (instructor) => {
-        setSelectedInstructor(instructor);
-        setCurrentPage(PAGE_INSTRUCTOR_PROFILE);
-    };
-
-    const handleEnroll = (course) => {
-        console.log(`Zapisano na kurs: ${course.title}`);
-        setDetailsCourse(null);
-        setIsInstructorView(false);
-        setViewingCourse(course);
-    };
-    
-    const handleCourseCreate = (newCourse) => {
-        alert(`Pomyślnie stworzono kurs: ${newCourse.title}`);
-        handleBackFromViews();
-    };
-
-    const handleSearchSubmit = () => {
-        if (searchQuery.trim() === '') return;
-        setViewingCourse(null);
-        setDetailsCourse(null);
-        setEditingCourse(null);
-        setIsAddingCourse(false);
-        setSelectedInstructor(null);
-        setRatingCourse(null);
-        setIsInstructorView(false);
-        setViewingCertificate(null);
-        setCurrentPage(PAGE_SEARCH_RESULTS);
-    };
-    
-    const handleStartRating = (course) => {
-        setRatingCourse(course);
-    };
-    
-    const handleSubmitRating = (courseTitle, rating) => {
-        alert(`Dziękujemy za ocenę ${rating} gwiazdek dla kursu: ${courseTitle}!`);
-        handleBackFromViews();
-        navigateToPage(PAGE_MY_LEARNING);
-    };
-
-    const handleViewCourseAsStudent = (courseId) => {
-        setIsInstructorView(false);
-        setViewingCourse(courseId);
-    };
-
-    const handleViewCourseAsInstructor = (course) => {
-        setIsInstructorView(true);
-        setViewingCourse(course.id);
-    };
-
-    const handleAdminViewCourse = (course) => {
-      setIsInstructorView(true); 
-      setViewingCourse(course.id);
-    };
-    
-    const handleShowCertificate = (course) => {
-        setViewingCertificate(course);
-    };
-
-    const renderPageContent = () => {
-        if (viewingCertificate) {
-            return (
-                <CertificatePage
-                    course={viewingCertificate}
-                    userName={user?.firstName + ' ' + user?.lastName || "Użytkownik"}
-                    onBack={handleBackFromViews}
-                />
-            );
-        }
+        <Route path="/login" element={<LoginPage navigateToPage={navigateToPage} />} />
+        <Route path="/register" element={<RegisterPage navigateToPage={navigateToPage} />} />
         
-        if (ratingCourse) {
-            return (
-                <CourseRatingForm 
-                    course={ratingCourse}
-                    onBack={handleBackFromViews}
-                    onSubmitRating={handleSubmitRating}
-                />
-            );
-        }
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute roles={['Admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/my-learning" 
+          element={
+            <ProtectedRoute>
+              <MyLearningPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/my-courses" 
+          element={
+            <ProtectedRoute roles={['Instructor', 'Admin']}>
+              <MyCoursesPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/add-course" 
+          element={
+            <ProtectedRoute roles={['Instructor', 'Admin']}>
+              <CourseAddPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+            path="/edit-course/:courseId" 
+            element={
+                <ProtectedRoute roles={['Instructor', 'Admin']}>
+                    <CourseEditPageWrapper />
+                </ProtectedRoute>
+            } 
+        />
+        <Route 
+            path="/instructor/analytics/:courseId" 
+            element={
+                <ProtectedRoute roles={['Instructor', 'Admin']}>
+                    <CourseAnalyticsPage />
+                </ProtectedRoute>
+            } 
+        />
+        <Route 
+          path="/favorites" 
+          element={
+            <ProtectedRoute>
+              <FavoritesPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/profile" 
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          } 
+        />
         
-        if (isAddingCourse) {
-            return (
-                <CourseAddPage 
-                    onBack={handleBackFromViews}
-                    onCourseCreate={handleCourseCreate}
-                />
-            );
-        }
+        <Route 
+            path="/course-view/:courseId" 
+            element={
+                <ProtectedRoute>
+                    <CourseView />
+                </ProtectedRoute>
+            } 
+        />
 
-        if (editingCourse) {
-            return (
-                <CourseEditPage 
-                    course={editingCourse} 
-                    onBack={handleBackFromViews} 
-                />
-            );
-        }
-
-        if (detailsCourse) {
-            return (
-                <CourseDetailsPage
-                    course={detailsCourse}
-                    onBack={handleBackFromViews}
-                    onEnroll={handleEnroll}
-                />
-            );
-        }
-
-        if (viewingCourse) {
-            return (
-                <CourseView 
-                    course={viewingCourse} 
-                    onBack={handleBackFromViews} 
-                    onStartRating={handleStartRating}
-                    isInstructorView={isInstructorView}
-                />
-            );
-        }
+        <Route 
+            path="/certificate/:courseId" 
+            element={
+                <ProtectedRoute>
+                    <CertificatePage />
+                </ProtectedRoute>
+            } 
+        />
         
-        if (selectedInstructor) {
-            const instructorCourses = coursesData.filter(
-                course => course.instructor === selectedInstructor.name
-            );
-            return (
-                <InstructorProfilePage
-                    instructor={selectedInstructor}
-                    courses={instructorCourses}
-                    onCourseClick={handleShowDetails}
-                    onBack={() => navigateToPage(PAGE_INSTRUCTORS)}
-                />
-            );
-        }
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
-        switch(currentPage) {
-            case PAGE_LOGIN:
-                return <LoginPage 
-                            setCurrentPage={navigateToPage} 
-                            onLoginSuccess={handleLoginSuccess}
-                       />;
-            case PAGE_REGISTER:
-                return <RegisterPage 
-                            setCurrentPage={navigateToPage} 
-                            onRegisterSuccess={handleLoginSuccess}
-                       />;
-            case PAGE_INSTRUCTORS:
-                return <InstructorsPage onInstructorClick={handleShowInstructorProfile} />;
-            case PAGE_FAVORITES:
-                return <FavoritesPage onNavigateToHome={() => navigateToPage(PAGE_HOME)} />;
-            case PAGE_MY_LEARNING:
-                return (
-                    <MyLearningPage
-                        onCourseClick={handleViewCourseAsStudent}
-                        onNavigateToHome={() => navigateToPage(PAGE_HOME)}
-                        onShowCertificate={handleShowCertificate}
-                    />
-                );
-            case PAGE_MY_COURSES:
-                return (
-                    <MyCoursesPage 
-                        setSelectedCourse={handleViewCourseAsInstructor}
-                        onNavigateToHome={() => navigateToPage(PAGE_HOME)} 
-                        onStartEdit={handleStartEdit}
-                        onStartAddCourse={handleStartAddCourse}
-                    />
-                );
-            case PAGE_PROFILE:
-                return (
-                    <ProfilePage 
-                        onBack={() => navigateToPage(PAGE_HOME)} 
-                    />
-                );
-            case PAGE_SEARCH_RESULTS:
-                return (
-                    <SearchResultsPage
-                      allCourses={coursesData}
-                      query={searchQuery}
-                      onCourseClick={handleShowDetails}
-                    />
-                );
-            
-            case PAGE_ADMIN:
-                return <AdminDashboard onAdminViewCourse={handleAdminViewCourse} />;
+      <Footer />
+    </div>
+  );
+}
 
-            case PAGE_HOME:
-            default:
-                return (
-                    <HomePage onShowDetails={handleShowDetails} />
-                );
-        }
-    };
-
+const CourseEditPageWrapper = () => {
+    const { courseId } = useParams();
+    const navigate = useNavigate();
+    
     return (
-        <div className="app">
-            <Header 
-                currentPage={currentPage} 
-                isLoggedIn={isLoggedIn}
-                handleLogout={handleLogout} 
-                isAdmin={isAdmin}
-                navigateToPage={navigateToPage}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                handleSearchSubmit={handleSearchSubmit}
-            />
-            
-            {renderPageContent()}
-
-            <Footer />
-        </div>
+        <CourseEditPage 
+            course={{ id: parseInt(courseId) }} 
+            onBack={() => navigate('/my-courses')} 
+        />
     );
 };
 

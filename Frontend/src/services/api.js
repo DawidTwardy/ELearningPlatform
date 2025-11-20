@@ -203,6 +203,43 @@ const downloadCertificate = async (courseId) => {
     window.URL.revokeObjectURL(url);
 };
 
+const fetchNotifications = async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Notifications`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+    });
+    return handleResponse(response);
+};
+
+const markNotificationRead = async (id) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Notifications/${id}/read`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+    });
+    if (!response.ok) throw new Error("Błąd podczas oznaczania powiadomienia");
+    return true;
+};
+
+const fetchCourseAnalytics = async (courseId) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/Analytics/course/${courseId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+    });
+    return handleResponse(response);
+};
+
 export {
     fetchCourseDetails,
     fetchLessonCompletion,
@@ -217,5 +254,8 @@ export {
     deleteComment,
     fetchMyEnrollments,
     uploadFile,
-    downloadCertificate
+    downloadCertificate,
+    fetchNotifications,
+    markNotificationRead,
+    fetchCourseAnalytics
 };
