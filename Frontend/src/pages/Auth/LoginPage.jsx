@@ -102,6 +102,19 @@ const LoginPage = ({ navigateToPage }) => {
                             {error && <div className="form-feedback"><span className="error-message">{error}</span></div>}
                         </div>
                         
+                        {/* LINK ZAPOMNIAŁEM HASŁA */}
+                        <div style={{ textAlign: 'right', marginBottom: '15px' }}>
+                            <a 
+                                href="#" 
+                                onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }}
+                                style={{ color: '#ccc', fontSize: '0.9rem', textDecoration: 'none' }}
+                                onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+                                onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                            >
+                                Zapomniałeś hasła?
+                            </a>
+                        </div>
+
                         <button type="submit" className="login-button" disabled={isLoading}>
                             {isLoading ? 'Logowanie...' : 'Zaloguj się'}
                         </button>

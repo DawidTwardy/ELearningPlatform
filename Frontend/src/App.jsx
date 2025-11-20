@@ -19,6 +19,8 @@ import InstructorProfilePage from './pages/Instructor/InstructorProfilePage';
 import SearchResultsPage from './pages/Search/SearchResultsPage';
 import CertificatePage from './pages/Course/CertificatePage';
 import CourseAnalyticsPage from './pages/Instructor/CourseAnalyticsPage';
+import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage'; // NOWY IMPORT
+import ResetPasswordPage from './pages/Auth/ResetPasswordPage';   // NOWY IMPORT
 import { useAuth } from './context/AuthContext';
 import './styles/components/App.css';
 
@@ -31,6 +33,8 @@ export const PAGE_LOGIN = 'login';
 export const PAGE_REGISTER = 'register';
 export const PAGE_FAVORITES = 'favorites';
 export const PAGE_PROFILE = 'profile';
+export const PAGE_FORGOT_PASSWORD = 'forgot-password'; // NOWA STAŁA
+export const PAGE_RESET_PASSWORD = 'reset-password';   // NOWA STAŁA
 
 function App() {
   const { user, logout } = useAuth();
@@ -57,6 +61,8 @@ function App() {
       case PAGE_REGISTER: navigate('/register'); break;
       case PAGE_FAVORITES: navigate('/favorites'); break;
       case PAGE_PROFILE: navigate('/profile'); break;
+      case PAGE_FORGOT_PASSWORD: navigate('/forgot-password'); break; // NOWA NAWIGACJA
+      case PAGE_RESET_PASSWORD: navigate('/reset-password'); break;   // NOWA NAWIGACJA
       default: navigate('/');
     }
   };
@@ -80,8 +86,11 @@ function App() {
   else if (path.startsWith('/profile')) currentPage = PAGE_PROFILE;
 
   // Logika: te strony mają być na PEŁNĄ SZEROKOŚĆ
+  // ZMIANA: Dodano forgot-password i reset-password do stron pełnoekranowych
   const isFullWidthPage = path.startsWith('/login') || 
                           path.startsWith('/register') || 
+                          path.startsWith('/forgot-password') || 
+                          path.startsWith('/reset-password') ||
                           path.startsWith('/courses/') || 
                           path.startsWith('/course-view/');
 
@@ -128,6 +137,16 @@ function App() {
             } 
           />
           
+          {/* NOWE TRASY DO RESETOWANIA HASŁA */}
+          <Route 
+            path="/forgot-password" 
+            element={<ForgotPasswordPage onNavigateToLogin={() => navigateToPage(PAGE_LOGIN)} />} 
+          />
+          <Route 
+            path="/reset-password" 
+            element={<ResetPasswordPage onNavigateToLogin={() => navigateToPage(PAGE_LOGIN)} />} 
+          />
+
           <Route 
             path="/admin" 
             element={
