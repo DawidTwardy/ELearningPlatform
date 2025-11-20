@@ -235,20 +235,20 @@ const CourseView = ({ course: courseProp, onBack }) => {
                         return (
                             <div key={secId}>
                                 <div 
-                                    className={`section-title ${expandedSections[secId] ? 'active' : ''}`}
+                                    className={`section-title2 ${expandedSections[secId] ? 'active' : ''}`}
                                     onClick={() => toggleSection(secId)}
                                     style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                                 >
                                     <span>{section.title || section.Title}</span>
                                     {isSectionCompleted && (
-                                        <span style={{ color: '#4CAF50', fontSize: '1.2em' }} title="Sekcja ukończona">
+                                        <span style={{ color: '#4CAF50', fontSize: '1.20em' }} title="Sekcja ukończona">
                                             ✅
                                         </span>
                                     )}
                                 </div>
 
                                 {expandedSections[secId] && (
-                                    <div className="section-lessons">
+                                    <div className="section-lessons2">
                                         {lessons.map((lesson) => {
                                             const lId = lesson.id || lesson.Id;
                                             const isActive = currentContent?.id === lId && currentContent?.contentType === 'lesson';

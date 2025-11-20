@@ -1,241 +1,209 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // Dodano useParams i useNavigate
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import StarRating from '../../components/Course/StarRating';
+import FavoriteHeart from '../../components/Course/FavoriteHeart';
+import { fetchCourseDetails } from '../../services/api';
 import '../../styles/pages/CourseDetailsPage.css';
-import StarRating from '../../components/Course/StarRating'; 
-import { useAuth } from '../../context/AuthContext';
-import { fetchCourseDetails } from '../../services/api'; // Importujemy funkcję z api.js
-import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:7115/api';
-
-const CourseDetailsPage = ({ course: propCourse, onBack, onEnroll }) => {
-  const { id } = useParams(); // Pobieramy ID z URL
-  const navigate = useNavigate();
-  const { isAuthenticated, token } = useAuth();
-  
-  const [course, setCourse] = useState(propCourse || null);
-  const [loading, setLoading] = useState(!propCourse);
+const CourseDetailsPage = () => {
+  const { id } = useParams();
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [enrollmentStatus, setEnrollmentStatus] = useState('not_enrolled'); 
+  const [expandedSections, setExpandedSections] = useState({});
 
-  // Pobieranie danych kursu jeśli nie zostały przekazane jako prop
   useEffect(() => {
-    const loadCourse = async () => {
-      if (!course && id) {
-        try {
-          setLoading(true);
-          const data = await fetchCourseDetails(id);
-          setCourse(data);
-        } catch (err) {
-          console.error("Błąd pobierania szczegółów kursu:", err);
-          setError("Nie udało się pobrać szczegółów kursu.");
-        } finally {
-          setLoading(false);
-        }
+    const getCourseDetails = async () => {
+      try {
+        const data = await fetchCourseDetails(id);
+        setCourse(data);
+      } catch (err) {
+        console.error(err);
+        setError('Nie udało się pobrać szczegółów kursu');
+      } finally {
+        setLoading(false);
       }
     };
-    loadCourse();
-  }, [id, course]);
 
-  useEffect(() => {
-    if (isAuthenticated && course?.id) {
-      checkEnrollmentStatus(course.id);
-    } else if (!isAuthenticated) {
-      setEnrollmentStatus('not_enrolled');
-    }
-  }, [course?.id, isAuthenticated]);
+    getCourseDetails();
+  }, [id]);
 
-  const checkEnrollmentStatus = async (courseId) => {
-    setEnrollmentStatus('loading');
-    try {
-      const response = await axios.get(`${API_BASE_URL}/Enrollments/check/${courseId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      const isEnrolled = response.data;
-      setEnrollmentStatus(isEnrolled ? 'enrolled' : 'not_enrolled');
-    } catch (error) {
-      console.error("Błąd sprawdzania zapisu:", error);
-      setEnrollmentStatus('not_enrolled');
-    }
+  const handleStartCourse = () => {
+    console.log("Rozpocznij naukę kliknięto dla:", id);
   };
 
-  const handleEnroll = async () => {
-    if (!isAuthenticated) {
-      alert("Musisz być zalogowany, aby zapisać się na kurs.");
-      navigate('/login'); // Przekierowanie do logowania
-      return;
-    }
-
-    setEnrollmentStatus('loading');
-
-    try {
-      await axios.post(`${API_BASE_URL}/Enrollments/${course.id}`, null, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      setEnrollmentStatus('success');
-      alert("Pomyślnie zapisano na kurs! Możesz go znaleźć w sekcji Moja Nauka.");
-      
-      if (onEnroll) {
-          onEnroll(course.id); 
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 409) {
-        setEnrollmentStatus('enrolled');
-        alert("Jesteś już zapisany na ten kurs.");
-      } else {
-        setEnrollmentStatus('error');
-        console.error("Błąd zapisu:", error);
-        alert("Wystąpił błąd podczas zapisu na kurs.");
-      }
-    }
+  const toggleSection = (sectionId) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
   };
 
-  const handleReportCourse = () => {
-    alert("Kurs został zgłoszony do administratora. Dziękujemy za Twoją opinię.");
-  };
+  if (loading) return <div className="loading-spinner">Ładowanie...</div>;
+  if (error) return <div className="error-message">{error}</div>;
+  if (!course) return <div className="not-found">Nie znaleziono kursu</div>;
 
-  const handleBack = () => {
-      if (onBack) onBack();
-      else navigate(-1); // Powrót w historii przeglądarki
-  };
-
-  const renderEnrollButton = () => {
-    if (!isAuthenticated) {
-      return (
-        <button className="details-enroll-button" onClick={() => navigate('/login')}>
-          Zaloguj się, aby się zapisać
-        </button>
-      );
-    }
-    
-    switch (enrollmentStatus) {
-      case 'loading':
-        return (
-          <button className="details-enroll-button disabled" disabled>
-            Sprawdzanie statusu...
-          </button>
-        );
-      case 'enrolled':
-      case 'success':
-        return (
-          <button className="details-enroll-button enrolled" disabled>
-            Już zapisany
-          </button>
-        );
-      case 'error':
-        return (
-          <button className="details-enroll-button error" onClick={handleEnroll}>
-            Błąd. Spróbuj ponownie
-          </button>
-        );
-      case 'not_enrolled':
-      default:
-        return (
-          <button className="details-enroll-button" onClick={handleEnroll}>
-            Zapisz się i rozpocznij naukę
-          </button>
-        );
-    }
-  };
-
-  if (loading) return <div className="loading-container">Ładowanie szczegółów kursu...</div>;
-  if (error) return <div className="error-container">{error}</div>;
-  if (!course) return <div className="error-container">Nie znaleziono kursu.</div>;
-
-  // Przygotowanie danych instruktora (fallback)
-  const instructor = course.instructor || {
-      name: "Nieznany instruktor",
-      avatarSrc: "/src/icon/usericon.png",
-      bio: "Brak informacji o instruktorze."
-  };
+  const totalLessonsCount = course.sections?.reduce((acc, section) => acc + (section.lessons?.length || 0), 0) || 0;
 
   return (
-    <main className="main-content">
-      <div className="details-container">
-        <div className="details-sidebar">
-          <div className="details-image-container">
-            <img 
-              src={course.imageSrc || course.imageUrl || "/src/course/placeholder_ai.png"} 
-              alt={course.title} 
-              className="details-image"
-              onError={(e) => { e.target.onerror = null; e.target.src = "/src/course/placeholder_ai.png"; }}
-            />
-          </div>
-          <div className="details-sidebar-info">
-            <h1 className="details-title-sidebar">{course.title}</h1>
-            <div className="details-rating-sidebar">
-              <StarRating rating={course.rating || 0} />
-            </div>
-            
-            {renderEnrollButton()}
-            
-            <button className="details-report-button" onClick={handleReportCourse}>
-              Zgłoś ten kurs
-            </button>
-
-            <button className="details-back-button" onClick={handleBack}>
-              Powrót
-            </button>
-          </div>
-        </div>
-
-        <div className="details-content">
-          <h1 className="details-title-main">{course.title}</h1>
+    <div className="page-wrapper">
+      <main className="course-details-main">
+        <div className="course-content-wrapper">
           
-          <section className="details-section">
-            <h2 className="details-section-title">Opis Kursu</h2>
-            <div 
-              className="details-description"
-              dangerouslySetInnerHTML={{ __html: course.description || "Brak opisu." }}
-            />
-          </section>
-
-          <section className="details-section">
-            <h2 className="details-section-title">Program Kursu</h2>
-            <div className="details-curriculum">
-              {course.sections && course.sections.length > 0 ? (
-                  course.sections.map(section => (
-                    <div key={section.id} className="curriculum-section">
-                      <h3 className="curriculum-section-title">{section.title}</h3>
-                      {section.lessons && section.lessons.length > 0 ? (
-                          <ul className="curriculum-lesson-list">
-                            {section.lessons.map((lesson) => (
-                              <li key={lesson.id}>{lesson.title}</li>
-                            ))}
-                          </ul>
-                      ) : (
-                          <p className="no-lessons">Brak lekcji w tej sekcji.</p>
-                      )}
-                    </div>
-                  ))
-              ) : (
-                  <p>Brak zdefiniowanego programu kursu.</p>
-              )}
-            </div>
-          </section>
-
-          <section className="details-section">
-            <h2 className="details-section-title">Instruktor</h2>
-            <div className="details-instructor">
-              <img 
-                src={instructor.avatarSrc || "/src/icon/usericon.png"} 
-                alt={instructor.name} 
-                className="instructor-avatar-details"
-              />
+          <div className="course-header-dark">
+            <h1 className="course-title">{course.title}</h1>
+            <p className="course-subtitle">{course.description}</p>
+            
+            <div className="course-meta">
+              <div className="rating-wrapper">
+                <span className="rating-number">{course.rating || 0}</span>
+                <StarRating rating={course.rating || 0} />
+              </div>
               <div className="instructor-info">
-                <h3 className="instructor-name-details">{instructor.name}</h3>
-                <p className="instructor-bio-details">{instructor.bio}</p>
+                Utworzono przez <strong>{course.instructor?.name || 'Nieznany Instruktor'}</strong>
+              </div>
+              <div className="last-updated">
+                Kategoria: {course.category} • Poziom: {course.level}
               </div>
             </div>
-          </section>
+          </div>
+
+          <div className="course-layout-grid">
+            <div className="course-main-column">
+              
+              <div className="course-image-mobile">
+                 <img 
+                    src={course.imageUrl || '/src/course/placeholder_dotnet.png'} 
+                    alt={course.title} 
+                    onError={(e) => { e.target.onerror = null; e.target.src = '/src/course/placeholder_dotnet.png'; }}
+                  />
+              </div>
+
+              <div className="section-card">
+                <h3>Opis kursu</h3>
+                <div className="course-description-text">
+                  {course.description}
+                </div>
+              </div>
+
+              <div className="section-card">
+                <h3>Program kursu</h3>
+                <div className="course-curriculum-summary">
+                  <span>{course.sections?.length || 0} sekcji</span>
+                  <span className="dot-separator">•</span>
+                  <span>{totalLessonsCount} lekcji</span>
+                </div>
+
+                <div className="curriculum-list">
+                  {course.sections && course.sections.length > 0 ? (
+                    course.sections.map((section) => (
+                      <div key={section.id} className="curriculum-section">
+                        <div 
+                          className="section-header" 
+                          onClick={() => toggleSection(section.id)}
+                        >
+                          <h5 className="section-title2">
+                            {section.title}
+                          </h5>
+                          <span className={`arrow-icon ${expandedSections[section.id] ? 'rotated' : ''}`}>
+                            ▼
+                          </span>
+                        </div>
+                        
+                        {expandedSections[section.id] && (
+                          <div className="section-content">
+                            {section.lessons && section.lessons.length > 0 ? (
+                              <ul className="lessons-list">
+                                {section.lessons.map((lesson) => (
+                                  <li key={lesson.id} className="lesson-item">
+                                    <span className="icon-play">▶</span>
+                                    <span className="lesson-title">{lesson.title}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <div className="no-lessons">Brak lekcji w tej sekcji</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <p>Brak dostępnych sekcji w tym kursie.</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="section-card instructor-section">
+                <h3>Instruktor</h3>
+                <div className="instructor-profile">
+                  <div className="instructor-avatar">
+                     {course.instructor?.name ? course.instructor.name[0].toUpperCase() : '?'}
+                  </div>
+                  <div className="instructor-details">
+                    <h4>{course.instructor?.name || 'Instruktor'}</h4>
+                    <p className="instructor-bio">{course.instructor?.bio || 'Brak biografii instruktora.'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="course-sidebar-column">
+              <div className="sidebar-card floating-card">
+                <div className="preview-image-container">
+                  <img 
+                    src={course.imageUrl || '/src/course/placeholder_dotnet.png'} 
+                    alt={course.title} 
+                    className="course-preview-image" 
+                    onError={(e) => { e.target.onerror = null; e.target.src = '/src/course/placeholder_dotnet.png'; }}
+                  />
+                </div>
+                <div className="sidebar-content">
+                  <div className="price-container">
+                    <span className="price-tag">
+                      {course.price && course.price > 0 ? `${course.price} PLN` : 'Darmowy'}
+                    </span>
+                  </div>
+                  
+                  <button className="btn-primary full-width" onClick={handleStartCourse}>
+                    Rozpocznij naukę
+                  </button>
+                  
+                  <div className="course-includes">
+                    <h4>Ten kurs zawiera:</h4>
+                    <ul>
+                      <li>
+                        <span className="icon">📄</span>
+                        {totalLessonsCount} lekcji
+                      </li>
+                      <li>
+                        <span className="icon">∞</span>
+                        Dożywotni dostęp
+                      </li>
+                      <li>
+                        <span className="icon">📱</span>
+                        Dostęp na urządzeniach mobilnych
+                      </li>
+                      <li>
+                        <span className="icon">🏆</span>
+                        Certyfikat ukończenia
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  <div className="sidebar-actions">
+                     <button className="btn-text">Udostępnij</button>
+                     <div className="favorite-wrapper">
+                        <FavoriteHeart courseId={course.id} isFavorite={false} />
+                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 };
 

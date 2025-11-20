@@ -73,7 +73,7 @@
     align-self: flex-start;
 }
 
-.section-title {
+.section-title2 {
     font-size: 18px;
     font-weight: bold;
     color: #ddd;
@@ -85,24 +85,24 @@
     transition: all 0.3s ease;
 }
 
-.section-title:hover {
+.section-title2:hover {
     background-color: #444;
     color: #fff;
 }
 
-.section-title.active {
+.section-title2.active {
     background-color: #4caf50;
     color: #fff;
     box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
 }
 
-.section-lessons {
+.section-lessons2 {
     padding-left: 15px;
     margin-bottom: 15px;
 }
 
-.section-lessons p {
-    font-size: 15px;
+.section-lessons2 p {
+    font-size: 12px;
     color: #ccc;
     margin: 6px 0;
     padding: 8px 10px;
@@ -111,19 +111,19 @@
     transition: background-color 0.3s, color 0.3s;
 }
 
-.section-lessons p:hover {
+.section-lessons2 p:hover {
     background-color: #3a3a3a;
     color: #fff;
 }
 
-.section-lessons p.active {
+.section-lessons2 p.active {
     background-color: #2196f3;
     color: #fff;
     font-weight: bold;
     box-shadow: 0 0 8px rgba(33, 150, 243, 0.6);
 }
 
-.section-lessons p.active-quiz {
+.section-lessons2 p.active-quiz {
     background-color: #f44336;
     color: #fff;
     font-weight: bold;
