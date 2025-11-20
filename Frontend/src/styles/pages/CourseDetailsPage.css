@@ -1,217 +1,256 @@
-.details-container {
+.course-details-container {
+    color: #fff;
+    width: 100%;
     display: flex;
-    flex-direction: row-reverse;
-    gap: 40px;
-    max-width: 1300px;
-    margin: 0 auto;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #121212;
 }
 
-.details-sidebar {
-    flex: 1;
-    max-width: 380px;
-    background-color: #1E1E1E;
-    border-radius: 12px;
-    padding: 20px;
-    align-self: flex-start;
-    position: sticky;
-    top: 100px;
-}
-
-.details-image-container {
+/* --- HEADER / BANNER --- */
+.course-header {
     width: 100%;
-    border-radius: 8px;
-    overflow: hidden;
+    background-color: #1B1B1B;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: center; 
+    padding: 60px 0;
+}
+
+.header-content {
+    width: 100%;
+    /* Zwiększamy limit szerokości do 1800px lub usuwamy go całkowicie, jeśli wolisz */
+    max-width: 1800px; 
+    padding: 0 40px;
+    display: flex;
+    flex-direction: column;
+}
+
+.course-title-large {
+    font-size: 3.2em;
     margin-bottom: 20px;
-}
-
-.details-image {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
-.details-sidebar-info {
-    padding: 0 10px;
-}
-
-.details-title-sidebar {
-    font-size: 1.6em;
     font-weight: bold;
-    margin-bottom: 15px;
-    color: #FFF;
+    line-height: 1.2;
 }
 
-.details-title-main {
-    display: none;
+.course-description-short {
+    font-size: 1.4em;
+    color: #bbb;
+    margin-bottom: 30px;
+    line-height: 1.6;
+    max-width: 900px;
 }
 
-.details-rating-sidebar {
+.course-meta {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    font-size: 1.1em;
+    color: #aaa;
+}
+
+.rating-wrapper {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 25px;
+    color: #f1c40f;
+    font-weight: bold;
 }
 
-.details-rating-sidebar .star-rating {
-    margin: 0;
-}
-.details-rating-sidebar .star-icon-image {
-     width: 20px;
-     height: 20px;
-}
-
-.details-enroll-button {
+/* --- GŁÓWNA ZAWARTOŚĆ --- */
+.course-content-wrapper {
     width: 100%;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 30px;
-    font-size: 1.1em;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background-color: #28A745;
-    color: white;
-    margin-bottom: 15px;
-}
-.details-enroll-button:hover {
-    background-color: #218838;
+    max-width: 1800px; /* Zwiększono z 1600px na 1800px */
+    margin: 0 auto;
+    padding: 50px 40px;
+    
+    display: flex;
+    align-items: flex-start;
+    gap: 50px; /* Zmniejszono gap, żeby więcej miejsca było dla treści */
+    position: relative;
 }
 
-/* NOWE STYLE DLA PRZYCISKU ZGŁOSZENIA */
-.details-report-button {
-    width: 100%;
-    padding: 10px 20px;
-    border: 1px solid #dc3545;
-    border-radius: 30px;
-    font-size: 1em;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background-color: transparent;
-    color: #dc3545;
-    margin-bottom: 15px;
-}
-.details-report-button:hover {
-    background-color: rgba(220, 53, 69, 0.1);
-}
-/* KONIEC NOWYCH STYLI */
-
-.details-back-button {
-     width: 100%;
-    padding: 10px 20px;
-    border: 1px solid #555;
-    border-radius: 30px;
-    font-size: 1em;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background-color: transparent;
-    color: #E0E0E0;
-}
-.details-back-button:hover {
-    background-color: #333;
-    border-color: #777;
-}
-
-.details-content {
-    flex: 2.5;
+.course-main {
+    flex: 1; /* To kluczowe - treść zajmuje całe dostępne miejsce */
     min-width: 0;
 }
 
-.details-section {
-    background-color: #1E1E1E;
-    border-radius: 12px;
-    padding: 25px 30px;
-    margin-bottom: 25px;
+/* --- SIDEBAR --- */
+.course-sidebar {
+    width: 360px; /* Zmniejszono z 400px na 360px, by dać więcej miejsca prostokątom */
+    flex-shrink: 0;
+    position: sticky;
+    top: 100px;
+    z-index: 10;
 }
 
-.details-section-title {
-    font-size: 1.4em;
+.course-info-card {
+    background-color: #1B1B1B;
+    border-radius: 20px;
+    padding: 30px;
+    border: 1px solid #333;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.course-price {
+    font-size: 2.5em;
     font-weight: bold;
-    border-bottom: 1px solid #333;
-    padding-bottom: 15px;
+    margin-bottom: 25px;
+    color: #fff;
+}
+
+.enroll-button {
+    width: 100%;
+    padding: 18px;
+    background-color: #7B61FF;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
     margin-bottom: 20px;
 }
 
-.details-description {
-    font-size: 1.05em;
-    line-height: 1.6;
-    color: #DCDCDC;
+.enroll-button:hover {
+    background-color: #6a50e0;
+    transform: translateY(-2px);
 }
 
-.details-curriculum {
+.includes-list {
+    list-style: none;
+    margin-top: 25px;
+}
+
+.includes-list li {
+    margin-bottom: 15px;
+    color: #ccc;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 15px;
+    font-size: 1.1em;
+}
+
+/* --- SEKCJE (Prostokąty) --- */
+.what-you-will-learn {
+    background-color: #1B1B1B;
+    border: 1px solid #333;
+    border-radius: 15px;
+    padding: 40px;
+    margin-bottom: 50px;
+    /* Dzięki flex: 1 w .course-main, ten element rozciągnie się na całą szerokość */
+}
+
+.section-title {
+    font-size: 1.8em;
+    margin-bottom: 25px;
+    font-weight: bold;
+}
+
+.learning-points {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dwie kolumny */
+    gap: 25px 40px;
+}
+
+.learning-point {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+    color: #ddd;
+    font-size: 1.1em;
+    line-height: 1.5;
+}
+
+.curriculum-container {
+    margin-bottom: 50px;
 }
 
 .curriculum-section {
-    background-color: #292929;
-    border-radius: 8px;
-    padding: 15px 20px;
+    margin-bottom: 25px;
+    border: 1px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #1B1B1B;
 }
 
-.curriculum-section-title {
-    font-size: 1.1em;
-    font-weight: bold;
-    margin-bottom: 10px;
-    color: #E0E0E0;
-}
-
-.curriculum-lesson-list {
-    list-style-type: '✓  ';
-    padding-left: 25px;
-    color: #AAA;
-}
-.curriculum-lesson-list li {
-    padding-left: 10px;
-    margin-bottom: 5px;
-}
-
-.details-instructor {
+.curriculum-header {
     display: flex;
-    align-items: flex-start;
-    gap: 20px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px 35px;
+    background-color: #252525;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    user-select: none;
 }
 
-.instructor-avatar-details {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    object-fit: cover;
-    background-color: #333;
+.curriculum-header:hover {
+    background-color: #2E2E2E;
 }
 
-.instructor-name-details {
-    font-size: 1.2em;
-    font-weight: bold;
-    margin-bottom: 5px;
+.section-info h4 {
+    margin: 0;
+    font-size: 1.3em;
+    font-weight: 600;
 }
 
-.instructor-bio-details {
-    font-size: 0.95em;
-    line-height: 1.5;
-    color: #BBB;
+.section-meta {
+    color: #888;
+    font-size: 1em;
 }
 
-@media (max-width: 900px) {
-    .details-container {
+.lessons-list {
+    border-top: 1px solid #333;
+}
+
+.lesson-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 35px;
+    border-bottom: 1px solid #333;
+    font-size: 1.1em;
+    color: #ddd;
+    background-color: #1B1B1B;
+    transition: background-color 0.2s;
+}
+
+.lesson-item:last-child {
+    border-bottom: none;
+}
+
+.lesson-item:hover {
+    background-color: #222;
+}
+
+.lesson-title {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.play-icon {
+    width: 24px;
+    height: 24px;
+    opacity: 0.7;
+}
+
+.lesson-duration {
+    color: #888;
+}
+
+/* --- Responsywność --- */
+@media (max-width: 1200px) {
+    .course-content-wrapper {
         flex-direction: column;
     }
-    .details-sidebar {
-        position: static;
-        max-width: 100%;
-        order: 1;
+    .course-sidebar {
+        width: 100%;
+        margin-top: 40px;
+        position: static; /* Sidebar przestaje być sticky i spada na dół */
     }
-    .details-content {
-        order: 2;
-    }
-    .details-title-sidebar {
-        display: none;
-    }
-     .details-title-main {
-        display: block;
-        margin-bottom: 20px;
-        color: #FFF;
+    .header-content, .course-content-wrapper {
+        padding: 40px 20px;
     }
 }

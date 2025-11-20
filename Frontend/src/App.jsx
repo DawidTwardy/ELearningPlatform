@@ -68,14 +68,22 @@ function App() {
   };
 
   let currentPage = PAGE_HOME;
-  if (location.pathname === '/instructors') currentPage = PAGE_INSTRUCTORS;
-  else if (location.pathname === '/admin') currentPage = PAGE_ADMIN;
-  else if (location.pathname === '/my-learning') currentPage = PAGE_MY_LEARNING;
-  else if (location.pathname === '/my-courses') currentPage = PAGE_MY_COURSES;
-  else if (location.pathname === '/login') currentPage = PAGE_LOGIN;
-  else if (location.pathname === '/register') currentPage = PAGE_REGISTER;
-  else if (location.pathname === '/favorites') currentPage = PAGE_FAVORITES;
-  else if (location.pathname === '/profile') currentPage = PAGE_PROFILE;
+  const path = location.pathname;
+
+  if (path.startsWith('/instructors')) currentPage = PAGE_INSTRUCTORS;
+  else if (path.startsWith('/admin')) currentPage = PAGE_ADMIN;
+  else if (path.startsWith('/my-learning')) currentPage = PAGE_MY_LEARNING;
+  else if (path.startsWith('/my-courses')) currentPage = PAGE_MY_COURSES;
+  else if (path.startsWith('/login')) currentPage = PAGE_LOGIN;
+  else if (path.startsWith('/register')) currentPage = PAGE_REGISTER;
+  else if (path.startsWith('/favorites')) currentPage = PAGE_FAVORITES;
+  else if (path.startsWith('/profile')) currentPage = PAGE_PROFILE;
+
+  // Logika: te strony mają być na PEŁNĄ SZEROKOŚĆ
+  const isFullWidthPage = path.startsWith('/login') || 
+                          path.startsWith('/register') || 
+                          path.startsWith('/courses/') || 
+                          path.startsWith('/course-view/');
 
   const ProtectedRoute = ({ children, roles }) => {
     if (!isLoggedIn) {
@@ -88,7 +96,7 @@ function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className="app">
       <Header 
         currentPage={currentPage} 
         isLoggedIn={isLoggedIn} 
@@ -100,104 +108,114 @@ function App() {
         handleSearchSubmit={handleSearchSubmit}
       />
       
-      <Routes>
-        <Route path="/" element={<HomePage navigateToPage={navigateToPage} />} />
-        <Route path="/instructors" element={<InstructorsPage />} />
-        <Route path="/instructor/:id" element={<InstructorProfilePage />} />
-        <Route path="/courses/:id" element={<CourseDetailsPage />} />
-        <Route path="/search" element={<SearchResultsPage />} />
-        
-        <Route path="/login" element={<LoginPage navigateToPage={navigateToPage} />} />
-        <Route path="/register" element={<RegisterPage navigateToPage={navigateToPage} />} />
-        
-        <Route 
-          path="/admin" 
-          element={
-            <ProtectedRoute roles={['Admin']}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/my-learning" 
-          element={
-            <ProtectedRoute>
-              <MyLearningPage />
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* Dostęp do sekcji instruktorskich dla wszystkich zalogowanych użytkowników */}
-        <Route 
-          path="/my-courses" 
-          element={
-            <ProtectedRoute>
-              <MyCoursesPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/add-course" 
-          element={
-            <ProtectedRoute>
-              <CourseAddPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-            path="/edit-course/:courseId" 
+      {/* Dodajemy klasę full-width-page jeśli jesteśmy na odpowiedniej podstronie */}
+      <main className={`main-content ${isFullWidthPage ? 'full-width-page' : ''}`}>
+        <Routes>
+          <Route path="/" element={<HomePage navigateToPage={navigateToPage} />} />
+          <Route path="/instructors" element={<InstructorsPage />} />
+          <Route path="/instructor/:id" element={<InstructorProfilePage />} />
+          <Route path="/courses/:id" element={<CourseDetailsPage />} />
+          <Route path="/search" element={<SearchResultsPage />} />
+          
+          <Route path="/login" element={<LoginPage navigateToPage={navigateToPage} />} />
+          <Route 
+            path="/register" 
             element={
-                <ProtectedRoute>
-                    <CourseEditPageWrapper />
-                </ProtectedRoute>
+              <RegisterPage 
+                navigateToPage={navigateToPage}
+                onRegisterSuccess={() => navigateToPage(PAGE_LOGIN)} 
+              />
             } 
-        />
-        <Route 
-            path="/instructor/analytics/:courseId" 
+          />
+          
+          <Route 
+            path="/admin" 
             element={
-                <ProtectedRoute>
-                    <CourseAnalyticsPage />
-                </ProtectedRoute>
+              <ProtectedRoute roles={['Admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
             } 
-        />
+          />
+          <Route 
+            path="/my-learning" 
+            element={
+              <ProtectedRoute>
+                <MyLearningPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/my-courses" 
+            element={
+              <ProtectedRoute>
+                <MyCoursesPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/add-course" 
+            element={
+              <ProtectedRoute>
+                <CourseAddPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+              path="/edit-course/:courseId" 
+              element={
+                  <ProtectedRoute>
+                      <CourseEditPageWrapper />
+                  </ProtectedRoute>
+              } 
+          />
+          <Route 
+              path="/instructor/analytics/:courseId" 
+              element={
+                  <ProtectedRoute>
+                      <CourseAnalyticsPage />
+                  </ProtectedRoute>
+              } 
+          />
 
-        <Route 
-          path="/favorites" 
-          element={
-            <ProtectedRoute>
-              <FavoritesPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/profile" 
-          element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-            path="/course-view/:courseId" 
+          <Route 
+            path="/favorites" 
             element={
-                <ProtectedRoute>
-                    <CourseView />
-                </ProtectedRoute>
+              <ProtectedRoute>
+                <FavoritesPage />
+              </ProtectedRoute>
             } 
-        />
+          />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+              path="/course-view/:courseId" 
+              element={
+                  <ProtectedRoute>
+                      <CourseView />
+                  </ProtectedRoute>
+              } 
+          />
 
-        <Route 
-            path="/certificate/:courseId" 
-            element={
-                <ProtectedRoute>
-                    <CertificatePage />
-                </ProtectedRoute>
-            } 
-        />
-        
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route 
+              path="/certificate/:courseId" 
+              element={
+                  <ProtectedRoute>
+                      <CertificatePage />
+                  </ProtectedRoute>
+              } 
+          />
+          
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
 
       <Footer />
     </div>
