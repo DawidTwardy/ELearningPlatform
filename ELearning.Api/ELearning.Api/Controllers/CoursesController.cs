@@ -37,7 +37,8 @@ namespace ELearning.Api.Controllers
                 c.Price,
                 ImageSrc = c.ImageUrl,
                 ImageUrl = c.ImageUrl,
-                Rating = 0,
+                Rating = c.Rating, // POPRAWKA: Pobieramy z bazy
+                RatingCount = c.RatingCount, // POPRAWKA: Dodano liczbę głosów
                 Instructor = c.Instructor != null ? new { Name = c.Instructor.UserName, Bio = "Instruktor" } : null
             });
 
@@ -56,7 +57,6 @@ namespace ELearning.Api.Controllers
                 return Unauthorized("Nie rozpoznano użytkownika.");
             }
 
-            // FILTROWANIE: Zwracamy tylko kursy, gdzie InstructorId == userId
             var courses = await _context.Courses
                 .Where(c => c.InstructorId == userId)
                 .Include(c => c.Instructor)
@@ -72,7 +72,8 @@ namespace ELearning.Api.Controllers
                 c.Price,
                 ImageSrc = c.ImageUrl,
                 ImageUrl = c.ImageUrl,
-                Rating = 0,
+                Rating = c.Rating, // POPRAWKA
+                RatingCount = c.RatingCount, // POPRAWKA
                 Instructor = c.Instructor != null ? new { Name = c.Instructor.UserName, Bio = "Instruktor" } : null
             });
 
@@ -107,7 +108,8 @@ namespace ELearning.Api.Controllers
                 course.Price,
                 ImageSrc = course.ImageUrl,
                 ImageUrl = course.ImageUrl,
-                Rating = 0,
+                Rating = course.Rating, // POPRAWKA
+                RatingCount = course.RatingCount, // POPRAWKA
                 Instructor = course.Instructor != null ? new
                 {
                     Name = course.Instructor.UserName,

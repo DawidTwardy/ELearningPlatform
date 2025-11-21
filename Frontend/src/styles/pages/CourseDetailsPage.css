@@ -53,12 +53,26 @@
 .rating-wrapper {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px; /* Zwiększono lekko odstęp dla lepszej czytelności */
 }
+
+/* --- POPRAWKA WYRÓWNANIA W NAGŁÓWKU --- */
+.rating-wrapper .star-rating {
+    margin: 0; /* Resetuje domyślny margines z App.css, aby gwiazdki były równo z liczbą */
+}
+
+/* --- NOWE STYLE DLA POWIĘKSZONYCH GWIAZDEK W NAGŁÓWKU --- */
+.rating-wrapper .star-icon-image {
+    width: 35px;  /* Duże gwiazdki w nagłówku */
+    height: 35px;
+}
+/* -------------------------------------------------------- */
 
 .rating-number {
   color: #facc15;
   font-weight: 700;
+  font-size: 1.5em; /* Powiększenie liczby, aby pasowała do dużych gwiazdek */
+  line-height: 1;   /* Wyrównanie linii */
 }
 
 .instructor-info strong {
@@ -88,7 +102,6 @@
   padding: 32px;
   margin-bottom: 24px;
   border-radius: 12px;
- 
 }
 
 .section-card h3 {
@@ -97,6 +110,18 @@
   color: #ffffff;
   margin: 0 0 20px 0;
 }
+
+/* --- POPRAWKA WYRÓWNANIA W KOMENTARZACH --- */
+.review-item .star-rating {
+    margin: 0; /* Reset marginesu, aby gwiazdki były równo z nickiem */
+}
+
+/* --- NOWE STYLE DLA GWIAZDEK W KOMENTARZACH (OPINIACH) --- */
+.review-item .star-icon-image {
+    width: 24px; /* Nieco większe niż standardowe, ale mniejsze niż w nagłówku */
+    height: 24px;
+}
+/* --------------------------------------------------------- */
 
 .course-curriculum-summary {
   font-size: 1rem;
@@ -129,23 +154,16 @@
   justify-content: space-between;
   align-items: center;
   padding: 6px 8px;
-
-  
   cursor: pointer;
   transition: background-color 0.2s ease;
   min-height: 13px;
 }
 
-
-
 .section-title2 {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 500;
-  font-weight: 300;
+  font-weight: 300; /* Skorygowane powtórzenie font-weight */
   color: #ffffff;
-
- 
 }
 
 .arrow-icon {
@@ -176,18 +194,17 @@
 }
 
 .lesson-item {
-    float: left;
+  float: left;
   padding: 8px 12px;
   border-bottom: 1px solid #2a2a2a;
   display: flex;
-  
-  justify-content: flex-start; /* Wyrównanie do lewej (start) */
+  justify-content: flex-start;
   gap: 12px;
   color: #d1d5db;
   font-size: 0.9rem;
   width: 100%;
   box-sizing: border-box;
-  text-align: left; /* Wymuszenie tekstu do lewej */
+  text-align: left;
 }
 
 .lesson-item:last-child {
@@ -195,8 +212,8 @@
 }
 
 .lesson-title {
-  flex: 1; /* Zajmuje całą dostępną szerokość */
-  text-align: left; /* Tekst wyrównany do lewej */
+  flex: 1;
+  text-align: left;
 }
 
 .icon-play {

@@ -15,7 +15,6 @@ namespace ELearning.Api.Models
 
         public string Description { get; set; } = string.Empty;
 
-        // Nowe pola wymagane przez frontend
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; } = 0.00m;
 
@@ -25,6 +24,10 @@ namespace ELearning.Api.Models
 
         public string ImageUrl { get; set; } = "/src/course/placeholder_ai.png";
 
+        public double Rating { get; set; } = 0.0;
+
+        public int RatingCount { get; set; } = 0;
+
         public string? InstructorId { get; set; }
 
         [ForeignKey("InstructorId")]
@@ -32,5 +35,6 @@ namespace ELearning.Api.Models
 
         public ICollection<CourseSection> Sections { get; set; } = new List<CourseSection>();
         public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
+        public ICollection<CourseReview> Reviews { get; set; } = new List<CourseReview>();
     }
 }

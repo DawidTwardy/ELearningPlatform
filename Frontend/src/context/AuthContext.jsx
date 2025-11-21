@@ -5,7 +5,6 @@ const AuthContext = createContext(null);
 
 const API_BASE_URL = 'http://localhost:7115/api';
 
-// Funkcja pomocnicza do dekodowania tokena (bez dodatkowych bibliotek)
 const parseJwt = (token) => {
     try {
         const base64Url = token.split('.')[1];
@@ -30,9 +29,11 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setIsAuthenticated(false);
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken'); // Usuwamy również refresh token
     }, []);
 
     useEffect(() => {
+        // Konfiguracja axiosa dla requestów (opcjonalnie, bo api.js używa fetch, ale warto mieć spójność)
         const requestInterceptor = axios.interceptors.request.use(
             config => {
                 const currentToken = localStorage.getItem('token');
@@ -44,12 +45,14 @@ export const AuthProvider = ({ children }) => {
             error => Promise.reject(error)
         );
 
+        // Interceptor odpowiedzi - tu można też dodać refresh logikę dla axiosa,
+        // ale główna logika jest teraz w api.js dla fetcha.
         const responseInterceptor = axios.interceptors.response.use(
             response => response,
             error => {
                 if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                    console.error("Token wygasł lub jest nieprawidłowy. Wylogowanie.");
-                    logout();
+                    // W przypadku użycia axiosa bezpośrednio w komponentach (np. login/register)
+                    // błędy 401 są obsługiwane lokalnie
                 }
                 return Promise.reject(error);
             }
@@ -61,29 +64,25 @@ export const AuthProvider = ({ children }) => {
         };
     }, [logout]);
 
-    // Ten efekt aktualizuje stan usera gdy zmienia się token
     useEffect(() => {
         if (token) {
             localStorage.setItem('token', token);
             const decoded = parseJwt(token);
             
             if (decoded) {
-                // Mapujemy roszczenia (claims) z tokena na obiekt user
-                // ASP.NET Core Identity często używa długich nazw dla ról i nazw
                 const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || decoded.role || "User";
                 const name = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || decoded.unique_name || decoded.sub || "Użytkownik";
 
                 setUser({
                     username: name,
                     role: role,
-                    // Możesz dodać więcej pól jeśli są w tokenie
                 });
                 setIsAuthenticated(true);
             } else {
-                // Jeśli token jest uszkodzony
                 logout();
             }
         } else {
+            // Jeśli token zniknie ze stanu, czyścimy storage
             localStorage.removeItem('token');
             setIsAuthenticated(false);
             setUser(null);
@@ -93,8 +92,14 @@ export const AuthProvider = ({ children }) => {
     const login = async (username, password) => {
         try {
             const response = await axios.post(`${API_BASE_URL}/Auth/login`, { username, password });
-            const token = response.data.token;
-            setToken(token); // To uruchomi useEffect powyżej
+            // Backend zwraca teraz { token, refreshToken } w data
+            const { token, refreshToken } = response.data;
+            
+            if (refreshToken) {
+                localStorage.setItem('refreshToken', refreshToken);
+            }
+            
+            setToken(token); 
             return { success: true };
         } catch (error) {
             console.error('Błąd logowania:', error.response ? error.response.data : error.message);
@@ -105,7 +110,12 @@ export const AuthProvider = ({ children }) => {
     const register = async (userData) => {
         try {
             const response = await axios.post(`${API_BASE_URL}/Auth/register`, userData);
-            const token = response.data.token;
+            const { token, refreshToken } = response.data;
+            
+            if (refreshToken) {
+                localStorage.setItem('refreshToken', refreshToken);
+            }
+            
             setToken(token);
             return { success: true };
         } catch (error) {

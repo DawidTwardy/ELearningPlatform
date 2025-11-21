@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StarRating from '../../components/Course/StarRating';
 import FavoriteHeart from '../../components/Course/FavoriteHeart';
-import { fetchCourseDetails, fetchUserEnrollment } from '../../services/api';
+import { fetchCourseDetails, fetchUserEnrollment, fetchCourseReviews } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/pages/CourseDetailsPage.css';
 
@@ -11,15 +11,21 @@ const CourseDetailsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [course, setCourse] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedSections, setExpandedSections] = useState({});
 
   useEffect(() => {
-    const getCourseDetails = async () => {
+    const loadData = async () => {
       try {
-        const data = await fetchCourseDetails(id);
-        setCourse(data);
+        // Pobieramy równolegle szczegóły kursu oraz opinie
+        const [courseData, reviewsData] = await Promise.all([
+            fetchCourseDetails(id),
+            fetchCourseReviews(id)
+        ]);
+        setCourse(courseData);
+        setReviews(reviewsData);
       } catch (err) {
         console.error(err);
         setError('Nie udało się pobrać szczegółów kursu');
@@ -28,7 +34,7 @@ const CourseDetailsPage = () => {
       }
     };
 
-    getCourseDetails();
+    loadData();
   }, [id]);
 
   const handleStartCourse = async () => {
@@ -164,6 +170,32 @@ const CourseDetailsPage = () => {
                   </div>
                 </div>
               </div>
+
+              <div className="section-card reviews-section">
+                <h3>Opinie studentów ({reviews.length})</h3>
+                {reviews.length === 0 ? (
+                    <p style={{ color: '#9ca3af' }}>Ten kurs nie ma jeszcze opinii.</p>
+                ) : (
+                    <div className="reviews-list" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {reviews.map((review) => (
+                        <div key={review.id} className="review-item" style={{ borderBottom: '1px solid #333', paddingBottom: '15px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+                            <img 
+                                src={review.userAvatar || '/src/icon/usericon.png'} 
+                                style={{ width: '30px', height: '30px', borderRadius: '50%' }} 
+                                alt="User" 
+                            />
+                            <strong style={{ color: '#fff' }}>{review.userName}</strong>
+                            <StarRating rating={review.rating} />
+                        </div>
+                        <p style={{ color: '#d1d5db', margin: '5px 0 0 0' }}>{review.content}</p>
+                        <small style={{ color: '#6b7280' }}>{new Date(review.createdAt).toLocaleDateString()}</small>
+                        </div>
+                    ))}
+                    </div>
+                )}
+              </div>
+
             </div>
 
             <div className="course-sidebar-column">

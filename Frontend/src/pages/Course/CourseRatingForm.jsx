@@ -24,7 +24,8 @@ const CourseRatingForm = ({ course, onBack, onSubmitRating }) => {
       return;
     }
     console.log("Wysyłanie oceny:", { courseId: course.id, rating, reviewText });
-    onSubmitRating(course.title, rating);
+    // Przekazujemy teraz również treść recenzji
+    onSubmitRating(course.title, rating, reviewText);
   };
 
   const currentStars = hoverRating > 0 ? hoverRating : rating;

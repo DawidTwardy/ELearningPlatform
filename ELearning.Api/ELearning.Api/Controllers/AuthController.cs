@@ -11,6 +11,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ELearning.Api.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using ELearning.Api.Persistence;
 
 namespace ELearning.Api.Controllers
 {
@@ -23,28 +26,28 @@ namespace ELearning.Api.Controllers
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
+        private readonly ApplicationDbContext _context;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             RoleManager<IdentityRole> roleManager,
             IConfiguration configuration,
-            IEmailService emailService)
+            IEmailService emailService,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
             _configuration = configuration;
             _emailService = emailService;
+            _context = context;
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto model)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var user = new ApplicationUser
             {
@@ -59,53 +62,87 @@ namespace ELearning.Api.Controllers
             if (result.Succeeded)
             {
                 const string defaultRole = "User";
-
                 if (!await _roleManager.RoleExistsAsync(defaultRole))
                 {
                     await _roleManager.CreateAsync(new IdentityRole(defaultRole));
                 }
-
                 await _userManager.AddToRoleAsync(user, defaultRole);
+
+                var jwtToken = await GenerateJwtToken(user);
+                var refreshToken = GenerateRefreshToken();
+
+                refreshToken.UserId = user.Id;
+                _context.RefreshTokens.Add(refreshToken);
+                await _context.SaveChangesAsync();
 
                 try
                 {
-                    await _emailService.SendEmailAsync(
-                        user.Email,
-                        "Witamy w ELearning Platform!",
-                        $"<h3>Czeœæ {user.FirstName}!</h3><p>Dziêkujemy za rejestracjê w naszej platformie. ¯yczymy owocnej nauki!</p>"
-                    );
+                    await _emailService.SendEmailAsync(user.Email, "Witamy w ELearning Platform!", $"<h3>Czeœæ {user.FirstName}!</h3><p>Dziêkujemy za rejestracjê.</p>");
                 }
-                catch
-                {
-                }
+                catch { }
 
-                return Ok(new { Token = await GenerateJwtToken(user) });
+                return Ok(new AuthResponseDto { Token = jwtToken, RefreshToken = refreshToken.Token });
             }
 
-            return BadRequest(new
-            {
-                Errors = result.Errors.Select(e => new { Code = e.Code, Description = e.Description })
-            });
+            return BadRequest(new { Errors = result.Errors.Select(e => new { Code = e.Code, Description = e.Description }) });
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
             var user = await _userManager.FindByNameAsync(model.Username);
-
-            if (user == null)
-            {
-                return Unauthorized(new { Message = "B³êdny login lub has³o." });
-            }
+            if (user == null) return Unauthorized(new { Message = "B³êdny login lub has³o." });
 
             var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
-
             if (result.Succeeded)
             {
-                return Ok(new { Token = await GenerateJwtToken(user) });
+                var jwtToken = await GenerateJwtToken(user);
+                var refreshToken = GenerateRefreshToken();
+
+                // Opcjonalne czyszczenie starych tokenów
+                var oldTokens = _context.RefreshTokens.Where(t => t.UserId == user.Id && t.Expires < DateTime.UtcNow);
+                _context.RefreshTokens.RemoveRange(oldTokens);
+
+                refreshToken.UserId = user.Id;
+                _context.RefreshTokens.Add(refreshToken);
+                await _context.SaveChangesAsync();
+
+                return Ok(new AuthResponseDto { Token = jwtToken, RefreshToken = refreshToken.Token });
             }
 
             return Unauthorized(new { Message = "B³êdny login lub has³o." });
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] TokenRequestDto tokenRequest)
+        {
+            if (string.IsNullOrEmpty(tokenRequest.RefreshToken))
+                return BadRequest(new { Message = "Brak tokena odœwie¿ania." });
+
+            var storedToken = await _context.RefreshTokens
+                .Include(r => r.User)
+                .SingleOrDefaultAsync(x => x.Token == tokenRequest.RefreshToken);
+
+            if (storedToken == null || !storedToken.IsActive)
+            {
+                return Unauthorized(new { Message = "Nieprawid³owy lub wygas³y token odœwie¿ania." });
+            }
+
+            var user = storedToken.User;
+
+            var newJwtToken = await GenerateJwtToken(user);
+            var newRefreshToken = GenerateRefreshToken();
+
+            storedToken.Revoked = DateTime.UtcNow;
+            storedToken.ReplacedByToken = newRefreshToken.Token;
+
+            newRefreshToken.UserId = user.Id;
+            _context.RefreshTokens.Add(newRefreshToken);
+
+            _context.RefreshTokens.Update(storedToken);
+            await _context.SaveChangesAsync();
+
+            return Ok(new AuthResponseDto { Token = newJwtToken, RefreshToken = newRefreshToken.Token });
         }
 
         [HttpPost("forgot-password")]
@@ -121,14 +158,13 @@ namespace ELearning.Api.Controllers
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-
             var message = $"<h3>Reset has³a</h3><p>Twój token do resetu has³a to: <b>{token}</b></p>";
 
             try
             {
                 await _emailService.SendEmailAsync(user.Email, "Reset has³a - ELearning Platform", message);
             }
-            catch (Exception ex)
+            catch
             {
                 return StatusCode(500, new { Message = "Nie uda³o siê wys³aæ emaila." });
             }
@@ -154,7 +190,7 @@ namespace ELearning.Api.Controllers
             {
                 try
                 {
-                    await _emailService.SendEmailAsync(user.Email, "Has³o zmienione", "<p>Twoje has³o do ELearning Platform zosta³o pomyœlnie zmienione.</p>");
+                    await _emailService.SendEmailAsync(user.Email, "Has³o zmienione", "<p>Twoje has³o zosta³o pomyœlnie zmienione.</p>");
                 }
                 catch { }
 
@@ -177,31 +213,34 @@ namespace ELearning.Api.Controllers
             };
 
             var roles = await _userManager.GetRolesAsync(user);
-            foreach (var role in roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
+            foreach (var role in roles) claims.Add(new Claim(ClaimTypes.Role, role));
 
             var jwtSettings = _configuration.GetSection("JwtSettings");
-
-            var jwtKey = jwtSettings["Secret"];
-            if (string.IsNullOrEmpty(jwtKey))
-            {
-                throw new InvalidOperationException("JwtSettings:Secret not configured or is null.");
-            }
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey.Trim()));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Secret"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddDays(7),
+                expires: DateTime.UtcNow.AddMinutes(15), // Token wa¿ny tylko 15 minut
                 signingCredentials: creds
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private RefreshToken GenerateRefreshToken()
+        {
+            var randomNumber = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            return new RefreshToken
+            {
+                Token = Convert.ToBase64String(randomNumber),
+                Expires = DateTime.UtcNow.AddDays(7),
+                Created = DateTime.UtcNow
+            };
         }
     }
 }

@@ -23,6 +23,8 @@ namespace ELearning.Api.Persistence
         public DbSet<UserAnswer> UserAnswers { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<CourseReview> CourseReviews { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; } // <--- DODANO TO
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

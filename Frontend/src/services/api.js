@@ -1,7 +1,81 @@
 const API_BASE_URL = 'http://localhost:7115/api';
 
-const getAuthToken = () => {
-    return localStorage.getItem('token');
+const getAuthToken = () => localStorage.getItem('token');
+const getRefreshToken = () => localStorage.getItem('refreshToken');
+
+// Funkcja pomocnicza do odświeżania tokena
+const refreshAccessToken = async () => {
+    const refreshToken = getRefreshToken();
+    const currentToken = getAuthToken();
+
+    if (!refreshToken || !currentToken) return null;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/Auth/refresh-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: currentToken, refreshToken })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('refreshToken', data.refreshToken);
+            return data.token;
+        } else {
+            // Refresh nieudany - wyloguj
+            console.error("Refresh token expired or invalid");
+            localStorage.clear();
+            window.location.href = '/login';
+            return null;
+        }
+    } catch (error) {
+        console.error("Refresh request failed", error);
+        localStorage.clear();
+        window.location.href = '/login';
+        return null;
+    }
+};
+
+// Wrapper dla fetch, który automatycznie dodaje token i obsługuje refresh
+const authenticatedFetch = async (url, options = {}) => {
+    let token = getAuthToken();
+    
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    // Usuń Content-Type jeśli wysyłamy FormData (np. upload plików)
+    if (options.body instanceof FormData) {
+        delete headers['Content-Type'];
+    }
+
+    try {
+        let response = await fetch(url, { ...options, headers });
+
+        // Jeśli otrzymamy 401 (Unauthorized), próbujemy odświeżyć token
+        if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            
+            if (newToken) {
+                // Ponawiamy zapytanie z nowym tokenem
+                const newHeaders = {
+                    ...headers,
+                    'Authorization': `Bearer ${newToken}`
+                };
+                response = await fetch(url, { ...options, headers: newHeaders });
+            } else {
+                // Nie udało się odświeżyć -> rzucamy błąd
+                throw new Error("Sesja wygasła. Zaloguj się ponownie.");
+            }
+        }
+
+        return handleResponse(response);
+    } catch (error) {
+        throw error;
+    }
 };
 
 const handleResponse = async (response) => {
@@ -9,215 +83,100 @@ const handleResponse = async (response) => {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
         throw new Error(errorData.message || `API Error: ${response.status}`);
     }
-    // Obsługa odpowiedzi 204 No Content (częste przy DELETE/PUT)
     if (response.status === 204) {
         return null;
     }
     return response.json();
 };
 
+// --- FUNKCJE API ---
+
 const fetchCourseDetails = async (courseId) => {
-    const response = await fetch(`${API_BASE_URL}/Courses/${courseId}`, {
-        method: 'GET',
-    });
+    // Publiczny endpoint - zwykły fetch
+    const response = await fetch(`${API_BASE_URL}/Courses/${courseId}`);
     return handleResponse(response);
 };
 
-// NOWE FUNKCJE DLA INSTRUKTORA
 const fetchInstructorCourses = async () => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Courses/my-courses`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-    });
-    return handleResponse(response);
+    return authenticatedFetch(`${API_BASE_URL}/Courses/my-courses`, { method: 'GET' });
 };
 
 const deleteCourse = async (courseId) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Courses/${courseId}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
-    
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.message || 'Nie udało się usunąć kursu.');
-    }
-    return true; 
+    return authenticatedFetch(`${API_BASE_URL}/Courses/${courseId}`, { method: 'DELETE' });
 };
 
 const fetchUserEnrollment = async (courseId) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Enrollments/${courseId}`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.message || 'Nie udało się zapisać na kurs.');
-    }
-    return response.json().catch(() => ({ success: true }));
+    return authenticatedFetch(`${API_BASE_URL}/Enrollments/${courseId}`, { method: 'POST' });
 };
 
 const fetchCourseProgress = async (courseId) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Progress/course/${courseId}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
-    
-    if (response.status === 404) {
-        return null;
-    }
-    
-    return handleResponse(response);
+    return authenticatedFetch(`${API_BASE_URL}/Progress/course/${courseId}`, { method: 'GET' });
 };
 
 const fetchCompletedLessons = async (courseId) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Progress/course/${courseId}/completed-lessons`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
-    return handleResponse(response);
+    return authenticatedFetch(`${API_BASE_URL}/Progress/course/${courseId}/completed-lessons`, { method: 'GET' });
 };
 
 const fetchCompletedQuizzes = async (courseId) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Progress/course/${courseId}/completed-quizzes`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
-    return handleResponse(response);
+    return authenticatedFetch(`${API_BASE_URL}/Progress/course/${courseId}/completed-quizzes`, { method: 'GET' });
 };
 
 const markLessonCompleted = async (lessonId) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/complete`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.message || 'Nie udało się oznaczyć lekcji jako ukończonej.');
-    }
-    return response.json().catch(() => ({ success: true }));
+    return authenticatedFetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/complete`, { method: 'POST' });
 };
 
 const fetchLessonCompletion = async (lessonId) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/completion`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
-    return handleResponse(response);
+    return authenticatedFetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/completion`, { method: 'GET' });
 };
 
 const fetchComments = async (courseId) => {
-    const response = await fetch(`${API_BASE_URL}/Comments/course/${courseId}`, {
-        method: 'GET',
-    });
+    // Komentarze mogą być publiczne, ale w tym systemie są dostępne
+    const response = await fetch(`${API_BASE_URL}/Comments/course/${courseId}`);
     return handleResponse(response);
 };
 
 const createComment = async (courseId, content, parentCommentId = null) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Comments`, {
+    return authenticatedFetch(`${API_BASE_URL}/Comments`, {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ courseId, content, parentCommentId })
     });
-    return handleResponse(response);
 };
 
 const updateComment = async (commentId, content) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Comments/${commentId}`, {
+    return authenticatedFetch(`${API_BASE_URL}/Comments/${commentId}`, {
         method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ content })
     });
-    if (!response.ok) {
-        throw new Error('Błąd podczas edycji');
-    }
-    return true;
 };
 
 const deleteComment = async (commentId) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Comments/${commentId}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        }
-    });
-    if (!response.ok) {
-        throw new Error('Błąd podczas usuwania');
-    }
-    return true;
+    return authenticatedFetch(`${API_BASE_URL}/Comments/${commentId}`, { method: 'DELETE' });
 };
 
 const fetchMyEnrollments = async () => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Enrollments`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-    });
-    return handleResponse(response);
+    return authenticatedFetch(`${API_BASE_URL}/Enrollments`, { method: 'GET' });
 };
 
 const uploadFile = async (file) => {
-    const token = getAuthToken();
     const formData = new FormData();
     formData.append('file', file);
-
-    const response = await fetch(`${API_BASE_URL}/Upload`, {
+    
+    // authenticatedFetch obsłuży usunięcie Content-Type dla FormData
+    return authenticatedFetch(`${API_BASE_URL}/Upload`, {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
         body: formData
     });
-
-    return handleResponse(response);
 };
 
 const downloadCertificate = async (courseId) => {
     const token = getAuthToken();
+    // Pobieranie plików to specyficzny przypadek, trudniejszy do obsłużenia przez wrapper JSON.
+    // Tutaj używamy bezpośredniego fetch z ewentualną logiką odświeżania "ręcznie" lub zakładamy że token jest ważny.
+    // Dla uproszczenia: standardowy fetch z tokenem.
+    
     const response = await fetch(`${API_BASE_URL}/Certificates/${courseId}`, {
         method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
     });
 
     if (!response.ok) {
@@ -237,46 +196,33 @@ const downloadCertificate = async (courseId) => {
 };
 
 const fetchNotifications = async () => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Notifications`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-    });
-    return handleResponse(response);
+    return authenticatedFetch(`${API_BASE_URL}/Notifications`, { method: 'GET' });
 };
 
 const markNotificationRead = async (id) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Notifications/${id}/read`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-    });
-    if (!response.ok) throw new Error("Błąd podczas oznaczania powiadomienia");
-    return true;
+    return authenticatedFetch(`${API_BASE_URL}/Notifications/${id}/read`, { method: 'PUT' });
 };
 
 const fetchCourseAnalytics = async (courseId) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/Analytics/course/${courseId}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
+    return authenticatedFetch(`${API_BASE_URL}/Analytics/course/${courseId}`, { method: 'GET' });
+};
+
+const createReview = async (courseId, rating, content) => {
+    return authenticatedFetch(`${API_BASE_URL}/Reviews`, {
+        method: 'POST',
+        body: JSON.stringify({ courseId, rating, content })
     });
+};
+
+const fetchCourseReviews = async (courseId) => {
+    const response = await fetch(`${API_BASE_URL}/Reviews/course/${courseId}`);
     return handleResponse(response);
 };
 
 export {
     fetchCourseDetails,
-    fetchInstructorCourses, // Dodano
-    deleteCourse,           // Dodano
+    fetchInstructorCourses, 
+    deleteCourse,           
     fetchLessonCompletion,
     markLessonCompleted,
     fetchUserEnrollment,
@@ -292,5 +238,7 @@ export {
     downloadCertificate,
     fetchNotifications,
     markNotificationRead,
-    fetchCourseAnalytics
+    fetchCourseAnalytics,
+    createReview,
+    fetchCourseReviews
 };

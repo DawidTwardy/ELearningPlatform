@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchCourseDetails, markLessonCompleted, fetchCompletedLessons, fetchCompletedQuizzes, downloadCertificate } from '../../services/api';
+import { fetchCourseDetails, markLessonCompleted, fetchCompletedLessons, fetchCompletedQuizzes, downloadCertificate, createReview } from '../../services/api';
 import QuizView from './QuizView';
 import DiscussionThread from './DiscussionThread';
+import CourseRatingForm from '../Course/CourseRatingForm';
 import '../../styles/pages/CourseView.css';
 
 const BASE_URL = 'http://localhost:7115';
@@ -18,6 +19,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
     const [completedLessonIds, setCompletedLessonIds] = useState([]); 
     const [completedQuizIds, setCompletedQuizIds] = useState([]); 
     const [error, setError] = useState(null);
+    const [showRatingForm, setShowRatingForm] = useState(false);
 
     const getCourseId = () => {
         if (paramId) return paramId;
@@ -111,6 +113,17 @@ const CourseView = ({ course: courseProp, onBack }) => {
             await downloadCertificate(courseId);
         } catch (e) {
             alert(e.message);
+        }
+    };
+
+    const handleRateCourse = async (title, rating, reviewText) => {
+        try {
+            await createReview(parseInt(courseId), rating, reviewText);
+            alert("Dziękujemy za ocenę!");
+            setShowRatingForm(false);
+        } catch (error) {
+            console.error(error);
+            alert("Nie udało się dodać opinii: " + error.message);
         }
     };
 
@@ -295,10 +308,25 @@ const CourseView = ({ course: courseProp, onBack }) => {
                         </button>
                     )}
 
-                    <button className="rate-course-button">Oceń ten kurs</button>
+                    <button 
+                        className="rate-course-button"
+                        onClick={() => setShowRatingForm(true)}
+                    >
+                        Oceń ten kurs
+                    </button>
                     <button className="back-button" onClick={handleBack}>Powrót</button>
                 </div>
             </div>
+
+            {showRatingForm && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <CourseRatingForm 
+                        course={{ id: courseId, title: course.title || course.Title }} 
+                        onBack={() => setShowRatingForm(false)} 
+                        onSubmitRating={(title, rating, reviewText) => handleRateCourse(title, rating, reviewText)}
+                    />
+                </div>
+            )}
         </div>
     );
 };
