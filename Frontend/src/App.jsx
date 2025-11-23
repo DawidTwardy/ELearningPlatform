@@ -19,8 +19,9 @@ import InstructorProfilePage from './pages/Instructor/InstructorProfilePage';
 import SearchResultsPage from './pages/Search/SearchResultsPage';
 import CertificatePage from './pages/Course/CertificatePage';
 import CourseAnalyticsPage from './pages/Instructor/CourseAnalyticsPage';
-import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage'; // NOWY IMPORT
-import ResetPasswordPage from './pages/Auth/ResetPasswordPage';   // NOWY IMPORT
+import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
+import CertificateVerificationPage from './pages/Course/CertificateVerificationPage'; // NOWY IMPORT
 import { useAuth } from './context/AuthContext';
 import './styles/components/App.css';
 
@@ -33,8 +34,9 @@ export const PAGE_LOGIN = 'login';
 export const PAGE_REGISTER = 'register';
 export const PAGE_FAVORITES = 'favorites';
 export const PAGE_PROFILE = 'profile';
-export const PAGE_FORGOT_PASSWORD = 'forgot-password'; // NOWA STAŁA
-export const PAGE_RESET_PASSWORD = 'reset-password';   // NOWA STAŁA
+export const PAGE_FORGOT_PASSWORD = 'forgot-password';
+export const PAGE_RESET_PASSWORD = 'reset-password';
+export const PAGE_VERIFY_CERTIFICATE = 'verify-certificate'; // NOWA STAŁA
 
 function App() {
   const { user, logout } = useAuth();
@@ -61,8 +63,9 @@ function App() {
       case PAGE_REGISTER: navigate('/register'); break;
       case PAGE_FAVORITES: navigate('/favorites'); break;
       case PAGE_PROFILE: navigate('/profile'); break;
-      case PAGE_FORGOT_PASSWORD: navigate('/forgot-password'); break; // NOWA NAWIGACJA
-      case PAGE_RESET_PASSWORD: navigate('/reset-password'); break;   // NOWA NAWIGACJA
+      case PAGE_FORGOT_PASSWORD: navigate('/forgot-password'); break;
+      case PAGE_RESET_PASSWORD: navigate('/reset-password'); break;
+      case PAGE_VERIFY_CERTIFICATE: navigate('/verify-certificate'); break; // NOWA OBSŁUGA
       default: navigate('/');
     }
   };
@@ -84,15 +87,15 @@ function App() {
   else if (path.startsWith('/register')) currentPage = PAGE_REGISTER;
   else if (path.startsWith('/favorites')) currentPage = PAGE_FAVORITES;
   else if (path.startsWith('/profile')) currentPage = PAGE_PROFILE;
+  else if (path.startsWith('/verify-certificate')) currentPage = PAGE_VERIFY_CERTIFICATE;
 
-  // Logika: te strony mają być na PEŁNĄ SZEROKOŚĆ
-  // ZMIANA: Dodano forgot-password i reset-password do stron pełnoekranowych
   const isFullWidthPage = path.startsWith('/login') || 
                           path.startsWith('/register') || 
                           path.startsWith('/forgot-password') || 
                           path.startsWith('/reset-password') ||
                           path.startsWith('/courses/') || 
-                          path.startsWith('/course-view/');
+                          path.startsWith('/course-view/') ||
+                          path.startsWith('/verify-certificate');
 
   const ProtectedRoute = ({ children, roles }) => {
     if (!isLoggedIn) {
@@ -117,7 +120,6 @@ function App() {
         handleSearchSubmit={handleSearchSubmit}
       />
       
-      {/* Dodajemy klasę full-width-page jeśli jesteśmy na odpowiedniej podstronie */}
       <main className={`main-content ${isFullWidthPage ? 'full-width-page' : ''}`}>
         <Routes>
           <Route path="/" element={<HomePage navigateToPage={navigateToPage} />} />
@@ -137,7 +139,6 @@ function App() {
             } 
           />
           
-          {/* NOWE TRASY DO RESETOWANIA HASŁA */}
           <Route 
             path="/forgot-password" 
             element={<ForgotPasswordPage onNavigateToLogin={() => navigateToPage(PAGE_LOGIN)} />} 
@@ -145,6 +146,12 @@ function App() {
           <Route 
             path="/reset-password" 
             element={<ResetPasswordPage onNavigateToLogin={() => navigateToPage(PAGE_LOGIN)} />} 
+          />
+          
+          {/* NOWA TRASA PUBLICZNA */}
+          <Route 
+            path="/verify-certificate" 
+            element={<CertificateVerificationPage />} 
           />
 
           <Route 

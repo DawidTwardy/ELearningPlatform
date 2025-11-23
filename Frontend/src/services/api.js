@@ -91,6 +91,11 @@ const fetchInstructorCourses = async () => {
     return authenticatedFetch(`${API_BASE_URL}/Courses/my-courses`, { method: 'GET' });
 };
 
+const searchCourses = async (query) => {
+    const response = await fetch(`${API_BASE_URL}/Courses?search=${encodeURIComponent(query)}`);
+    return handleResponse(response);
+};
+
 const deleteCourse = async (courseId) => {
     return authenticatedFetch(`${API_BASE_URL}/Courses/${courseId}`, { method: 'DELETE' });
 };
@@ -180,6 +185,11 @@ const downloadCertificate = async (courseId) => {
     window.URL.revokeObjectURL(url);
 };
 
+const verifyCertificate = async (certificateId) => {
+    const response = await fetch(`${API_BASE_URL}/Certificates/verify/${certificateId}`);
+    return handleResponse(response);
+};
+
 const fetchNotifications = async () => {
     return authenticatedFetch(`${API_BASE_URL}/Notifications`, { method: 'GET' });
 };
@@ -248,5 +258,7 @@ export {
     fetchLeaderboard,
     fetchMyStats,
     fetchUserNote,
-    saveUserNote
+    saveUserNote,
+    searchCourses,
+    verifyCertificate
 };

@@ -10,7 +10,7 @@ namespace ELearning.Api.Models
         public int Id { get; set; }
 
         [Required]
-        public string UserId { get; set; } // To pole jest kluczowe!
+        public string UserId { get; set; }
 
         [ForeignKey("UserId")]
         public ApplicationUser User { get; set; }
@@ -23,8 +23,11 @@ namespace ELearning.Api.Models
 
         public DateTime EnrollmentDate { get; set; } = DateTime.UtcNow;
 
-        public int Progress { get; set; } = 0; // To pole te¿ musi byæ
+        public int Progress { get; set; } = 0;
 
-        public bool IsCompleted { get; set; } = false; // I to
+        public bool IsCompleted { get; set; } = false;
+
+        // Nowe pole do certyfikatów
+        public string? CertificateId { get; set; }
     }
 }

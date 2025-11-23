@@ -54,6 +54,10 @@ namespace ELearning.Api.Controllers
                 if (currentProgress == 100)
                 {
                     enrollment.IsCompleted = true;
+                    if (string.IsNullOrEmpty(enrollment.CertificateId))
+                    {
+                        enrollment.CertificateId = Guid.NewGuid().ToString("N").ToUpper();
+                    }
                     await _gamificationService.AddPointsAsync(userId, 100);
                 }
                 else
@@ -173,6 +177,10 @@ namespace ELearning.Api.Controllers
             if (progressPercentage == 100)
             {
                 enrollment.IsCompleted = true;
+                if (string.IsNullOrEmpty(enrollment.CertificateId))
+                {
+                    enrollment.CertificateId = Guid.NewGuid().ToString("N").ToUpper();
+                }
                 await _gamificationService.AddPointsAsync(userId, 100);
             }
             else

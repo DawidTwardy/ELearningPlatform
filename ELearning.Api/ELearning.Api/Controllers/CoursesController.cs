@@ -19,13 +19,25 @@ namespace ELearning.Api.Controllers
             _context = context;
         }
 
-        // GET: api/Courses (Publiczne - wszystkie kursy)
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<object>>> GetCourses()
+        public async Task<ActionResult<IEnumerable<object>>> GetCourses([FromQuery] string? search)
         {
-            var courses = await _context.Courses
+            var query = _context.Courses
                 .Include(c => c.Instructor)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string searchLower = search.ToLower();
+                query = query.Where(c => c.Title.ToLower().Contains(searchLower) ||
+                                         (c.Instructor != null && (
+                                            c.Instructor.UserName.ToLower().Contains(searchLower) ||
+                                            c.Instructor.FirstName.ToLower().Contains(searchLower) ||
+                                            c.Instructor.LastName.ToLower().Contains(searchLower)
+                                         )));
+            }
+
+            var courses = await query.ToListAsync();
 
             var result = courses.Select(c => new
             {
@@ -37,15 +49,14 @@ namespace ELearning.Api.Controllers
                 c.Price,
                 ImageSrc = c.ImageUrl,
                 ImageUrl = c.ImageUrl,
-                Rating = c.Rating, // POPRAWKA: Pobieramy z bazy
-                RatingCount = c.RatingCount, // POPRAWKA: Dodano liczbę głosów
+                Rating = c.Rating,
+                RatingCount = c.RatingCount,
                 Instructor = c.Instructor != null ? new { Name = c.Instructor.UserName, Bio = "Instruktor" } : null
             });
 
             return Ok(result);
         }
 
-        // GET: api/Courses/my-courses (Prywatne - tylko kursy zalogowanego instruktora)
         [HttpGet("my-courses")]
         [Authorize]
         public async Task<ActionResult<IEnumerable<object>>> GetInstructorCourses()
@@ -72,8 +83,8 @@ namespace ELearning.Api.Controllers
                 c.Price,
                 ImageSrc = c.ImageUrl,
                 ImageUrl = c.ImageUrl,
-                Rating = c.Rating, // POPRAWKA
-                RatingCount = c.RatingCount, // POPRAWKA
+                Rating = c.Rating,
+                RatingCount = c.RatingCount,
                 Instructor = c.Instructor != null ? new { Name = c.Instructor.UserName, Bio = "Instruktor" } : null
             });
 
@@ -108,8 +119,8 @@ namespace ELearning.Api.Controllers
                 course.Price,
                 ImageSrc = course.ImageUrl,
                 ImageUrl = course.ImageUrl,
-                Rating = course.Rating, // POPRAWKA
-                RatingCount = course.RatingCount, // POPRAWKA
+                Rating = course.Rating,
+                RatingCount = course.RatingCount,
                 Instructor = course.Instructor != null ? new
                 {
                     Name = course.Instructor.UserName,

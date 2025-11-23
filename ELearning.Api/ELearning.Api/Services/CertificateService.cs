@@ -7,7 +7,7 @@ namespace ELearning.Api.Services
 {
     public class CertificateService
     {
-        public byte[] GenerateCertificate(string studentName, string courseTitle, string instructorName, DateTime date)
+        public byte[] GenerateCertificate(string studentName, string courseTitle, string instructorName, DateTime date, string certificateId)
         {
             var document = Document.Create(container =>
             {
@@ -44,7 +44,8 @@ namespace ELearning.Api.Services
                                 });
                             });
 
-                            x.Item().PaddingTop(50).AlignCenter().Text("ELearning Platform").FontSize(10).FontColor(Colors.Grey.Lighten1);
+                            x.Item().PaddingTop(40).AlignCenter().Text($"ID Certyfikatu: {certificateId}").FontSize(10).FontColor(Colors.Grey.Lighten1);
+                            x.Item().AlignCenter().Text("ELearning Platform").FontSize(10).FontColor(Colors.Grey.Lighten1);
                         });
                 });
             });

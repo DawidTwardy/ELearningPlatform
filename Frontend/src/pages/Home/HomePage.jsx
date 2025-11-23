@@ -2,19 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CourseCard from '../../components/Course/CourseCard';
 import Leaderboard from '../../components/Gamification/Leaderboard';
-// WAŻNE: Importujemy nowy plik stylów
-import '../../styles/pages/HomePage.css'; 
+import { useAuth } from '../../context/AuthContext';
+import '../../styles/pages/HomePage.css';
 
 const COURSES_PER_PAGE = 9;
 
-const HomePage = () => {
+const HomePage = ({ navigateToPage }) => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    
-    // Stan paginacji
     const [currentPage, setCurrentPage] = useState(1);
 
+    const { user } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -41,7 +40,10 @@ const HomePage = () => {
         navigate(`/courses/${courseId}`);
     };
 
-    // Obliczenia paginacji
+    const handleRegisterClick = () => {
+        navigate('/register');
+    };
+
     const indexOfLastCourse = currentPage * COURSES_PER_PAGE;
     const indexOfFirstCourse = indexOfLastCourse - COURSES_PER_PAGE;
     const currentCourses = courses.slice(indexOfFirstCourse, indexOfLastCourse);
@@ -59,12 +61,58 @@ const HomePage = () => {
     if (error) return <div className="error-container">{error}</div>;
 
     return (
-        <main className="main-content">
-            {/* 1. Sekcja "Jak to działa" */}
+        <main className="main-content home-page-wrapper">
+            
+            {!user && (
+                <>
+                    <section className="hero-section">
+                        <div className="hero-content">
+                            <h1 className="hero-title">Rozwiń swoje umiejętności IT<br />z najlepszymi ekspertami</h1>
+                            <p className="hero-subtitle">
+                                Dołącz do tysięcy studentów, zdobywaj certyfikaty i awansuj w karierze. 
+                                Ucz się we własnym tempie, gdziekolwiek jesteś.
+                            </p>
+                            <button className="hero-cta-button" onClick={handleRegisterClick}>
+                                Rozpocznij za darmo
+                            </button>
+                        </div>
+                        <div className="hero-image-container">
+                            <img src="/src/login/illustration.png" alt="Nauka online" className="hero-image" />
+                        </div>
+                    </section>
+
+                    <section className="features-section">
+                        <h2 className="section-header-title">Dlaczego warto wybrać naszą platformę?</h2>
+                        <div className="features-grid">
+                            <div className="feature-card">
+                                <div className="feature-icon">🚀</div>
+                                <h3>Szybki rozwój</h3>
+                                <p>Praktyczne projekty i zadania, które przygotują Cię do realnej pracy.</p>
+                            </div>
+                            <div className="feature-card">
+                                <div className="feature-icon">🏆</div>
+                                <h3>Certyfikaty</h3>
+                                <p>Potwierdź swoje umiejętności unikalnym certyfikatem po każdym kursie.</p>
+                            </div>
+                            <div className="feature-card">
+                                <div className="feature-icon">🤝</div>
+                                <h3>Społeczność</h3>
+                                <p>Ucz się razem z innymi, wymieniaj wiedzą i rywalizuj w rankingu.</p>
+                            </div>
+                            <div className="feature-card">
+                                <div className="feature-icon">∞</div>
+                                <h3>Dożywotni dostęp</h3>
+                                <p>Kupujesz raz, korzystasz zawsze. Wracaj do materiałów kiedy chcesz.</p>
+                            </div>
+                        </div>
+                    </section>
+                </>
+            )}
+
             <section className="home-how-it-works">
                 <div className="home-section-header">
-                    <h2 className="home-section-title">Rozpocznij naukę w 3 prostych krokach</h2>
-                    <p className="home-section-subtitle">Dołącz do naszej społeczności i rozwijaj swoje umiejętności</p>
+                    <h2 className="home-section-title">Jak to działa?</h2>
+                    <p className="home-section-subtitle">Twoja droga do sukcesu w 3 krokach</p>
                 </div>
                 
                 <div className="home-steps-container">
@@ -91,9 +139,10 @@ const HomePage = () => {
                 </div>
             </section>
 
-            {/* 2. Sekcja Kursów (na górze) */}
             <section className="courses-section">
-                <h2 className="page-title" style={{textAlign: 'center', marginBottom: '30px'}}>Najpopularniejsze kursy</h2>
+                <h2 className="page-title" style={{textAlign: 'center', marginBottom: '30px'}}>
+                    {user ? "Polecane dla Ciebie" : "Najpopularniejsze kursy"}
+                </h2>
                 
                 <div className="courses-list">
                     {courses.length === 0 ? (
@@ -109,7 +158,6 @@ const HomePage = () => {
                     )}
                 </div>
 
-                {/* Paginacja */}
                 {courses.length > COURSES_PER_PAGE && (
                     <div className="pagination-container">
                         <button 
@@ -133,7 +181,6 @@ const HomePage = () => {
                 )}
             </section>
             
-            {/* 3. Sekcja Rankingu (na dole, pod kursami) */}
             <section className="leaderboard-section">
                 <h2 className="page-title" style={{textAlign: 'center', marginTop: '0'}}>Ranking Użytkowników</h2>
                 <Leaderboard />
