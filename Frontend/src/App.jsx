@@ -21,7 +21,8 @@ import CertificatePage from './pages/Course/CertificatePage';
 import CourseAnalyticsPage from './pages/Instructor/CourseAnalyticsPage';
 import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
-import CertificateVerificationPage from './pages/Course/CertificateVerificationPage'; // NOWY IMPORT
+import CertificateVerificationPage from './pages/Course/CertificateVerificationPage';
+import DailyReviewPage from './pages/User/DailyReviewPage';
 import { useAuth } from './context/AuthContext';
 import './styles/components/App.css';
 
@@ -36,7 +37,8 @@ export const PAGE_FAVORITES = 'favorites';
 export const PAGE_PROFILE = 'profile';
 export const PAGE_FORGOT_PASSWORD = 'forgot-password';
 export const PAGE_RESET_PASSWORD = 'reset-password';
-export const PAGE_VERIFY_CERTIFICATE = 'verify-certificate'; // NOWA STAŁA
+export const PAGE_VERIFY_CERTIFICATE = 'verify-certificate';
+export const PAGE_DAILY_REVIEW = 'daily-review';
 
 function App() {
   const { user, logout } = useAuth();
@@ -65,7 +67,8 @@ function App() {
       case PAGE_PROFILE: navigate('/profile'); break;
       case PAGE_FORGOT_PASSWORD: navigate('/forgot-password'); break;
       case PAGE_RESET_PASSWORD: navigate('/reset-password'); break;
-      case PAGE_VERIFY_CERTIFICATE: navigate('/verify-certificate'); break; // NOWA OBSŁUGA
+      case PAGE_VERIFY_CERTIFICATE: navigate('/verify-certificate'); break;
+      case PAGE_DAILY_REVIEW: navigate('/daily-review'); break;
       default: navigate('/');
     }
   };
@@ -88,6 +91,7 @@ function App() {
   else if (path.startsWith('/favorites')) currentPage = PAGE_FAVORITES;
   else if (path.startsWith('/profile')) currentPage = PAGE_PROFILE;
   else if (path.startsWith('/verify-certificate')) currentPage = PAGE_VERIFY_CERTIFICATE;
+  else if (path.startsWith('/daily-review')) currentPage = PAGE_DAILY_REVIEW;
 
   const isFullWidthPage = path.startsWith('/login') || 
                           path.startsWith('/register') || 
@@ -95,7 +99,8 @@ function App() {
                           path.startsWith('/reset-password') ||
                           path.startsWith('/courses/') || 
                           path.startsWith('/course-view/') ||
-                          path.startsWith('/verify-certificate');
+                          path.startsWith('/verify-certificate') ||
+                          path.startsWith('/daily-review');
 
   const ProtectedRoute = ({ children, roles }) => {
     if (!isLoggedIn) {
@@ -148,10 +153,18 @@ function App() {
             element={<ResetPasswordPage onNavigateToLogin={() => navigateToPage(PAGE_LOGIN)} />} 
           />
           
-          {/* NOWA TRASA PUBLICZNA */}
           <Route 
             path="/verify-certificate" 
             element={<CertificateVerificationPage />} 
+          />
+
+          <Route 
+            path="/daily-review" 
+            element={
+              <ProtectedRoute>
+                <DailyReviewPage />
+              </ProtectedRoute>
+            } 
           />
 
           <Route 

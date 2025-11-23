@@ -233,6 +233,17 @@ const saveUserNote = async (lessonId, content) => {
     });
 };
 
+const fetchDailyReview = async () => {
+    return authenticatedFetch(`${API_BASE_URL}/Quizzes/daily`, { method: 'GET' });
+};
+
+const submitDailyReview = async (answers) => {
+    return authenticatedFetch(`${API_BASE_URL}/Quizzes/daily/submit`, {
+        method: 'POST',
+        body: JSON.stringify(answers)
+    });
+};
+
 export {
     fetchCourseDetails,
     fetchInstructorCourses, 
@@ -260,5 +271,7 @@ export {
     fetchUserNote,
     saveUserNote,
     searchCourses,
-    verifyCertificate
+    verifyCertificate,
+    fetchDailyReview,
+    submitDailyReview
 };

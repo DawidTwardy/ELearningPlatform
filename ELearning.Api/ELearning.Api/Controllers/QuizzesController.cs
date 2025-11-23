@@ -2,6 +2,7 @@ using ELearning.Api.DTOs.Quiz;
 using ELearning.Api.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -50,6 +51,29 @@ namespace ELearning.Api.Controllers
             {
                 await _gamificationService.UpdateStreakAsync(GetUserId());
                 await _gamificationService.AddPointsAsync(GetUserId(), 50);
+                await _gamificationService.CheckBadgesAsync(GetUserId());
+            }
+
+            return Ok(result);
+        }
+
+        [HttpGet("daily")]
+        public async Task<IActionResult> GetDailyReview()
+        {
+            var review = await _quizService.GenerateDailyReviewAsync(GetUserId());
+            return Ok(review);
+        }
+
+        [HttpPost("daily/submit")]
+        public async Task<IActionResult> SubmitDailyReview([FromBody] List<SubmittedAnswerDto> answers)
+        {
+            var result = await _quizService.SubmitDailyReviewAsync(answers, GetUserId());
+
+            if (result.Score > 0)
+            {
+                int points = result.Score * 5;
+                await _gamificationService.AddPointsAsync(GetUserId(), points);
+                await _gamificationService.UpdateStreakAsync(GetUserId());
                 await _gamificationService.CheckBadgesAsync(GetUserId());
             }
 

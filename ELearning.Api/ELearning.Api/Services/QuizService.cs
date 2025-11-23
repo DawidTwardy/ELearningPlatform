@@ -2,6 +2,8 @@ using ELearning.Api.DTOs.Quiz;
 using ELearning.Api.Interfaces;
 using ELearning.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ELearning.Api.Models.CourseContent;
@@ -19,14 +21,12 @@ namespace ELearning.Api.Services
 
         public async Task<QuizQuestionsDto?> GetQuizByIdAsync(int quizId, string userId)
         {
-            // £adujemy quiz z jego pytaniami i opcjami
             var quiz = await _context.Quizzes
                 .Where(q => q.Id == quizId)
                 .Include(q => q.Questions)
                     .ThenInclude(qs => qs.Options)
                 .Select(q => new QuizQuestionsDto
                 {
-                    // Mapowanie na DTO. Zapewniamy, ¿e nazwy pól DTO s¹ u¿ywane (np. QuestionId)
                     QuizId = q.Id,
                     Title = q.Title,
                     SectionId = q.SectionId,
@@ -51,8 +51,6 @@ namespace ELearning.Api.Services
         {
             var quizId = submitDto.QuizId;
 
-            // 1. Pobranie poprawnych odpowiedzi dla quizu
-            // U¿ywamy z³¹czenia implicite poprzez Question, aby upewniæ siê, ¿e pobieramy tylko dla danego quizu
             var correctAnswers = await _context.AnswerOptions
                 .Where(o => o.Question.QuizId == quizId && o.IsCorrect)
                 .ToDictionaryAsync(o => o.QuestionId, o => o.Id);
@@ -67,10 +65,8 @@ namespace ELearning.Api.Services
                 MaxScore = maxScore
             };
 
-            // 2. Porównanie odpowiedzi i obliczenie wyniku
             foreach (var submittedAnswer in submitDto.Answers)
             {
-                // Musimy upewniæ siê, ¿e submittedAnswer.QuestionId istnieje w correctAnswers
                 var isCorrect = correctAnswers.TryGetValue(submittedAnswer.QuestionId, out var correctOptionId) && correctOptionId == submittedAnswer.AnswerOptionId;
 
                 userAttempt.UserAnswers.Add(new Models.CourseContent.UserAnswer
@@ -87,25 +83,92 @@ namespace ELearning.Api.Services
             }
 
             userAttempt.Score = score;
-
-            // Za³o¿enie: zaliczony przy 80% poprawnych odpowiedzi
             userAttempt.IsPassed = maxScore > 0 && (double)score / maxScore >= 0.8;
 
-            // 3. Zapisanie próby
             _context.UserQuizAttempts.Add(userAttempt);
             await _context.SaveChangesAsync();
 
-            // 4. Pobranie liczby prób
             var attemptsCount = await _context.UserQuizAttempts
                 .CountAsync(a => a.QuizId == quizId && a.UserId == userId);
 
-            // 5. Zwrócenie wyniku
             return new QuizResultDto
             {
                 Score = score,
                 MaxScore = maxScore,
                 IsPassed = userAttempt.IsPassed,
                 AttemptsCount = attemptsCount
+            };
+        }
+
+        public async Task<QuizQuestionsDto> GenerateDailyReviewAsync(string userId)
+        {
+            var completedCourseIds = await _context.Enrollments
+                .Where(e => e.UserId == userId && e.IsCompleted)
+                .Select(e => e.CourseId)
+                .ToListAsync();
+
+            if (!completedCourseIds.Any())
+            {
+                return new QuizQuestionsDto
+                {
+                    Title = "Codzienna powtórka",
+                    Questions = new List<QuestionDto>()
+                };
+            }
+
+            var randomQuestions = await _context.Questions
+                .Include(q => q.Options)
+                .Include(q => q.Quiz)
+                .ThenInclude(qz => qz.Section)
+                .Where(q => completedCourseIds.Contains(q.Quiz.Section.CourseId))
+                .OrderBy(r => Guid.NewGuid())
+                .Take(5)
+                .Select(qs => new QuestionDto
+                {
+                    QuestionId = qs.Id,
+                    Text = qs.Text,
+                    QuestionType = qs.QuestionType,
+                    Options = qs.Options.Select(o => new AnswerOptionDto
+                    {
+                        AnswerOptionId = o.Id,
+                        Text = o.Text
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return new QuizQuestionsDto
+            {
+                QuizId = 0,
+                Title = "Codzienna powtórka",
+                Questions = randomQuestions
+            };
+        }
+
+        public async Task<QuizResultDto> SubmitDailyReviewAsync(List<SubmittedAnswerDto> answers, string userId)
+        {
+            var questionIds = answers.Select(a => a.QuestionId).ToList();
+
+            var correctAnswers = await _context.AnswerOptions
+                .Where(o => questionIds.Contains(o.QuestionId) && o.IsCorrect)
+                .ToDictionaryAsync(o => o.QuestionId, o => o.Id);
+
+            int score = 0;
+            int maxScore = answers.Count;
+
+            foreach (var answer in answers)
+            {
+                if (correctAnswers.TryGetValue(answer.QuestionId, out var correctId) && correctId == answer.AnswerOptionId)
+                {
+                    score++;
+                }
+            }
+
+            return new QuizResultDto
+            {
+                Score = score,
+                MaxScore = maxScore,
+                IsPassed = score == maxScore,
+                AttemptsCount = 1
             };
         }
     }

@@ -109,6 +109,36 @@ const HomePage = ({ navigateToPage }) => {
                 </>
             )}
 
+            {user && (
+                <section style={{ marginBottom: '40px', padding: '0 20px' }}>
+                    <div 
+                        style={{
+                            backgroundColor: '#1E1E1E',
+                            padding: '30px',
+                            borderRadius: '12px',
+                            border: '1px solid #28A745',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '20px'
+                        }}
+                    >
+                        <div>
+                            <h2 style={{ margin: '0 0 10px 0', color: '#fff' }}>Codzienna Dawka Wiedzy</h2>
+                            <p style={{ margin: 0, color: '#aaa' }}>Sprawdź, ile pamiętasz! Rozwiąż szybki test z ukończonych kursów i zdobądź dodatkowe punkty.</p>
+                        </div>
+                        <button 
+                            className="hero-cta-button" 
+                            style={{ backgroundColor: '#28A745', fontSize: '1rem', padding: '12px 25px' }}
+                            onClick={() => navigate('/daily-review')}
+                        >
+                            Rozpocznij Powtórkę 🔥
+                        </button>
+                    </div>
+                </section>
+            )}
+
             <section className="home-how-it-works">
                 <div className="home-section-header">
                     <h2 className="home-section-title">Jak to działa?</h2>
