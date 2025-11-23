@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -17,8 +18,10 @@ namespace ELearning.Api.Models.CourseContent
 
         public int SectionId { get; set; }
 
-        
         [ForeignKey("SectionId")]
         public CourseSection? Section { get; set; }
+
+        // Nowe pole: Lista zasobów do pobrania
+        public ICollection<LessonResource> Resources { get; set; } = new List<LessonResource>();
     }
 }

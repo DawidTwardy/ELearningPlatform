@@ -29,6 +29,8 @@ namespace ELearning.Api.Persistence
         public DbSet<Badge> Badges { get; set; }
         public DbSet<UserBadge> UserBadges { get; set; }
         public DbSet<UserNote> UserNotes { get; set; }
+        public DbSet<PushSubscription> PushSubscriptions { get; set; }
+        public DbSet<LessonResource> LessonResources { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

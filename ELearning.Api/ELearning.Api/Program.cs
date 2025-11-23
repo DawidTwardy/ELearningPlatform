@@ -56,6 +56,7 @@ builder.Services.AddScoped<FileStorageService>();
 builder.Services.AddScoped<CertificateService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IGamificationService, GamificationService>();
+builder.Services.AddScoped<PushNotificationService>();
 
 builder.Services.AddCors(options =>
 {
