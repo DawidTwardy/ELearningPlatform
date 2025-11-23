@@ -4,6 +4,7 @@
     padding: 20px;
     margin-top: 30px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    overflow-x: auto; /* Zabezpieczenie na małe ekrany */
 }
 
 .leaderboard-table {
@@ -22,6 +23,19 @@
     background-color: #2a2a2a;
     font-weight: bold;
     color: #aaa;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+/* Wyrównanie punktów do lewej (zgodnie z prośbą) */
+.points-cell {
+    font-weight: bold;
+    color: #4CAF50;
+    text-align: left; /* ZMIANA Z RIGHT NA LEFT */
+}
+
+.points-header {
+    text-align: left; /* ZMIANA Z RIGHT NA LEFT */
 }
 
 .rank-cell {
@@ -31,12 +45,26 @@
     text-align: center;
 }
 
-.points-cell {
-    font-weight: bold;
-    color: #4CAF50;
-    text-align: right;
+/* Podświetlenie wiersza zalogowanego użytkownika */
+.highlight-row {
+    background-color: rgba(40, 167, 69, 0.15); /* Delikatna zieleń */
+    border-left: 4px solid #28A745;
 }
 
+.highlight-row td {
+    color: #fff;
+    font-weight: 500;
+}
+
+.separator-row td {
+    padding: 5px;
+    background-color: transparent;
+    border: none;
+    font-size: 1.2em;
+    letter-spacing: 2px;
+}
+
+/* Pozostałe style (Badge, Streak) bez zmian */
 .streak-display {
     display: flex;
     align-items: center;

@@ -212,6 +212,17 @@ const fetchMyStats = async () => {
     return authenticatedFetch(`${API_BASE_URL}/Gamification/my-stats`, { method: 'GET' });
 };
 
+const fetchUserNote = async (lessonId) => {
+    return authenticatedFetch(`${API_BASE_URL}/Notes/lesson/${lessonId}`, { method: 'GET' });
+};
+
+const saveUserNote = async (lessonId, content) => {
+    return authenticatedFetch(`${API_BASE_URL}/Notes`, {
+        method: 'POST',
+        body: JSON.stringify({ lessonId, content })
+    });
+};
+
 export {
     fetchCourseDetails,
     fetchInstructorCourses, 
@@ -235,5 +246,7 @@ export {
     createReview,
     fetchCourseReviews,
     fetchLeaderboard,
-    fetchMyStats
+    fetchMyStats,
+    fetchUserNote,
+    saveUserNote
 };

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { fetchCourseDetails, markLessonCompleted, fetchCompletedLessons, fetchCompletedQuizzes, downloadCertificate, createReview } from '../../services/api';
 import QuizView from './QuizView';
 import DiscussionThread from './DiscussionThread';
+import PersonalNotes from '../../components/Lesson/PersonalNotes';
 import CourseRatingForm from '../Course/CourseRatingForm';
 import '../../styles/pages/CourseView.css';
 
@@ -20,6 +21,8 @@ const CourseView = ({ course: courseProp, onBack }) => {
     const [completedQuizIds, setCompletedQuizIds] = useState([]); 
     const [error, setError] = useState(null);
     const [showRatingForm, setShowRatingForm] = useState(false);
+    
+    const [activeTab, setActiveTab] = useState('discussion');
 
     const getCourseId = () => {
         if (paramId) return paramId;
@@ -159,9 +162,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
         let videoUrl = currentContent.videoUrl || currentContent.VideoUrl;
         let content = currentContent.content || currentContent.Content;
         
-        // Handle uploaded files URL
         if (typeof content === 'object' && content.url) {
-            // Sometimes content is JSON stringified in DB
             content = content.url;
         } else if (typeof content === 'string' && content.startsWith('{')) {
              try {
@@ -170,10 +171,8 @@ const CourseView = ({ course: courseProp, onBack }) => {
              } catch(e) {}
         }
 
-        // If we have a direct URL in content (for PDF or Video from upload)
         let mediaUrl = videoUrl || content;
         
-        // Fix relative paths for uploaded files
         if (mediaUrl && mediaUrl.startsWith('/uploads')) {
             mediaUrl = `${BASE_URL}${mediaUrl}`;
         }
@@ -229,10 +228,51 @@ const CourseView = ({ course: courseProp, onBack }) => {
                         </div>
                     )}
                     
-                    <DiscussionThread 
-                        courseId={courseId} 
-                        isInstructorView={false} 
-                    />
+                    {currentContent?.contentType === 'lesson' && (
+                        <div style={{ marginTop: '30px', padding: '0 20px' }}>
+                            <div style={{ display: 'flex', borderBottom: '1px solid #444', marginBottom: '0' }}>
+                                <button 
+                                    style={{
+                                        background: activeTab === 'discussion' ? '#1e1e1e' : 'transparent',
+                                        color: activeTab === 'discussion' ? '#fff' : '#aaa',
+                                        border: 'none',
+                                        padding: '10px 20px',
+                                        cursor: 'pointer',
+                                        borderBottom: activeTab === 'discussion' ? '2px solid #4CAF50' : 'none',
+                                        fontWeight: 'bold',
+                                        fontSize: '1rem'
+                                    }}
+                                    onClick={() => setActiveTab('discussion')}
+                                >
+                                    Dyskusja
+                                </button>
+                                <button 
+                                    style={{
+                                        background: activeTab === 'notes' ? '#1e1e1e' : 'transparent',
+                                        color: activeTab === 'notes' ? '#fff' : '#aaa',
+                                        border: 'none',
+                                        padding: '10px 20px',
+                                        cursor: 'pointer',
+                                        borderBottom: activeTab === 'notes' ? '2px solid #4CAF50' : 'none',
+                                        fontWeight: 'bold',
+                                        fontSize: '1rem'
+                                    }}
+                                    onClick={() => setActiveTab('notes')}
+                                >
+                                    Moje Notatki
+                                </button>
+                            </div>
+
+                            {activeTab === 'discussion' ? (
+                                <DiscussionThread 
+                                    courseId={courseId} 
+                                    isInstructorView={false} 
+                                />
+                            ) : (
+                                <PersonalNotes lessonId={currentContent.id || currentContent.Id} />
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <div className="course-sections">

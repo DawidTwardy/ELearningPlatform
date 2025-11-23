@@ -28,6 +28,7 @@ namespace ELearning.Api.Persistence
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Badge> Badges { get; set; }
         public DbSet<UserBadge> UserBadges { get; set; }
+        public DbSet<UserNote> UserNotes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -79,19 +80,13 @@ namespace ELearning.Api.Persistence
                 .HasForeignKey(c => c.ParentCommentId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // === SEEDOWANIE ODZNAK ===
             modelBuilder.Entity<Badge>().HasData(
-                // Łatwe (na zachętę)
                 new Badge { Id = 1, Name = "Pierwszy krok", Description = "Ukończ pierwszą lekcję", CriteriaType = "LessonCount", CriteriaThreshold = 1, IconUrl = "/badges/first_step.png" },
                 new Badge { Id = 5, Name = "Debiutant", Description = "Zalicz pierwszy quiz", CriteriaType = "QuizCount", CriteriaThreshold = 1, IconUrl = "/badges/rookie.png" },
                 new Badge { Id = 6, Name = "Na start", Description = "Zdobądź pierwsze 100 punktów", CriteriaType = "Points", CriteriaThreshold = 100, IconUrl = "/badges/starter_points.png" },
-
-                // Średnie
                 new Badge { Id = 2, Name = "Pilny Student", Description = "Ukończ 5 lekcji", CriteriaType = "LessonCount", CriteriaThreshold = 5, IconUrl = "/badges/student.png" },
                 new Badge { Id = 3, Name = "Mistrz Quizów", Description = "Zalicz 3 quizy", CriteriaType = "QuizCount", CriteriaThreshold = 3, IconUrl = "/badges/quiz_master.png" },
                 new Badge { Id = 4, Name = "Systematyczność", Description = "Utrzymaj streak przez 3 dni", CriteriaType = "Streak", CriteriaThreshold = 3, IconUrl = "/badges/marathon.png" },
-
-                // Trudne (dla zaawansowanych)
                 new Badge { Id = 7, Name = "Weteran", Description = "Ukończ 20 lekcji", CriteriaType = "LessonCount", CriteriaThreshold = 20, IconUrl = "/badges/veteran.png" },
                 new Badge { Id = 8, Name = "Geniusz", Description = "Zalicz 10 quizów", CriteriaType = "QuizCount", CriteriaThreshold = 10, IconUrl = "/badges/genius.png" },
                 new Badge { Id = 9, Name = "Tydzień z głowy", Description = "Ucz się codziennie przez 7 dni", CriteriaType = "Streak", CriteriaThreshold = 7, IconUrl = "/badges/week_streak.png" },
