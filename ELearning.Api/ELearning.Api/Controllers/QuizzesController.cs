@@ -13,15 +13,16 @@ namespace ELearning.Api.Controllers
     public class QuizzesController : ControllerBase
     {
         private readonly IQuizService _quizService;
+        private readonly IGamificationService _gamificationService;
 
-        public QuizzesController(IQuizService quizService)
+        public QuizzesController(IQuizService quizService, IGamificationService gamificationService)
         {
             _quizService = quizService;
+            _gamificationService = gamificationService;
         }
 
         private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        // GET /api/quizzes/5
         [HttpGet("{id}")]
         public async Task<IActionResult> GetQuiz(int id)
         {
@@ -35,7 +36,6 @@ namespace ELearning.Api.Controllers
             return Ok(quiz);
         }
 
-        // POST /api/quizzes/submit
         [HttpPost("submit")]
         public async Task<IActionResult> SubmitQuiz([FromBody] SubmitQuizDto submitDto)
         {
@@ -45,6 +45,13 @@ namespace ELearning.Api.Controllers
             }
 
             var result = await _quizService.SubmitQuizAsync(submitDto, GetUserId());
+
+            if (result.IsPassed)
+            {
+                await _gamificationService.UpdateStreakAsync(GetUserId());
+                await _gamificationService.AddPointsAsync(GetUserId(), 50);
+                await _gamificationService.CheckBadgesAsync(GetUserId());
+            }
 
             return Ok(result);
         }

@@ -1,0 +1,137 @@
+/* Frontend/src/styles/pages/HomePage.css */
+
+/* Kontener całej sekcji */
+.home-how-it-works {
+    width: 100%;
+    margin-bottom: 60px;
+    padding: 20px 0;
+}
+
+/* Nagłówek sekcji */
+.home-section-header {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.home-section-title {
+    font-size: 2.2em;
+    font-weight: bold;
+    color: #FFFFFF;
+    margin-bottom: 10px;
+}
+
+.home-section-subtitle {
+    color: #AAAAAA;
+    font-size: 1.1em;
+}
+
+/* Kontener na 3 karty */
+.home-steps-container {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+/* Pojedyncza karta kroku */
+.home-step-card {
+    background-color: #1B1B1B;
+    border-radius: 20px;
+    padding: 40px 30px;
+    flex: 1;
+    min-width: 280px;
+    max-width: 350px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative; /* Ważne dla numeru w tle */
+    overflow: hidden;
+    border: 1px solid #333;
+}
+
+.home-step-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+    border-color: #7B61FF;
+}
+
+/* Kółko z ikoną */
+.home-step-icon {
+    width: 80px;
+    height: 80px;
+    background-color: #242424;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 25px;
+    border: 2px solid #7B61FF;
+    font-size: 2em;
+    font-weight: bold;
+    color: #7B61FF;
+    box-shadow: 0 0 15px rgba(123, 97, 255, 0.2);
+    z-index: 2;
+    position: relative;
+}
+
+.home-step-card h3 {
+    font-size: 1.4em;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #FFFFFF;
+    z-index: 2;
+    position: relative;
+}
+
+.home-step-card p {
+    color: #CCCCCC;
+    line-height: 1.6;
+    font-size: 0.95em;
+    z-index: 2;
+    position: relative;
+}
+
+/* Numer w tle (np. 1, 2, 3) */
+.home-step-number-bg {
+    position: absolute;
+    top: -20px;
+    right: -10px;
+    font-size: 10em;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.03);
+    pointer-events: none;
+    z-index: 1;
+    font-family: sans-serif;
+}
+
+/* Styl dla sekcji z kursami i rankingiem */
+.courses-section-wrapper {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.courses-column {
+    flex: 2;
+    min-width: 300px;
+}
+
+.leaderboard-column {
+    flex: 1;
+    min-width: 300px;
+}
+
+/* Responsywność dla mniejszych ekranów */
+@media (max-width: 1000px) {
+    .courses-section-wrapper {
+        flex-direction: column;
+    }
+    
+    .courses-column, .leaderboard-column {
+        width: 100%;
+    }
+}

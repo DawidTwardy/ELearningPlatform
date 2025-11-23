@@ -3,7 +3,6 @@ const API_BASE_URL = 'http://localhost:7115/api';
 const getAuthToken = () => localStorage.getItem('token');
 const getRefreshToken = () => localStorage.getItem('refreshToken');
 
-// Funkcja pomocnicza do odświeżania tokena
 const refreshAccessToken = async () => {
     const refreshToken = getRefreshToken();
     const currentToken = getAuthToken();
@@ -23,7 +22,6 @@ const refreshAccessToken = async () => {
             localStorage.setItem('refreshToken', data.refreshToken);
             return data.token;
         } else {
-            // Refresh nieudany - wyloguj
             console.error("Refresh token expired or invalid");
             localStorage.clear();
             window.location.href = '/login';
@@ -37,7 +35,6 @@ const refreshAccessToken = async () => {
     }
 };
 
-// Wrapper dla fetch, który automatycznie dodaje token i obsługuje refresh
 const authenticatedFetch = async (url, options = {}) => {
     let token = getAuthToken();
     
@@ -47,7 +44,6 @@ const authenticatedFetch = async (url, options = {}) => {
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     };
 
-    // Usuń Content-Type jeśli wysyłamy FormData (np. upload plików)
     if (options.body instanceof FormData) {
         delete headers['Content-Type'];
     }
@@ -55,19 +51,16 @@ const authenticatedFetch = async (url, options = {}) => {
     try {
         let response = await fetch(url, { ...options, headers });
 
-        // Jeśli otrzymamy 401 (Unauthorized), próbujemy odświeżyć token
         if (response.status === 401) {
             const newToken = await refreshAccessToken();
             
             if (newToken) {
-                // Ponawiamy zapytanie z nowym tokenem
                 const newHeaders = {
                     ...headers,
                     'Authorization': `Bearer ${newToken}`
                 };
                 response = await fetch(url, { ...options, headers: newHeaders });
             } else {
-                // Nie udało się odświeżyć -> rzucamy błąd
                 throw new Error("Sesja wygasła. Zaloguj się ponownie.");
             }
         }
@@ -89,10 +82,7 @@ const handleResponse = async (response) => {
     return response.json();
 };
 
-// --- FUNKCJE API ---
-
 const fetchCourseDetails = async (courseId) => {
-    // Publiczny endpoint - zwykły fetch
     const response = await fetch(`${API_BASE_URL}/Courses/${courseId}`);
     return handleResponse(response);
 };
@@ -130,7 +120,6 @@ const fetchLessonCompletion = async (lessonId) => {
 };
 
 const fetchComments = async (courseId) => {
-    // Komentarze mogą być publiczne, ale w tym systemie są dostępne
     const response = await fetch(`${API_BASE_URL}/Comments/course/${courseId}`);
     return handleResponse(response);
 };
@@ -161,7 +150,6 @@ const uploadFile = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
     
-    // authenticatedFetch obsłuży usunięcie Content-Type dla FormData
     return authenticatedFetch(`${API_BASE_URL}/Upload`, {
         method: 'POST',
         body: formData
@@ -170,9 +158,6 @@ const uploadFile = async (file) => {
 
 const downloadCertificate = async (courseId) => {
     const token = getAuthToken();
-    // Pobieranie plików to specyficzny przypadek, trudniejszy do obsłużenia przez wrapper JSON.
-    // Tutaj używamy bezpośredniego fetch z ewentualną logiką odświeżania "ręcznie" lub zakładamy że token jest ważny.
-    // Dla uproszczenia: standardowy fetch z tokenem.
     
     const response = await fetch(`${API_BASE_URL}/Certificates/${courseId}`, {
         method: 'GET',
@@ -219,6 +204,14 @@ const fetchCourseReviews = async (courseId) => {
     return handleResponse(response);
 };
 
+const fetchLeaderboard = async () => {
+    return authenticatedFetch(`${API_BASE_URL}/Gamification/leaderboard`, { method: 'GET' });
+};
+
+const fetchMyStats = async () => {
+    return authenticatedFetch(`${API_BASE_URL}/Gamification/my-stats`, { method: 'GET' });
+};
+
 export {
     fetchCourseDetails,
     fetchInstructorCourses, 
@@ -240,5 +233,7 @@ export {
     markNotificationRead,
     fetchCourseAnalytics,
     createReview,
-    fetchCourseReviews
+    fetchCourseReviews,
+    fetchLeaderboard,
+    fetchMyStats
 };

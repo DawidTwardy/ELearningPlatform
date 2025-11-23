@@ -23,11 +23,12 @@ body {
     width: 100%;
 }
 
+/* --- POPRAWIONY HEADER --- */
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 40px;
+    padding: 15px 30px; /* Zmniejszono padding boczny */
     background-color: #1B1B1B;
     width: 100%;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
@@ -35,26 +36,55 @@ body {
     top: 0;
     z-index: 1001;
     flex-shrink: 0;
+    flex-wrap: wrap; /* Pozwala na zawijanie na bardzo małych ekranach */
 }
 
-/* Reszta stylów nagłówka bez zmian... */
-.header-left { display: flex; align-items: center; gap: 30px; }
-.header-right { display: flex; align-items: center; gap: 30px; position: relative; }
-.logo-image { height: 50px; width: auto; cursor: pointer; }
-.search-bar { display: flex; align-items: center; background-color: #242424; border: 3px solid #E0E0E0; border-radius: 30px; padding: 8px 20px; margin-left: 2%; width: 800px; }
-.search-icon-image { height: 18px; width: auto; margin-right: 10px; }
-.search-input { background: none; border: none; color: #FFFFFF; outline: none; width: 100%; padding: 0; }
-.nav-links a { color: #FFFFFF; text-decoration: none; margin-left: 15px; font-size: 0.95em; cursor: pointer; white-space: nowrap; }
-.nav-links a.active { text-decoration: underline; font-weight: bold; }
-.user-actions { display: flex; align-items: center; gap: 15px; position: relative; }
-.action-icon-image { height: 35px; width: auto; cursor: pointer; }
-.profile-menu { position: absolute; top: 50px; right: 0; width: 180px; background-color: rgba(51, 51, 51, 0.75); border-radius: 0 0 10px 10px; border: none; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7); z-index: 999; padding: 5px 0; display: flex; flex-direction: column; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
-.menu-item { background: none; border: none; color: #FFFFFF; padding: 10px; text-align: center; width: 100%; cursor: pointer; font-size: 0.9em; transition: color 0.2s, font-weight 0.2s, background-color 0.2s; }
-.menu-item:hover { background-color: rgba(68, 68, 68, 0.5); font-weight: bold; text-shadow: 0 0 5px rgba(241, 196, 15, 0.5); }
-.menu-item.logout { color: #FF6B6B; font-weight: bold; }
-.menu-divider { height: 1px; background-color: rgba(85, 85, 85, 0.5); margin: 5px 0; }
+.header-left { 
+    display: flex; 
+    align-items: center; 
+    gap: 20px; 
+    flex: 1; /* Zajmuje dostępną przestrzeń */
+    min-width: 0; /* Zapobiega wypychaniu */
+}
 
-/* Domyślny układ strony (dla Home, My Learning itp.) */
+.header-right { 
+    display: flex; 
+    align-items: center; 
+    gap: 20px; 
+    position: relative; 
+    flex-shrink: 0;
+}
+
+.logo-image { height: 40px; width: auto; cursor: pointer; } /* Nieco mniejsze logo */
+
+/* Responsywny pasek wyszukiwania */
+.search-bar { 
+    display: flex; 
+    align-items: center; 
+    background-color: #242424; 
+    border: 2px solid #E0E0E0; 
+    border-radius: 30px; 
+    padding: 8px 15px; 
+    width: 100%; 
+    max-width: 600px; /* Maksymalna szerokość zamiast sztywnej */
+    min-width: 200px;
+}
+
+.search-icon-image { height: 16px; width: auto; margin-right: 10px; }
+.search-input { background: none; border: none; color: #FFFFFF; outline: none; width: 100%; padding: 0; font-size: 0.95rem; }
+
+.nav-links a { color: #FFFFFF; text-decoration: none; margin-left: 15px; font-size: 0.9em; cursor: pointer; white-space: nowrap; }
+.nav-links a.active { text-decoration: underline; font-weight: bold; }
+
+.user-actions { display: flex; align-items: center; gap: 15px; position: relative; }
+.action-icon-image { height: 30px; width: auto; cursor: pointer; }
+
+.profile-menu { position: absolute; top: 50px; right: 0; width: 180px; background-color: rgba(51, 51, 51, 0.95); border-radius: 0 0 10px 10px; border: 1px solid #444; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7); z-index: 999; padding: 5px 0; display: flex; flex-direction: column; }
+.menu-item { background: none; border: none; color: #FFFFFF; padding: 10px; text-align: center; width: 100%; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s; }
+.menu-item:hover { background-color: rgba(255, 255, 255, 0.1); }
+.menu-item.logout { color: #FF6B6B; font-weight: bold; }
+.menu-divider { height: 1px; background-color: #444; margin: 5px 0; }
+
 .main-content {
     max-width: 1400px;
     width: 100%;
@@ -66,145 +96,93 @@ body {
     flex-direction: column;
 }
 
-/* --- FIX PEŁNEJ SZEROKOŚCI --- */
-/* Używamy tego dla CourseDetails, Login, Register */
 .main-content.full-width-page {
-    padding: 0 !important;       /* Zerujemy padding kontenera */
-    max-width: none !important;  /* Usuwamy limit 1400px */
-    width: 100% !important;      /* Wymuszamy 100% szerokości */
-    display: flex;               /* Flex pozwala dzieciom się rozciągać */
-    flex-direction: column;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
 }
 
-/* Ważne: Nie wymuszamy stylów na dzieciach (jak w poprzednim błędzie), 
-   pozwalamy stronie samej zarządzać swoim układem */
-
 .page-title { font-size: 1.6em; margin-bottom: 25px; font-weight: bold; }
-.courses-list { display: flex; flex-wrap: wrap; gap: 45px; justify-content: center; }
+.courses-list { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; }
 
 .footer {
     display: flex;
     align-items: center;
     padding: 20px 40px;
     background-color: #0D0D0D;
-    border-top: none;
     margin-top: auto;
     width: 100%;
     flex-shrink: 0;
 }
-.footer .logo-image { height: 50px; width: auto; }
+.footer .logo-image { height: 40px; width: auto; }
 
-/* Style kart (zachowane powiększenie) */
+/* Karty kursów */
 .notification-icon-wrapper { position: relative; cursor: pointer; }
-.notification-dot { position: absolute; top: 3px; right: 3px; width: 10px; height: 10px; background-color: #FF6B6B; border-radius: 50%; border: 2px solid #1B1B1B; }
-.course-card { background-color: #1B1B1B; border-radius: 30px; padding: 30px 20px; width: calc(25% - 34px); min-width: 280px; flex-grow: 0; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6); position: relative; transition: transform 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: column; }
-.course-card:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0, 0, 0, 0.8); }
-.card-image-container { height: 180px; border-radius: 15px; position: relative; width: 100%; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 -10px 10px rgba(0, 0, 0, 0.1); }
-.card-image { width: 100%; height: 100%; object-fit: cover; border-radius: 20px; overflow: hidden; position: relative; clip-path: none; opacity: 1; }
-.filled-heart { position: absolute; top: -10px; right: -10px; width: 50px; height: auto; z-index: 100; cursor: pointer; }
-.card-info { padding: 0 5px; flex-grow: 1; }
-.course-title { font-size: 1.35em; font-weight: bold; margin: 5px 0 10px; }
-.course-instructor { color: #aaaaaa; font-size: 1.05em; margin-bottom: 10px; min-height: 1.2em; }
-.star-rating { margin-left: 0; display: flex; margin-top: 10px; gap: 5px; }
-.star-icon-image { width: 18px; height: 18px; object-fit: contain; }
-.card-action-button, .card-continue-button, .card-edit-button { padding: 10px 16px; border: none; border-radius: 20px; color: white; font-weight: bold; cursor: pointer; transition: filter 0.2s; font-size: 1em; flex: 1; text-align: center; }
-.card-action-button:hover, .card-continue-button:hover, .card-edit-button:hover { filter: brightness(1.1); }
-.card-continue-button { background-color: #7B61FF; width: 100%; margin-top: 15px; }
-.card-edit-button { background-color: #2196F3; width: 100%; margin-top: 15px; }
-.progress-bar-container { width: 100%; background-color: #333; border-radius: 10px; height: 15px; margin-top: 10px; overflow: hidden; position: relative; }
-.progress-bar-fill { height: 100%; background-color: #4CAF50; transition: width 0.5s ease; }
-.progress-bar-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; color: white; font-weight: bold; text-shadow: 0 0 2px black; }
+.notification-dot { position: absolute; top: 0; right: 0; width: 8px; height: 8px; background-color: #FF6B6B; border-radius: 50%; }
 
-/* --- STYLE DLA SEKCJI INFO NA HOME PAGE (Scoped) --- */
-/* Używamy prefiksu .home- aby nie psuć innych podstron (np. Course Details) */
+.course-card { 
+    background-color: #1B1B1B; 
+    border-radius: 20px; 
+    padding: 20px; 
+    width: 300px; /* Stała szerokość dla lepszego układu siatki */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); 
+    position: relative; 
+    transition: transform 0.2s ease; 
+    display: flex; 
+    flex-direction: column; 
+}
+.course-card:hover { transform: translateY(-5px); }
 
-.home-how-it-works {
+.card-image-container { height: 160px; border-radius: 12px; position: relative; width: 100%; margin-bottom: 15px; overflow: hidden; background-color: #2a2a2a; }
+.card-image { width: 100%; height: 100%; object-fit: cover; }
+.filled-heart { position: absolute; top: 10px; right: 10px; width: 30px; z-index: 10; cursor: pointer; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)); }
+
+.card-info { display: flex; flex-direction: column; flex-grow: 1; }
+.course-title { font-size: 1.2em; font-weight: bold; margin: 5px 0; line-height: 1.3; }
+.course-instructor { color: #aaa; font-size: 0.9em; margin-bottom: 10px; }
+
+.star-rating { display: flex; gap: 2px; }
+.star-icon-image { width: 16px; height: 16px; }
+
+/* Styl paginacji (używany w HomePage) */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 30px;
     width: 100%;
-    margin-bottom: 60px;
 }
 
-.home-section-header {
-    text-align: center;
-    margin-bottom: 40px;
+.pagination-btn {
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
-.home-section-title {
-    font-size: 2.2em;
-    font-weight: bold;
-    color: #FFFFFF;
-    margin-bottom: 10px;
+.pagination-btn:hover:not(:disabled) {
+    background-color: #444;
 }
 
-.home-section-subtitle {
-    color: #AAAAAA;
-    font-size: 1.1em;
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.home-steps-container {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    flex-wrap: wrap;
+.pagination-info {
+    color: #aaa;
+    font-size: 0.9rem;
 }
 
-.home-step-card {
-    background-color: #1B1B1B;
-    border-radius: 30px;
-    padding: 40px 30px;
-    flex: 1;
-    min-width: 280px;
-    max-width: 400px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.home-step-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.8);
-}
-
-.home-step-icon {
-    width: 70px;
-    height: 70px;
-    background-color: #242424;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 25px;
-    border: 2px solid #7B61FF;
-    font-size: 1.8em;
-    font-weight: bold;
-    color: #7B61FF;
-    box-shadow: 0 0 15px rgba(123, 97, 255, 0.2);
-}
-
-.home-step-card h3 {
-    font-size: 1.5em;
-    font-weight: bold;
-    margin-bottom: 15px;
-    color: #FFFFFF;
-}
-
-.home-step-card p {
-    color: #AAAAAA;
-    line-height: 1.6;
-    font-size: 1em;
-}
-
-.home-step-number-bg {
-    position: absolute;
-    top: -20px;
-    right: -10px;
-    font-size: 8em;
-    font-weight: 900;
-    color: rgba(255, 255, 255, 0.03);
-    pointer-events: none;
-    z-index: 0;
+/* Responsywność */
+@media (max-width: 768px) {
+    .header { padding: 10px 15px; gap: 15px; }
+    .search-bar { max-width: 100%; margin: 10px 0; order: 3; width: 100%; }
+    .header-left, .header-right { width: auto; }
+    .nav-links { display: none; } /* Uproszczenie na mobile */
+    .course-card { width: 100%; }
 }

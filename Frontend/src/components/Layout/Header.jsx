@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import NotificationsDropdown from '../Notifications/NotificationsDropdown';
-import { fetchNotifications } from '../../services/api';
+import { fetchNotifications, fetchMyStats } from '../../services/api';
+import '../../styles/components/Gamification.css'; 
 import { 
   PAGE_HOME, 
   PAGE_INSTRUCTORS, 
@@ -36,10 +37,12 @@ const Header = ({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
+    const [streak, setStreak] = useState(0);
 
     useEffect(() => {
         if (isLoggedIn) {
             checkNotifications();
+            checkStats();
         }
     }, [isLoggedIn, isNotificationsOpen]);
 
@@ -50,6 +53,15 @@ const Header = ({
             setHasUnread(unread);
         } catch (error) {
             console.error("Błąd sprawdzania powiadomień", error);
+        }
+    };
+
+    const checkStats = async () => {
+        try {
+            const data = await fetchMyStats();
+            setStreak(data.currentStreak);
+        } catch(error) {
+            console.error("Błąd statystyk", error);
         }
     };
 
@@ -167,6 +179,11 @@ const Header = ({
                 <div className="user-actions">
                     {isLoggedIn && (
                         <>
+                            <div className="streak-display" title="Dni nauki z rzędu">
+                                <span className="fire-icon">🔥</span>
+                                <span>{streak}</span>
+                            </div>
+
                             <img 
                                 src="/src/icon/hearticon.png" 
                                 alt="Ulubione" 

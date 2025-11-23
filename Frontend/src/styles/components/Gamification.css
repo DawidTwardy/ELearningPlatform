@@ -1,0 +1,101 @@
+.leaderboard-container {
+    background-color: #1E1E1E;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 30px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #fff;
+}
+
+.leaderboard-table th, .leaderboard-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #333;
+}
+
+.leaderboard-table th {
+    background-color: #2a2a2a;
+    font-weight: bold;
+    color: #aaa;
+}
+
+.rank-cell {
+    font-weight: bold;
+    color: #f3b421;
+    width: 50px;
+    text-align: center;
+}
+
+.points-cell {
+    font-weight: bold;
+    color: #4CAF50;
+    text-align: right;
+}
+
+.streak-display {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #f39c12;
+    font-weight: bold;
+    font-size: 0.95em;
+    background-color: rgba(243, 156, 18, 0.1);
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(243, 156, 18, 0.3);
+    cursor: default;
+}
+
+.fire-icon {
+    font-size: 1.2em;
+}
+
+.badges-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.badge-item {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 15px;
+    width: 150px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.2s;
+}
+
+.badge-item:hover {
+    transform: translateY(-3px);
+    border-color: #f3b421;
+}
+
+.badge-icon {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 10px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.3));
+}
+
+.badge-name {
+    font-size: 0.9em;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.badge-desc {
+    font-size: 0.75em;
+    color: #aaa;
+}

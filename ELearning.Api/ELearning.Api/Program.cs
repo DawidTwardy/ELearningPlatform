@@ -55,6 +55,7 @@ builder.Services.AddScoped<IQuizService, QuizService>();
 builder.Services.AddScoped<FileStorageService>();
 builder.Services.AddScoped<CertificateService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IGamificationService, GamificationService>();
 
 builder.Services.AddCors(options =>
 {

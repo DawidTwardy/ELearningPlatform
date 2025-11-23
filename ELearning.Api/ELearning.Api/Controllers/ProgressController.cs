@@ -1,4 +1,5 @@
 using ELearning.Api.Persistence;
+using ELearning.Api.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +13,12 @@ namespace ELearning.Api.Controllers
     public class ProgressController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IGamificationService _gamificationService;
 
-        public ProgressController(ApplicationDbContext context)
+        public ProgressController(ApplicationDbContext context, IGamificationService gamificationService)
         {
             _context = context;
+            _gamificationService = gamificationService;
         }
 
         [HttpGet("course/{courseId}")]
@@ -51,6 +54,7 @@ namespace ELearning.Api.Controllers
                 if (currentProgress == 100)
                 {
                     enrollment.IsCompleted = true;
+                    await _gamificationService.AddPointsAsync(userId, 100);
                 }
                 else
                 {
@@ -123,6 +127,10 @@ namespace ELearning.Api.Controllers
             _context.LessonCompletions.Add(completion);
             await _context.SaveChangesAsync();
 
+            await _gamificationService.UpdateStreakAsync(userId);
+            await _gamificationService.AddPointsAsync(userId, 10);
+            await _gamificationService.CheckBadgesAsync(userId);
+
             await UpdateEnrollmentProgress(userId, lesson.Section.Course.Id);
 
             return Ok(new { success = true });
@@ -165,6 +173,7 @@ namespace ELearning.Api.Controllers
             if (progressPercentage == 100)
             {
                 enrollment.IsCompleted = true;
+                await _gamificationService.AddPointsAsync(userId, 100);
             }
             else
             {

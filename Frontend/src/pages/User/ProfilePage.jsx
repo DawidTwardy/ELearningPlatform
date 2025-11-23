@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-// ZMIANA: Importujemy style z nowej lokalizacji
 import '../../styles/pages/CourseEditPage.css';
 import '../../styles/pages/ProfilePage.css';
-
-// Usunęliśmy import RteToolbar
+import { fetchMyStats } from '../../services/api';
+import BadgesList from '../../components/Gamification/BadgesList';
 
 const ProfilePage = ({ onBack }) => {
-  // ... (cała logika komponentu bez zmian) ...
   const [avatarPreview, setAvatarPreview] = useState('/src/icon/usericon.png');
   const [firstName, setFirstName] = useState('Jan');
   const [lastName, setLastName] = useState('Kowalski');
@@ -16,14 +14,29 @@ const ProfilePage = ({ onBack }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [bio, setBio] = useState('Ekspert w dziedzinie baz danych z 10-letnim doświadczeniem. Pasjonat czystego kodu i efektywnych zapytań SQL.');
+  const [bio, setBio] = useState('');
   
+  const [stats, setStats] = useState({ points: 0, currentStreak: 0, badges: [] });
+
   const [openItems, setOpenItems] = useState({
     dane: true,
-    login: true,
-    haslo: true,
-    instructor: true
+    gamification: true,
+    login: false,
+    haslo: false,
+    instructor: false
   });
+
+  useEffect(() => {
+      const loadStats = async () => {
+          try {
+              const data = await fetchMyStats();
+              setStats(data);
+          } catch (e) {
+              console.error(e);
+          }
+      };
+      loadStats();
+  }, []);
 
   const toggleItem = (id) => {
     setOpenItems(prev => ({ ...prev, [id]: !prev[id] }));
@@ -38,20 +51,6 @@ const ProfilePage = ({ onBack }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (newPassword || currentPassword || confirmNewPassword) {
-      if (!newPassword || !currentPassword || !confirmNewPassword) {
-        alert("Aby zmienić hasło, musisz wypełnić wszystkie trzy pola: aktualne, nowe i potwierdzenie.");
-        return;
-      }
-      if (newPassword !== confirmNewPassword) {
-        alert("Nowe hasła nie są zgodne.");
-        return;
-      }
-      console.log("Zmieniam hasło...");
-    }
-    
-    console.log("Zapisano dane profilu:", { firstName, lastName, login, bio, avatarPreview });
     alert("Zmiany w profilu zostały zapisane!");
     onBack();
   };
@@ -81,10 +80,27 @@ const ProfilePage = ({ onBack }) => {
               <label htmlFor="avatarUpload" className="profile-avatar-button">
                 Zmień zdjęcie
               </label>
+              
+              <div style={{marginTop: '20px', textAlign: 'center', width: '100%'}}>
+                  <div style={{fontSize: '2em', fontWeight: 'bold', color: '#4CAF50'}}>{stats.points}</div>
+                  <div style={{color: '#aaa', fontSize: '0.9em'}}>Punkty Doświadczenia</div>
+              </div>
             </div>
 
             <div className="profile-fields-column">
               
+              <h4 
+                className={`collapsible-header ${openItems.gamification ? 'open' : ''}`}
+                onClick={() => toggleItem('gamification')}
+              >
+                Twoje Osiągnięcia
+              </h4>
+              {openItems.gamification && (
+                  <div className="section-item">
+                      <BadgesList badges={stats.badges} />
+                  </div>
+              )}
+
               <h4 
                 className={`collapsible-header ${openItems.dane ? 'open' : ''}`}
                 onClick={() => toggleItem('dane')}
@@ -190,7 +206,7 @@ const ProfilePage = ({ onBack }) => {
               {openItems.instructor && (
                 <div className="section-item">
                   <div className="edit-form-group">
-                    <label htmlFor="instructorBio">Opis nstruktora (bio)</label>
+                    <label htmlFor="instructorBio">Opis instruktora (bio)</label>
                     <div className="text-editor-wrapper-quill">
                       <ReactQuill 
                         theme="snow" 
