@@ -26,24 +26,25 @@ namespace ELearning.Api.Controllers
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
+            // SprawdŸ czy u¿ytkownik jest zapisany na kurs
             var enrollment = await _context.Enrollments
                 .FirstOrDefaultAsync(e => e.CourseId == dto.CourseId && e.UserId == userId);
 
             if (enrollment == null)
             {
-                // POPRAWKA: Zwracamy obiekt JSON zamiast stringa
                 return BadRequest(new { message = "Musisz byæ zapisany na kurs, aby dodaæ recenzjê." });
             }
 
+            // SprawdŸ czy u¿ytkownik ju¿ nie oceni³ tego kursu
             var existingReview = await _context.CourseReviews
                 .FirstOrDefaultAsync(r => r.CourseId == dto.CourseId && r.UserId == userId);
 
             if (existingReview != null)
             {
-                // POPRAWKA: Zwracamy obiekt JSON
                 return BadRequest(new { message = "Ju¿ oceni³eœ ten kurs." });
             }
 
+            // 1. Utwórz now¹ recenzjê i dodaj do kontekstu (jeszcze nie zapisujemy)
             var review = new CourseReview
             {
                 CourseId = dto.CourseId,
@@ -54,9 +55,27 @@ namespace ELearning.Api.Controllers
             };
 
             _context.CourseReviews.Add(review);
-            await _context.SaveChangesAsync();
 
-            await RecalculateCourseRating(dto.CourseId);
+            // 2. Pobierz kurs i zaktualizuj jego œredni¹ ocenê
+            var course = await _context.Courses.FindAsync(dto.CourseId);
+            if (course != null)
+            {
+                // Pobieramy listê DOTYCHCZASOWYCH ocen z bazy (bez tej nowej, bo ona jest jeszcze w pamiêci)
+                var existingRatings = await _context.CourseReviews
+                    .Where(r => r.CourseId == dto.CourseId)
+                    .Select(r => r.Rating)
+                    .ToListAsync();
+
+                // Dodajemy now¹ ocenê do listy w pamiêci, aby wyliczyæ now¹ œredni¹
+                existingRatings.Add(dto.Rating);
+
+                // Aktualizujemy pola w encji Course
+                course.Rating = Math.Round(existingRatings.Average(), 1);
+                course.RatingCount = existingRatings.Count;
+            }
+
+            // 3. Zapisujemy wszystko (Recenzjê i aktualizacjê Kursu) w jednej transakcji
+            await _context.SaveChangesAsync();
 
             return Ok(new { message = "Recenzja dodana pomyœlnie." });
         }
@@ -80,30 +99,6 @@ namespace ELearning.Api.Controllers
                 .ToListAsync();
 
             return Ok(reviews);
-        }
-
-        private async Task RecalculateCourseRating(int courseId)
-        {
-            var course = await _context.Courses.FindAsync(courseId);
-            if (course == null) return;
-
-            var ratings = await _context.CourseReviews
-                .Where(r => r.CourseId == courseId)
-                .Select(r => r.Rating)
-                .ToListAsync();
-
-            if (ratings.Any())
-            {
-                course.Rating = Math.Round(ratings.Average(), 1);
-                course.RatingCount = ratings.Count;
-            }
-            else
-            {
-                course.Rating = 0;
-                course.RatingCount = 0;
-            }
-
-            await _context.SaveChangesAsync();
         }
     }
 }

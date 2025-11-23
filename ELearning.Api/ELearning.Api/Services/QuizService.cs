@@ -116,11 +116,15 @@ namespace ELearning.Api.Services
                 };
             }
 
-            var randomQuestions = await _context.Questions
+            var candidateQuestions = await _context.Questions
                 .Include(q => q.Options)
                 .Include(q => q.Quiz)
-                .ThenInclude(qz => qz.Section)
+                    .ThenInclude(qz => qz.Section)
+                        .ThenInclude(s => s.Course)
                 .Where(q => completedCourseIds.Contains(q.Quiz.Section.CourseId))
+                .ToListAsync();
+
+            var randomQuestions = candidateQuestions
                 .OrderBy(r => Guid.NewGuid())
                 .Take(5)
                 .Select(qs => new QuestionDto
@@ -128,13 +132,17 @@ namespace ELearning.Api.Services
                     QuestionId = qs.Id,
                     Text = qs.Text,
                     QuestionType = qs.QuestionType,
+
+                    CourseTitle = qs.Quiz?.Section?.Course?.Title ?? "Nieznany kurs",
+                    SectionTitle = qs.Quiz?.Section?.Title ?? "Nieznana sekcja",
+
                     Options = qs.Options.Select(o => new AnswerOptionDto
                     {
                         AnswerOptionId = o.Id,
                         Text = o.Text
                     }).ToList()
                 })
-                .ToListAsync();
+                .ToList();
 
             return new QuizQuestionsDto
             {
