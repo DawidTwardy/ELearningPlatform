@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import { 
     fetchCourseDetails, 
     markLessonCompleted, 
@@ -7,13 +8,15 @@ import {
     fetchCompletedQuizzes, 
     downloadCertificate, 
     createReview,
-    fetchUserEnrollment // Dodano import
+    fetchUserEnrollment 
 } from '../../services/api';
+import { downloadCalendarEvent } from '../../utils/calendarGenerator';
 import QuizView from './QuizView';
 import DiscussionThread from './DiscussionThread';
 import PersonalNotes from '../../components/Lesson/PersonalNotes';
 import CourseRatingForm from '../Course/CourseRatingForm';
-import StudyPlanner from '../../components/Course/StudyPlanner'; // Dodano import
+import StudyPlanner from '../../components/Course/StudyPlanner';
+import CalendarConfigModal from '../../components/Course/CalendarConfigModal'; // Upewnij się, że ten plik istnieje
 import '../../styles/pages/CourseView.css';
 
 const BASE_URL = 'http://localhost:7115';
@@ -28,9 +31,12 @@ const CourseView = ({ course: courseProp, onBack }) => {
     const [expandedSections, setExpandedSections] = useState({});
     const [completedLessonIds, setCompletedLessonIds] = useState([]); 
     const [completedQuizIds, setCompletedQuizIds] = useState([]); 
-    const [enrollmentDate, setEnrollmentDate] = useState(null); // Dodano stan daty
+    const [enrollmentDate, setEnrollmentDate] = useState(null);
     const [error, setError] = useState(null);
     const [showRatingForm, setShowRatingForm] = useState(false);
+    
+    // Nowy stan dla modala kalendarza
+    const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
     
     const [activeTab, setActiveTab] = useState('discussion');
 
@@ -52,7 +58,6 @@ const CourseView = ({ course: courseProp, onBack }) => {
             try {
                 setLoading(true);
                 
-                // Dodano pobieranie enrollmentData
                 const [courseData, completedIds, completedQuizzes, enrollmentData] = await Promise.all([
                     fetchCourseDetails(courseId),
                     fetchCompletedLessons(courseId).catch(() => []), 
@@ -66,7 +71,6 @@ const CourseView = ({ course: courseProp, onBack }) => {
                 setCompletedLessonIds(completedIds);
                 setCompletedQuizIds(completedQuizzes);
 
-                // Ustawienie daty zapisu
                 if (enrollmentData && enrollmentData.enrollmentDate) {
                     setEnrollmentDate(enrollmentData.enrollmentDate);
                 } else {
@@ -146,6 +150,14 @@ const CourseView = ({ course: courseProp, onBack }) => {
         } catch (error) {
             console.error(error);
             alert("Nie udało się dodać opinii: " + error.message);
+        }
+    };
+
+    // Funkcja obsługująca zatwierdzenie w modalu kalendarza
+    const handleCalendarConfirm = (time, days) => {
+        if (course) {
+            downloadCalendarEvent(course.title, time, days);
+            setIsCalendarModalOpen(false);
         }
     };
 
@@ -269,7 +281,6 @@ const CourseView = ({ course: courseProp, onBack }) => {
     const courseSections = course.sections || course.Sections || [];
     const isCompleted = isCourseFullyCompleted();
 
-    // Obliczenia dla StudyPlanner
     const totalLessons = courseSections.reduce((acc, sec) => acc + (sec.lessons || sec.Lessons || []).length, 0);
     const completedLessonsCount = completedLessonIds.length;
 
@@ -403,12 +414,44 @@ const CourseView = ({ course: courseProp, onBack }) => {
                         );
                     })}
                     
-                    {/* Dodano Study Planner w pasku bocznym */}
                     <StudyPlanner 
                         totalLessons={totalLessons}
                         completedLessons={completedLessonsCount}
                         enrollmentDate={enrollmentDate}
                     />
+
+                    {/* ZMIANA: Przycisk teraz otwiera modal */}
+                    <button 
+                        className="btn-calendar" 
+                        onClick={() => setIsCalendarModalOpen(true)}
+                        style={{
+                            width: '100%',
+                            marginTop: '10px',
+                            padding: '10px',
+                            backgroundColor: '#374151',
+                            color: '#e5e7eb',
+                            border: '1px solid #4b5563',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => {
+                            e.currentTarget.style.backgroundColor = '#4b5563';
+                            e.currentTarget.style.color = '#fff';
+                        }}
+                        onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = '#374151';
+                            e.currentTarget.style.color = '#e5e7eb';
+                        }}
+                    >
+                        <Calendar size={18} />
+                        Zaplanuj w kalendarzu
+                    </button>
 
                     {isCompleted && (
                         <button 
@@ -430,6 +473,15 @@ const CourseView = ({ course: courseProp, onBack }) => {
                 </div>
             </div>
 
+            {/* Modal Kalendarza */}
+            <CalendarConfigModal 
+                isOpen={isCalendarModalOpen}
+                onClose={() => setIsCalendarModalOpen(false)}
+                onConfirm={handleCalendarConfirm}
+                courseTitle={course?.title || "Kurs"}
+            />
+
+            {/* Modal Oceny */}
             {showRatingForm && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <CourseRatingForm 
