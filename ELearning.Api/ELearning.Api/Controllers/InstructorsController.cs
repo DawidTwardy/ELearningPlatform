@@ -23,14 +23,16 @@ namespace ELearning.Api.Controllers
         public async Task<IActionResult> GetInstructors()
         {
             var instructors = await _context.Users
-                .Where(u => u.Courses.Any())
+                .Where(u => u.Courses.Any()) // Pobieramy tylko tych, którzy maj¹ kursy
                 .Include(u => u.Courses)
                 .Select(u => new
                 {
                     Id = u.Id,
                     Name = $"{u.FirstName} {u.LastName}",
-                    AvatarSrc = "/src/icon/usericon.png",
-                    Bio = "Instruktor na platformie ELearning.",
+                    // POPRAWKA: Pobieramy avatar z bazy, jeœli null to domyœlny
+                    AvatarSrc = !string.IsNullOrEmpty(u.AvatarUrl) ? u.AvatarUrl : "/src/icon/usericon.png",
+                    // POPRAWKA: Pobieramy bio z bazy
+                    Bio = !string.IsNullOrEmpty(u.Bio) ? u.Bio : "Instruktor na platformie ELearning.",
                     TopCourses = u.Courses
                         .OrderByDescending(c => c.Enrollments.Count)
                         .Take(3)
@@ -47,13 +49,17 @@ namespace ELearning.Api.Controllers
         {
             var instructor = await _context.Users
                 .Include(u => u.Courses)
+                .ThenInclude(c => c.Sections) // Wa¿ne do zliczania lekcji
+                .ThenInclude(s => s.Lessons)
                 .Where(u => u.Id == id)
                 .Select(u => new
                 {
                     Id = u.Id,
                     Name = $"{u.FirstName} {u.LastName}",
-                    AvatarSrc = "/src/icon/usericon.png",
-                    Bio = "Doœwiadczony instruktor z pasj¹ do nauczania. Specjalizuje siê w przekazywaniu wiedzy w przystêpny sposób.",
+                    // POPRAWKA: Pobieramy avatar z bazy
+                    AvatarSrc = !string.IsNullOrEmpty(u.AvatarUrl) ? u.AvatarUrl : "/src/icon/usericon.png",
+                    // POPRAWKA: Pobieramy bio z bazy
+                    Bio = !string.IsNullOrEmpty(u.Bio) ? u.Bio : "Brak opisu instruktora.",
                     Courses = u.Courses.Select(c => new
                     {
                         Id = c.Id,
@@ -64,7 +70,9 @@ namespace ELearning.Api.Controllers
                         RatingCount = c.RatingCount,
                         Category = c.Category,
                         Level = c.Level,
-                        Description = c.Description
+                        Description = c.Description,
+                        // Zliczanie lekcji (z naszej poprzedniej poprawki)
+                        LessonsCount = c.Sections.SelectMany(s => s.Lessons).Count()
                     }).ToList()
                 })
                 .FirstOrDefaultAsync();
