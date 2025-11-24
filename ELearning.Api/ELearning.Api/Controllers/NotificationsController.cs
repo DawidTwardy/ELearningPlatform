@@ -1,3 +1,4 @@
+using ELearning.Api.Models;
 using ELearning.Api.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,6 +31,29 @@ namespace ELearning.Api.Controllers
 
             return Ok(notifications);
         }
+
+        // --- DODANO: Metoda do tworzenia powiadomieñ ---
+        [HttpPost]
+        public async Task<IActionResult> CreateNotification([FromBody] Notification notification)
+        {
+            if (notification == null) return BadRequest();
+
+            // Ustawiamy domyœlne wartoœci
+            notification.CreatedAt = DateTime.UtcNow;
+            notification.IsRead = false;
+
+            // Jeœli userId nie zosta³ podany, zwracamy b³¹d (dla zg³oszeñ b³êdów userId to instruktor)
+            if (string.IsNullOrEmpty(notification.UserId))
+            {
+                return BadRequest(new { message = "Odbiorca (UserId) jest wymagany." });
+            }
+
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+
+            return Ok(notification);
+        }
+        // -----------------------------------------------
 
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)

@@ -29,11 +29,10 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setIsAuthenticated(false);
         localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken'); // Usuwamy również refresh token
+        localStorage.removeItem('refreshToken'); 
     }, []);
 
     useEffect(() => {
-        // Konfiguracja axiosa dla requestów (opcjonalnie, bo api.js używa fetch, ale warto mieć spójność)
         const requestInterceptor = axios.interceptors.request.use(
             config => {
                 const currentToken = localStorage.getItem('token');
@@ -45,14 +44,11 @@ export const AuthProvider = ({ children }) => {
             error => Promise.reject(error)
         );
 
-        // Interceptor odpowiedzi - tu można też dodać refresh logikę dla axiosa,
-        // ale główna logika jest teraz w api.js dla fetcha.
         const responseInterceptor = axios.interceptors.response.use(
             response => response,
             error => {
                 if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                    // W przypadku użycia axiosa bezpośrednio w komponentach (np. login/register)
-                    // błędy 401 są obsługiwane lokalnie
+                   // Opcjonalna obsługa 401
                 }
                 return Promise.reject(error);
             }
@@ -72,8 +68,12 @@ export const AuthProvider = ({ children }) => {
             if (decoded) {
                 const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || decoded.role || "User";
                 const name = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || decoded.unique_name || decoded.sub || "Użytkownik";
+                
+                // --- POPRAWKA: Pobieranie ID użytkownika ---
+                const id = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || decoded.nameid || decoded.sub;
 
                 setUser({
+                    id: id,  // Kluczowe dla komentarzy i notatek
                     username: name,
                     role: role,
                 });
@@ -82,7 +82,6 @@ export const AuthProvider = ({ children }) => {
                 logout();
             }
         } else {
-            // Jeśli token zniknie ze stanu, czyścimy storage
             localStorage.removeItem('token');
             setIsAuthenticated(false);
             setUser(null);
@@ -92,7 +91,6 @@ export const AuthProvider = ({ children }) => {
     const login = async (username, password) => {
         try {
             const response = await axios.post(`${API_BASE_URL}/Auth/login`, { username, password });
-            // Backend zwraca teraz { token, refreshToken } w data
             const { token, refreshToken } = response.data;
             
             if (refreshToken) {

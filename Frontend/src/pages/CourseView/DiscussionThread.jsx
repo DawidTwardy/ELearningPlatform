@@ -214,10 +214,11 @@ const DiscussionThread = ({ isInstructorView, courseId }) => {
   if (!contextUser && authContext?.token) {
      const decoded = parseJwt(authContext.token);
      if (decoded) {
+         // WAŻNE: Tutaj również dodajemy logikę pobierania ID, aby pasowała do AuthContext
          contextUser = {
-             id: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"],
-             userName: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || "Użytkownik",
-             email: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"]
+             id: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || decoded.nameid || decoded.sub,
+             userName: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || decoded.unique_name || "Użytkownik",
+             email: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || decoded.email
          };
      }
   }
@@ -364,4 +365,4 @@ const DiscussionThread = ({ isInstructorView, courseId }) => {
   );
 };
 
-export default DiscussionThread;  
+export default DiscussionThread;

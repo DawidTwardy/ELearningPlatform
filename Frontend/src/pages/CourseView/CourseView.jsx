@@ -240,10 +240,11 @@ const CourseView = ({ course: courseProp, onBack }) => {
                 return;
             }
 
+            // POPRAWKA: Usunięto pole 'title', którego nie ma w modelu backendowym
+            // Tytuł wklejamy na początek wiadomości
             await createNotification({
                 userId: instructorId,
-                title: `Zgłoszenie błędu: ${currentContent?.title || "Nieznana lekcja"}`,
-                message: `Użytkownik zgłosił błąd w kursie "${course.title}". Treść: ${reportReason}`,
+                message: `[Zgłoszenie błędu: ${currentContent?.title || "Lekcja"}] Użytkownik zgłosił błąd w kursie "${course.title}". Treść: ${reportReason}`,
                 type: 'alert'
             });
 
@@ -252,7 +253,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
             setIsReportModalOpen(false);
         } catch (error) {
             console.error(error);
-            alert("Wystąpił błąd podczas wysyłania zgłoszenia.");
+            alert("Wystąpił błąd podczas wysyłania zgłoszenia: " + (error.message || "Błąd sieci"));
         }
     };
 

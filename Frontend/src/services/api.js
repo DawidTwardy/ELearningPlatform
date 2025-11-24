@@ -44,7 +44,6 @@ const authenticatedFetch = async (url, options = {}) => {
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     };
 
-    // Jeśli wysyłamy pliki, usuwamy Content-Type, by przeglądarka ustawiła boundary
     if (options.body instanceof FormData) {
         delete headers['Content-Type'];
     }
@@ -62,7 +61,6 @@ const authenticatedFetch = async (url, options = {}) => {
                 };
                 response = await fetch(url, { ...options, headers: newHeaders });
             } else {
-                // Opcjonalnie: przekieruj do logowania, jeśli odświeżanie się nie uda
                 throw new Error("Sesja wygasła. Zaloguj się ponownie.");
             }
         }
@@ -76,22 +74,19 @@ const authenticatedFetch = async (url, options = {}) => {
 const handleResponse = async (response) => {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        // Rzucamy błąd, który będzie przechwycony przez catch w komponentach
         throw new Error(errorData.message || `API Error: ${response.status}`);
     }
-    // Obsługa statusu 204 No Content
     if (response.status === 204) {
         return null;
     }
     return response.json();
 };
 
-// --- Auth (używane też w AuthContext, ale tutaj dla spójności) ---
 const loginUser = async (email, password) => {
     const response = await fetch(`${API_BASE_URL}/Auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }) // Backend oczekuje 'email' lub 'username' w zależności od DTO
+        body: JSON.stringify({ email, password })
     });
     return handleResponse(response);
 };
@@ -105,9 +100,7 @@ const registerUser = async (userData) => {
     return handleResponse(response);
 };
 
-// --- Courses ---
 const fetchCourseDetails = async (courseId) => {
-    // GET /Courses/{id}
     return authenticatedFetch(`${API_BASE_URL}/Courses/${courseId}`, { method: 'GET' });
 };
 
@@ -124,9 +117,14 @@ const deleteCourse = async (courseId) => {
     return authenticatedFetch(`${API_BASE_URL}/Courses/${courseId}`, { method: 'DELETE' });
 };
 
-// --- Enrollments ---
+const updateCourse = async (id, courseData) => {
+    return authenticatedFetch(`${API_BASE_URL}/Courses/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(courseData)
+    });
+};
+
 const enrollInCourse = async (courseId) => {
-    // Ważne: wysyłamy pusty obiekt JSON, aby Content-Type: application/json był poprawny dla ASP.NET
     return authenticatedFetch(`${API_BASE_URL}/Enrollments/${courseId}`, { 
         method: 'POST',
         body: JSON.stringify({}) 
@@ -134,7 +132,6 @@ const enrollInCourse = async (courseId) => {
 };
 
 const fetchUserEnrollment = async (courseId) => {
-    // GET /Enrollments/{id}/status
     return authenticatedFetch(`${API_BASE_URL}/Enrollments/${courseId}/status`, { method: 'GET' });
 };
 
@@ -142,15 +139,11 @@ const fetchMyEnrollments = async () => {
     return authenticatedFetch(`${API_BASE_URL}/Enrollments`, { method: 'GET' });
 };
 
-// --- Progress ---
 const fetchCourseProgress = async (courseId) => {
     return authenticatedFetch(`${API_BASE_URL}/Progress/course/${courseId}`, { method: 'GET' });
 };
 
 const fetchCompletedLessons = async (courseId) => {
-    // Upewnij się, że ten endpoint istnieje w backendzie. 
-    // Jeśli wcześniej działało axios.get(`/progress/course/${courseId}`), użyj krótszej ścieżki.
-    // Tutaj zakładam, że zwraca listę obiektów, więc mapujemy na ID.
     const data = await authenticatedFetch(`${API_BASE_URL}/Progress/course/${courseId}`, { method: 'GET' });
     return Array.isArray(data) ? data.map(p => p.lessonId) : [];
 };
@@ -161,7 +154,6 @@ const fetchCompletedQuizzes = async (courseId) => {
 };
 
 const markLessonCompleted = async (lessonId) => {
-    // FIX: Dodano puste body, aby POST był poprawny dla formatu JSON
     return authenticatedFetch(`${API_BASE_URL}/Progress/lesson/${lessonId}`, { 
         method: 'POST',
         body: JSON.stringify({})
@@ -172,7 +164,6 @@ const fetchLessonCompletion = async (lessonId) => {
     return authenticatedFetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/completion`, { method: 'GET' });
 };
 
-// --- Quizzes ---
 const submitQuiz = async (quizId, answers) => {
     return authenticatedFetch(`${API_BASE_URL}/Quizzes/${quizId}/submit`, {
         method: 'POST',
@@ -191,7 +182,6 @@ const submitDailyReview = async (answers) => {
     });
 };
 
-// --- Comments / Discussion ---
 const fetchComments = async (courseId) => {
     const response = await fetch(`${API_BASE_URL}/Comments/course/${courseId}`);
     return handleResponse(response);
@@ -215,19 +205,16 @@ const deleteComment = async (commentId) => {
     return authenticatedFetch(`${API_BASE_URL}/Comments/${commentId}`, { method: 'DELETE' });
 };
 
-// --- Files ---
 const uploadFile = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
     
-    // authenticatedFetch usunie Content-Type dla FormData
     return authenticatedFetch(`${API_BASE_URL}/Upload`, {
         method: 'POST',
         body: formData
     });
 };
 
-// --- Certificates ---
 const downloadCertificate = async (courseId) => {
     const token = getAuthToken();
     
@@ -257,7 +244,6 @@ const verifyCertificate = async (certificateId) => {
     return handleResponse(response);
 };
 
-// --- Notifications ---
 const fetchNotifications = async () => {
     return authenticatedFetch(`${API_BASE_URL}/Notifications`, { method: 'GET' });
 };
@@ -266,7 +252,6 @@ const markNotificationRead = async (id) => {
     return authenticatedFetch(`${API_BASE_URL}/Notifications/${id}/read`, { method: 'PUT' });
 };
 
-// Nowa funkcja do zgłaszania błędów (wymaga endpointu POST w backendzie)
 const createNotification = async (notificationData) => {
     return authenticatedFetch(`${API_BASE_URL}/Notifications`, {
         method: 'POST',
@@ -274,13 +259,11 @@ const createNotification = async (notificationData) => {
     });
 };
 
-// --- Analytics & Reviews ---
 const fetchCourseAnalytics = async (courseId) => {
     return authenticatedFetch(`${API_BASE_URL}/Analytics/course/${courseId}`, { method: 'GET' });
 };
 
 const createReview = async (courseId, rating, content) => {
-    // Mapujemy 'content' na to co oczekuje backend (np. 'comment' lub 'reviewText')
     return authenticatedFetch(`${API_BASE_URL}/Reviews`, {
         method: 'POST',
         body: JSON.stringify({ courseId, rating, comment: content }) 
@@ -292,7 +275,6 @@ const fetchCourseReviews = async (courseId) => {
     return handleResponse(response);
 };
 
-// --- Gamification ---
 const fetchLeaderboard = async () => {
     return authenticatedFetch(`${API_BASE_URL}/Gamification/leaderboard`, { method: 'GET' });
 };
@@ -301,7 +283,6 @@ const fetchMyStats = async () => {
     return authenticatedFetch(`${API_BASE_URL}/Gamification/my-stats`, { method: 'GET' });
 };
 
-// --- Notes ---
 const fetchUserNote = async (lessonId) => {
     return authenticatedFetch(`${API_BASE_URL}/Notes/lesson/${lessonId}`, { method: 'GET' });
 };
@@ -318,7 +299,8 @@ export {
     registerUser,
     fetchCourseDetails,
     fetchInstructorCourses, 
-    deleteCourse,           
+    deleteCourse,
+    updateCourse,
     fetchLessonCompletion,
     markLessonCompleted,
     enrollInCourse,

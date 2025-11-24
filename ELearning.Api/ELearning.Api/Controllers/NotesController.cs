@@ -1,6 +1,6 @@
 using ELearning.Api.DTOs.Notes;
 using ELearning.Api.Models;
-using ELearning.Api.Persistence; // <--- ZMIANA: Tu by³o .Data, a powinno byæ .Persistence
+using ELearning.Api.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
