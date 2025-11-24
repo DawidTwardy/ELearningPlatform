@@ -294,6 +294,16 @@ const saveUserNote = async (lessonId, content, title) => {
     });
 };
 
+const fetchInstructors = async () => {
+    const response = await fetch(`${API_BASE_URL}/Instructors`);
+    return handleResponse(response);
+};
+
+const fetchInstructorDetails = async (instructorId) => {
+    const response = await fetch(`${API_BASE_URL}/Instructors/${instructorId}`);
+    return handleResponse(response);
+};
+
 export {
     loginUser,
     registerUser,
@@ -329,5 +339,7 @@ export {
     searchCourses,
     verifyCertificate,
     fetchDailyReview,
-    submitDailyReview
+    submitDailyReview,
+    fetchInstructors,
+    fetchInstructorDetails
 };

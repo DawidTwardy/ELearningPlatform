@@ -1,18 +1,67 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { fetchInstructorDetails } from '../../services/api';
 import '../../styles/components/App.css';
 import '../../styles/pages/InstructorProfilePage.css';
 import { CourseCard } from '../../components/Course/CourseCard';
 import StarRating from '../../components/Course/StarRating';
 
-const InstructorProfilePage = ({ instructor, courses = [], onCourseClick, onBack }) => {
-  // ZABEZPIECZENIE: Jeśli instructor jest null/undefined, wyświetlamy stosowny komunikat.
-  // Zapobiega to błędowi "instructor is undefined" przy odświeżaniu lub ładowaniu.
-  if (!instructor) {
+const InstructorProfilePage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
+  const [instructor, setInstructor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadInstructor = async () => {
+      try {
+        const data = await fetchInstructorDetails(id);
+        setInstructor(data);
+      } catch (err) {
+        console.error("Błąd pobierania profilu instruktora:", err);
+        setError("Nie udało się załadować profilu instruktora.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+        loadInstructor();
+    }
+  }, [id]);
+
+  const handleBack = () => {
+      navigate('/instructors');
+  };
+
+  const handleCourseClick = (courseId) => {
+      navigate(`/courses/${courseId}`);
+  };
+
+  const calculateAverageRating = (courses) => {
+    if (!courses || courses.length === 0) return "0.0";
+    
+    // Filtrujemy kursy, które mają ocenę 0 (zakładamy, że 0 oznacza brak ocen)
+    const ratedCourses = courses.filter(course => course.rating > 0);
+    
+    if (ratedCourses.length === 0) return "0.0";
+
+    const total = ratedCourses.reduce((acc, curr) => acc + curr.rating, 0);
+    return (total / ratedCourses.length).toFixed(1);
+  };
+
+  if (loading) {
+      return <div className="main-content" style={{textAlign: 'center', padding: '50px'}}>Ładowanie profilu...</div>;
+  }
+
+  if (error || !instructor) {
     return (
       <main className="main-content">
          <div className="profile-header-container" style={{ justifyContent: 'center', flexDirection: 'column', alignItems: 'center', padding: '50px' }}>
-            <h2>Nie wybrano instruktora lub dane są niedostępne.</h2>
-            <button className="profile-back-button" onClick={onBack} style={{ position: 'static', marginTop: '20px' }}>
+            <h2>{error || "Nie znaleziono instruktora."}</h2>
+            <button className="profile-back-button" onClick={handleBack} style={{ position: 'static', marginTop: '20px' }}>
               &larr; Wróć do listy instruktorów
             </button>
          </div>
@@ -23,7 +72,7 @@ const InstructorProfilePage = ({ instructor, courses = [], onCourseClick, onBack
   return (
     <main className="main-content">
       <div className="profile-header-container">
-        <button className="profile-back-button" onClick={onBack}>
+        <button className="profile-back-button" onClick={handleBack}>
           &larr; Wszyscy Instruktorzy
         </button>
         <div className="profile-header-content">
@@ -36,18 +85,16 @@ const InstructorProfilePage = ({ instructor, courses = [], onCourseClick, onBack
           <div className="profile-header-info">
             <h1 className="profile-name">{instructor.name}</h1>
             <p className="profile-bio">{instructor.bio || "Instruktor nie dodał jeszcze swojej biografii."}</p>
+            
             <div className="profile-stats">
               <div className="profile-stat-item">
-                <span className="stat-value">4.7</span>
-                <StarRating rating={4.7} />
+                <span className="stat-value">
+                    {calculateAverageRating(instructor.courses)}
+                </span>
                 <span className="stat-label">Średnia ocena</span>
               </div>
               <div className="profile-stat-item">
-                <span className="stat-value">12,345</span>
-                <span className="stat-label">Studenci</span>
-              </div>
-              <div className="profile-stat-item">
-                <span className="stat-value">{courses.length}</span>
+                <span className="stat-value">{instructor.courses ? instructor.courses.length : 0}</span>
                 <span className="stat-label">Kursy</span>
               </div>
             </div>
@@ -58,12 +105,12 @@ const InstructorProfilePage = ({ instructor, courses = [], onCourseClick, onBack
       <div className="profile-courses-container">
         <h2 className="profile-courses-title">Kursy prowadzone przez {instructor.name}</h2>
         <div className="courses-list">
-          {courses && courses.length > 0 ? (
-            courses.map((course) => (
+          {instructor.courses && instructor.courses.length > 0 ? (
+            instructor.courses.map((course) => (
               <CourseCard 
                 key={course.id} 
                 course={course}
-                onClick={() => onCourseClick(course)}
+                onClick={() => handleCourseClick(course.id)}
                 showInstructor={false}
                 showFavoriteButton={true}
               >

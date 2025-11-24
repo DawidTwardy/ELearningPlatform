@@ -14,6 +14,9 @@
     text-align: center;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .instructor-card:hover {
@@ -43,7 +46,24 @@
 .instructor-name {
     font-size: 1.5em; 
     font-weight: bold; 
-    margin-bottom: 30px; 
+    margin-bottom: 15px; 
+}
+
+.instructor-bio {
+    font-size: 0.9em;
+    color: #ccc;
+    margin-bottom: 25px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.instructor-courses {
+    margin-top: 15px;
+    text-align: left;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 }
 
 .course-list-item {
@@ -51,19 +71,33 @@
     color: #DDDDDD; 
     margin-bottom: 10px;
     line-height: 1.4;
+    padding-left: 10px;
+    border-left: 2px solid #333333;
 }
 
 .show-all-courses {
     display: block;
-    margin-top: 30px;
+    
+    /* Centrowanie */
+    width: fit-content;
+    margin: 30px auto 0 auto;
+    
+    /* Kontrastowy wygląd przycisku */
+    background-color: #646cff; 
     color: #FFFFFF;
+    padding: 10px 25px;
+    border-radius: 8px;
+    border: none;
+    
     text-decoration: none;
     font-weight: bold;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: background-color 0.2s, transform 0.2s;
 }
 
 .show-all-courses:hover {
-    color: #DDDDDD;
-    text-decoration: underline;
+    background-color: #535bf2;
+    color: #FFFFFF;
+    text-decoration: none;
+    transform: translateY(-2px);
 }
