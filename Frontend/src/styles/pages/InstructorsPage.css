@@ -1,36 +1,55 @@
-.instructor-list {
-    display: flex; 
-    flex-wrap: wrap; 
-    gap: 40px; 
+.instructors-page {
+    padding: 20px;
+    min-height: 80vh;
+}
+
+.page-title {
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 3rem;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.instructors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 30px;
     justify-content: center;
+    padding: 0 20px;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
 .instructor-card {
     background-color: #1B1B1B;
-    border-radius: 20px; 
-    padding: 40px 30px; 
-    width: 380px;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.6); 
+    border-radius: 20px;
+    padding: 30px;
+    width: 100%;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.6);
     text-align: center;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    box-sizing: border-box;
 }
 
 .instructor-card:hover {
-    transform: translateY(-5px); 
-    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.8); 
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.8);
 }
 
 .instructor-avatar-container {
-    width: 130px; 
-    height: 130px; 
-    border-radius: 50%; 
-    margin: 0 auto 20px auto; 
-    overflow: hidden; 
-    background-color: #333333; 
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    margin: 0 auto 25px auto;
+    overflow: hidden;
+    background-color: #333333;
+    border: 4px solid #646cff;
+    padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -39,65 +58,43 @@
 .instructor-avatar {
     width: 100%;
     height: 100%;
-    object-fit: cover; 
-    opacity: 0.8;
-}
-
-.instructor-name {
-    font-size: 1.5em; 
-    font-weight: bold; 
-    margin-bottom: 15px; 
-}
-
-.instructor-bio {
-    font-size: 0.9em;
-    color: #ccc;
-    margin-bottom: 25px;
-    line-height: 1.4;
-    text-align: center;
-}
-
-.instructor-courses {
-    margin-top: 15px;
-    text-align: left;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-}
-
-.course-list-item {
-    font-size: 1em;
-    color: #DDDDDD; 
-    margin-bottom: 10px;
-    line-height: 1.4;
-    padding-left: 10px;
-    border-left: 2px solid #333333;
-}
-
-.show-all-courses {
+    object-fit: cover;
     display: block;
-    
-    /* Centrowanie */
-    width: fit-content;
-    margin: 30px auto 0 auto;
-    
-    /* Kontrastowy wygląd przycisku */
-    background-color: #646cff; 
+    transform: scale(2.0);
+}
+
+.instructor-info h3 {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+.instructor-bio-short {
+    font-size: 1em;
+    color: #cccccc;
+    margin-bottom: 25px;
+    line-height: 1.5;
+    min-height: 45px;
+}
+
+.view-profile-btn {
+    display: inline-block;
+    background-color: #646cff;
     color: #FFFFFF;
-    padding: 10px 25px;
+    padding: 14px 35px;
     border-radius: 8px;
     border: none;
-    
     text-decoration: none;
     font-weight: bold;
     cursor: pointer;
     transition: background-color 0.2s, transform 0.2s;
+    margin-top: auto;
+    font-size: 1rem;
 }
 
-.show-all-courses:hover {
+.view-profile-btn:hover {
     background-color: #535bf2;
     color: #FFFFFF;
-    text-decoration: none;
     transform: translateY(-2px);
 }

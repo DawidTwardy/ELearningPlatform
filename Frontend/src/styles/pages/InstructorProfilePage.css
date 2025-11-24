@@ -1,99 +1,97 @@
-.profile-header-container {
-    background-color: #1E1E1E;
-    border-radius: 12px;
-    padding: 30px 40px;
-    margin-bottom: 30px;
+.instructor-profile-page {
+    padding: 40px 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+    color: #ffffff;
+    min-height: 80vh;
 }
 
-.profile-back-button {
-    background: none;
-    border: none;
-    color: #AAA;
-    font-size: 0.95em;
-    cursor: pointer;
-    margin-bottom: 25px;
-    transition: color 0.2s;
-}
-.profile-back-button:hover {
-    color: #FFF;
-}
-
-.profile-header-content {
+.profile-header {
     display: flex;
-    gap: 30px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background-color: #1B1B1B;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.6);
+    margin-bottom: 40px;
 }
 
-.profile-avatar-large {
-    width: 150px;
-    height: 150px;
+.profile-avatar-container {
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
-    object-fit: cover;
+    overflow: hidden;
+    margin-bottom: 20px;
+    border: 4px solid #646cff;
     background-color: #333;
-    border: 3px solid #444;
 }
 
-.profile-header-info {
-    flex: 1;
+.profile-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-.profile-name {
-    font-size: 2.2em;
-    font-weight: bold;
-    margin: 0 0 10px 0;
+.profile-details h1 {
+    margin: 10px 0;
+    font-size: 2.5rem;
 }
 
 .profile-bio {
-    font-size: 1.05em;
-    color: #BBB;
+    color: #cccccc;
+    font-size: 1.1rem;
     line-height: 1.6;
-    margin-bottom: 25px;
+    max-width: 800px;
 }
 
-.profile-stats {
-    display: flex;
-    gap: 30px;
-    padding-top: 15px;
-    border-top: 1px solid #333;
+.instructor-courses-section h2 {
+    margin-bottom: 20px;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
 }
 
-.profile-stat-item {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+.courses-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
 }
 
-.profile-stat-item .stat-value {
-    font-size: 1.4em;
-    font-weight: bold;
-    color: #FFF;
+.course-item-card {
+    background-color: #252525;
+    border-radius: 10px;
+    padding: 15px;
+    text-align: left;
+    transition: transform 0.2s;
 }
 
-.profile-stat-item .stat-label {
-    font-size: 0.9em;
-    color: #AAA;
+.course-item-card:hover {
+    transform: translateY(-3px);
 }
 
-.profile-stat-item .star-rating {
+.course-item-img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.course-item-info h4 {
+    margin: 0 0 5px 0;
+    font-size: 1.1rem;
+}
+
+.course-item-info p {
+    color: #888;
+    font-size: 0.9rem;
     margin: 0;
 }
-.profile-stat-item .star-icon-image {
-    width: 18px;
-    height: 18px;
-}
 
-.profile-courses-title {
-    font-size: 1.6em;
-    margin-bottom: 25px;
-    font-weight: bold;
-}
-
-@media (max-width: 600px) {
-    .profile-header-content {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-    .profile-stats {
-        justify-content: center;
-    }
+.loading-container, .error-container {
+    text-align: center;
+    margin-top: 50px;
+    font-size: 1.2rem;
+    color: #ccc;
 }

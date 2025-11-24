@@ -1,71 +1,73 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import api, { resolveImageUrl } from '../../services/api';
 import '../../styles/pages/InstructorProfilePage.css';
-import CourseCard from '../../components/Course/CourseCard';
-import { fetchInstructorDetails, resolveImageUrl } from '../../services/api';
 
 const InstructorProfilePage = () => {
   const { id } = useParams();
   const [instructor, setInstructor] = useState(null);
-  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadData = async () => {
+    const fetchInstructor = async () => {
       try {
-        const data = await fetchInstructorDetails(id);
-        setInstructor(data.instructor);
-        setCourses(data.courses);
-      } catch (error) {
-        console.error("Error fetching instructor details", error);
+        const response = await api.get(`/instructors/${id}`);
+        setInstructor(response.data);
+      } catch (err) {
+        console.error(err);
+        setError('Nie udało się pobrać danych instruktora.');
       } finally {
         setLoading(false);
       }
     };
-    loadData();
+
+    fetchInstructor();
   }, [id]);
 
-  if (loading) return <div className="loading">Ładowanie...</div>;
-  if (!instructor) return <div className="error">Instruktor nie znaleziony</div>;
+  if (loading) return <div className="loading-container">Ładowanie profilu...</div>;
+  if (error) return <div className="error-container">{error}</div>;
+  if (!instructor) return <div className="error-container">Nie znaleziono instruktora.</div>;
 
   return (
     <div className="instructor-profile-page">
-      <div className="instructor-header">
-        <div className="instructor-profile-image-container">
-            {/* Wyświetlanie awatara instruktora w jego profilu */}
-            <img 
-                src={resolveImageUrl(instructor.avatarUrl) || '/src/AvatarInstructor/usericon_large.png'} 
-                alt={`${instructor.firstName} ${instructor.lastName}`} 
-                className="instructor-profile-image"
-                onError={(e) => {e.target.onerror = null; e.target.src = '/src/AvatarInstructor/usericon_large.png'}}
-            />
+      <div className="profile-header">
+        <div className="profile-avatar-container">
+          <img
+            src={resolveImageUrl(instructor.avatarUrl) || '/src/AvatarInstructor/usericon_large.png'}
+            alt={`${instructor.firstName} ${instructor.lastName}`}
+            className="profile-avatar"
+            onError={(e) => {e.target.onerror = null; e.target.src = '/src/AvatarInstructor/usericon_large.png'}}
+          />
         </div>
-        <div className="instructor-details">
+        <div className="profile-details">
           <h1>{instructor.firstName} {instructor.lastName}</h1>
-          <p className="instructor-role">Instruktor</p>
-          <div className="instructor-stats">
-            <div className="stat-item">
-              <span className="stat-value">{courses.length}</span>
-              <span className="stat-label">Kursów</span>
-            </div>
-          </div>
+          <p className="profile-bio">{instructor.bio || "Brak opisu."}</p>
         </div>
       </div>
 
-      <div className="instructor-content">
-        <section className="about-section">
-          <h2>O Mnie</h2>
-          <div className="bio-content" dangerouslySetInnerHTML={{ __html: instructor.bio }} />
-        </section>
-
-        <section className="instructor-courses-section">
-          <h2>Moje Kursy</h2>
-          <div className="courses-grid">
-            {courses.map(course => (
-              <CourseCard key={course.id} course={course} />
-            ))}
-          </div>
-        </section>
+      <div className="instructor-courses-section">
+        <h2>Kursy prowadzone przez tego instruktora</h2>
+        <div className="courses-list">
+          {instructor.courses && instructor.courses.length > 0 ? (
+            instructor.courses.map(course => (
+              <div key={course.id} className="course-item-card">
+                <img 
+                    src={resolveImageUrl(course.imageUrl)} 
+                    alt={course.title} 
+                    className="course-item-img"
+                    onError={(e) => {e.target.onerror = null; e.target.src = '/src/course/placeholder_ai.png'}} 
+                />
+                <div className="course-item-info">
+                    <h4>{course.title}</h4>
+                    <p>{course.category}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p>Ten instruktor nie ma jeszcze przypisanych kursów.</p>
+          )}
+        </div>
       </div>
     </div>
   );

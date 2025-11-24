@@ -30,7 +30,6 @@ const InstructorsPage = () => {
         {instructors.map((instructor) => (
           <div key={instructor.id} className="instructor-card">
             <div className="instructor-avatar-container">
-              {/* Wyświetlanie awatara instruktora */}
               <img 
                 src={resolveImageUrl(instructor.avatarUrl) || '/src/AvatarInstructor/usericon_large.png'} 
                 alt={`${instructor.firstName} ${instructor.lastName}`} 
@@ -41,7 +40,7 @@ const InstructorsPage = () => {
             <div className="instructor-info">
               <h3>{instructor.firstName} {instructor.lastName}</h3>
               <p className="instructor-bio-short">
-                  {instructor.bio ? instructor.bio.substring(0, 100) + '...' : 'Instruktor'}
+                  {instructor.bio ? (instructor.bio.length > 100 ? instructor.bio.substring(0, 100) + '...' : instructor.bio) : 'Instruktor'}
               </p>
               <Link to={`/instructor/${instructor.id}`} className="view-profile-btn">
                 Zobacz Profil
