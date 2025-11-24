@@ -1,17 +1,45 @@
 import React, { useState } from 'react';
-import '../../styles/components/App.css'; // ZMIENIONA ŚCIEŻKA
-import '../../styles/pages/Favorites.css'; // ZMIENIONA ŚCIEŻKA
-import { CourseCard } from '../../components/Course/CourseCard'; // ZMIENIONA ŚCIEŻKA
-import StarRating from '../../components/Course/StarRating'; // ZMIENIONA ŚCIEŻKA
+import '../../styles/components/App.css'; 
+import '../../styles/pages/Favorites.css'; 
+import CourseCard from '../../components/Course/CourseCard'; 
 
 const initialFavoritesData = [
-  { id: 1, title: "Kurs Nauki SQL", instructor: "Michał Nowak", rating: 4, imageSrc: "/src/course/placeholder_sql.png", iconColor: "#007BFF" },
-  { id: 2, title: "Kurs Pythona", instructor: "Jan Kowalski", rating: 4.5, imageSrc: "/src/course/placeholder_python.png", iconColor: "#FFC107" },
-  { id: 3, title: "Kurs AI", instructor: "Michał Nowak", rating: 4, imageSrc: "/src/course/placeholder_ai.png", iconColor: "#8A2BE2" },
+  { 
+      id: 1, 
+      title: "Kurs Nauki SQL", 
+      instructorName: "Michał Nowak", 
+      averageRating: 4, 
+      reviewsCount: 15,
+      category: "Programowanie",
+      level: "Początkujący",
+      price: 199,
+      imageSrc: "/src/course/placeholder_sql.png"
+  },
+  { 
+      id: 2, 
+      title: "Kurs Pythona", 
+      instructorName: "Jan Kowalski", 
+      averageRating: 4.5, 
+      reviewsCount: 28,
+      category: "Programowanie",
+      level: "Średniozaawansowany",
+      price: 149,
+      imageSrc: "/src/course/placeholder_python.png" 
+  },
+  { 
+      id: 3, 
+      title: "Kurs AI", 
+      instructorName: "Michał Nowak", 
+      averageRating: 4, 
+      reviewsCount: 10,
+      category: "Biznes",
+      level: "Zaawansowany",
+      price: 299,
+      imageSrc: "/src/course/placeholder_ai.png" 
+  },
 ];
 
 const EmptyFavoritesMessage = ({ onNavigateToHome }) => {
-  
   const handleBrowseClick = () => {
     if (onNavigateToHome) {
       onNavigateToHome();
@@ -60,12 +88,9 @@ const FavoritesPage = ({ onNavigateToHome }) => {
             <CourseCard 
               key={course.id} 
               course={course}
-              onClick={null}
               isFavorite={true}
-              onFavoriteToggle={() => removeFavorite(course.id)}
-            >
-                <StarRating rating={course.rating} /> 
-            </CourseCard>
+              onToggleFavorite={() => removeFavorite(course.id)}
+            />
           ))}
         </div>
       ) : (

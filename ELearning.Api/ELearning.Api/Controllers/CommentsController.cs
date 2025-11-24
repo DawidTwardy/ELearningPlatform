@@ -41,7 +41,7 @@ namespace ELearning.Api.Controllers
                 Id = c.Id,
                 Content = c.Content,
                 UserName = c.User.UserName,
-                AvatarUrl = c.User.AvatarUrl, // Mapowanie awatara
+                AvatarUrl = c.User.AvatarUrl,
                 Created = c.Created,
                 ParentCommentId = c.ParentCommentId
             }).ToList();
@@ -94,7 +94,7 @@ namespace ELearning.Api.Controllers
                 Id = comment.Id,
                 Content = comment.Content,
                 UserName = user.UserName,
-                AvatarUrl = user.AvatarUrl, // Zwracamy awatar zaraz po dodaniu
+                AvatarUrl = user.AvatarUrl,
                 Created = comment.Created,
                 ParentCommentId = comment.ParentCommentId
             });
@@ -114,9 +114,21 @@ namespace ELearning.Api.Controllers
                 return Forbid();
             }
 
+            await DeleteChildrenRecursive(comment.Id);
+
             _context.Comments.Remove(comment);
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        private async Task DeleteChildrenRecursive(int parentId)
+        {
+            var children = await _context.Comments.Where(c => c.ParentCommentId == parentId).ToListAsync();
+            foreach (var child in children)
+            {
+                await DeleteChildrenRecursive(child.Id);
+                _context.Comments.Remove(child);
+            }
         }
 
         [HttpPut("{id}")]

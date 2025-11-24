@@ -5,24 +5,62 @@ import FavoriteHeart from './FavoriteHeart';
 import StarRating from './StarRating';
 import { resolveImageUrl } from '../../services/api';
 
-const CourseCard = ({ course, isFavorite, onToggleFavorite }) => {
+const CourseCard = ({ 
+    course, 
+    isFavorite, 
+    onToggleFavorite, 
+    children, 
+    onClick, 
+    progress,
+    showFavoriteButton = true,
+    showInstructor = true 
+}) => {
   const navigate = useNavigate();
 
   const handleCardClick = (e) => {
-      // Zapobiegaj nawigacji jeśli kliknięto w serce lub link instruktora
-      if (e.target.closest('.favorite-btn') || e.target.closest('.instructor-link')) {
+      if (e.target.closest('.favorite-btn-wrapper') || e.target.closest('.instructor-link')) {
           return;
       }
+      
+      if (onClick) {
+          onClick();
+          return;
+      }
+
       navigate(`/courses/${course.id}`);
   };
+
+  const ratingValue = parseFloat(course.averageRating || course.rating || 0);
+
+  // --- POPRAWIONA LOGIKA DLA NAZWY INSTRUKTORA ---
+  let instructorName = "Instruktor";
+  
+  if (course.instructorName) {
+      // Przypadek 1: DTO ma pole instructorName (np. FavoritesPage)
+      instructorName = course.instructorName;
+  } else if (typeof course.instructor === 'string') {
+      // Przypadek 2: Pole instructor jest stringiem (np. MyLearningPage)
+      instructorName = course.instructor;
+  } else if (course.instructor && typeof course.instructor === 'object') {
+      // Przypadek 3: Pole instructor jest obiektem (np. HomePage z API)
+      // Sprawdzamy różne warianty nazwy pola zwracane przez backend
+      if (course.instructor.name) instructorName = course.instructor.name;
+      else if (course.instructor.Name) instructorName = course.instructor.Name;
+      else if (course.instructor.userName) instructorName = course.instructor.userName;
+      else if (course.instructor.fullName) instructorName = course.instructor.fullName;
+  }
+
+  // Logika dla awatara
+  const instructorAvatar = course.instructor?.avatarUrl || course.instructorAvatar || null;
+  const instructorId = course.instructorId || course.instructor?.id;
 
   return (
     <div className="course-card" onClick={handleCardClick}>
       <div className="course-thumbnail">
         <div className={`placeholder-image ${getPlaceholderClass(course.category)}`}>
-            {getCategoryIcon(course.category)}
+             {/* Tu ewentualnie ikona kategorii */}
         </div>
-        {onToggleFavorite && (
+        {showFavoriteButton && onToggleFavorite && (
              <div className="favorite-btn-wrapper">
                 <FavoriteHeart isFavorite={isFavorite} onToggle={() => onToggleFavorite(course.id)} />
              </div>
@@ -30,33 +68,40 @@ const CourseCard = ({ course, isFavorite, onToggleFavorite }) => {
       </div>
       
       <div className="course-info">
-        <div className="course-category">{course.category}</div>
         <h3 className="course-title" title={course.title}>{course.title}</h3>
         
-        <div className="course-instructor">
-            {/* Mały awatar instruktora na karcie kursu */}
-            <img 
-                src={resolveImageUrl(course.instructor?.avatarUrl) || '/src/icon/usericon.png'} 
-                alt="Instructor" 
-                className="instructor-avatar-small"
-                onError={(e) => {e.target.onerror = null; e.target.src = '/src/icon/usericon.png'}}
-            />
-            <Link to={`/instructor/${course.instructorId}`} className="instructor-link">
-                {course.instructorName || "Instruktor"}
-            </Link>
-        </div>
+        {showInstructor && (
+            <div className="course-instructor">
+                <img 
+                    src={resolveImageUrl(instructorAvatar) || '/src/icon/usericon.png'} 
+                    alt="Instructor" 
+                    className="instructor-avatar-small"
+                    onError={(e) => {e.target.onerror = null; e.target.src = '/src/icon/usericon.png'}}
+                />
+                {instructorId ? (
+                    <Link to={`/instructor/${instructorId}`} className="instructor-link">
+                        {instructorName}
+                    </Link>
+                ) : (
+                    <span className="instructor-name-text">{instructorName}</span>
+                )}
+            </div>
+        )}
 
         <div className="course-meta">
-            <StarRating rating={course.averageRating || 0} />
-            <span className="rating-count">({course.reviewsCount || 0})</span>
+            <div className="stars-container-full">
+                <StarRating rating={ratingValue} />
+            </div>
+            <span className="rating-count">({course.reviewsCount || course.ratingCount || 0})</span>
         </div>
+
+        {typeof progress === 'number' && (
+            <div style={{ margin: '12px 0 0 0', width: '100%', backgroundColor: '#333', borderRadius: '4px', height: '6px', overflow: 'hidden' }}>
+                <div style={{ width: `${progress}%`, backgroundColor: '#4caf50', height: '100%' }} />
+            </div>
+        )}
         
-        <div className="course-footer">
-           <span className="course-level">{course.level}</span>
-           <span className="course-price">
-               {course.price > 0 ? `${course.price} PLN` : 'Darmowy'}
-           </span>
-        </div>
+        {children && <div style={{ marginTop: '15px' }}>{children}</div>}
       </div>
     </div>
   );
@@ -69,10 +114,6 @@ const getPlaceholderClass = (category) => {
         case 'design': return 'bg-pink';
         default: return 'bg-gray';
     }
-};
-
-const getCategoryIcon = (category) => {
-    return null; 
 };
 
 export default CourseCard;

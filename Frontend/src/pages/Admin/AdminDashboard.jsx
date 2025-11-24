@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import '../../styles/pages/AdminDashboard.css'; 
-import { CourseCard } from '../../components/Course/CourseCard'; 
-
+import CourseCard from '../../components/Course/CourseCard'; 
 
 const MOCK_REPORTED_COURSES = [
     { id: 2, title: "Kurs Pythona", instructor: "Jan Kowalski", rating: 4.5, imageSrc: "/src/course/placeholder_python.png"},
@@ -41,7 +40,6 @@ const AdminDashboard = ({ onAdminViewCourse }) => {
      }
   };
 
-
   return (
     <main className="main-content">
       <h2 className="page-title">Panel Moderacji Admina</h2>
@@ -58,7 +56,6 @@ const AdminDashboard = ({ onAdminViewCourse }) => {
               onEdit={null} 
               onClick={() => onAdminViewCourse(course)}
             >
-              {/* Przyciski admina przekazane jako 'children' */}
               <div className="admin-course-actions">
                 <button 
                   className="admin-btn-ignore"
@@ -96,14 +93,12 @@ const AdminDashboard = ({ onAdminViewCourse }) => {
                 <td>{comment.author}</td>
                 <td>{comment.course}</td>
                 <td className="admin-actions">
-                  
                   <button 
                     className="admin-btn-keep"
                     onClick={() => handleKeepComment(comment.id)}
                   >
                     Zachowaj
                   </button>
-
                   <button 
                     className="admin-btn-delete-comment"
                     onClick={() => handleDeleteComment(comment.id)}

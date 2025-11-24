@@ -3,8 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { searchCourses } from '../../services/api';
 import '../../styles/components/App.css';
 import '../../styles/pages/SearchResultsPage.css';
-import { CourseCard } from '../../components/Course/CourseCard';
-import StarRating from '../../components/Course/StarRating';
+import CourseCard from '../../components/Course/CourseCard'; 
 
 const SearchResultsPage = () => {
   const [searchParams] = useSearchParams();
@@ -57,13 +56,15 @@ const SearchResultsPage = () => {
               {results.map((course) => (
                 <CourseCard 
                   key={course.id} 
-                  course={course}
+                  course={{
+                      ...course,
+                      // Mapowanie rating na averageRating dla kompatybilności z CourseCard
+                      averageRating: course.averageRating || course.rating || 0
+                  }}
                   onClick={() => handleCourseClick(course)}
                   showInstructor={true}
                   showFavoriteButton={false}
-                >
-                    <StarRating rating={course.rating} /> 
-                </CourseCard>
+                />
               ))}
             </div>
           ) : (

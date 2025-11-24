@@ -81,7 +81,12 @@ namespace ELearning.Api.Controllers
                 }
                 catch { }
 
-                return Ok(new AuthResponseDto { Token = jwtToken, RefreshToken = refreshToken.Token });
+                return Ok(new AuthResponseDto
+                {
+                    Token = jwtToken,
+                    RefreshToken = refreshToken.Token,
+                    AvatarUrl = user.AvatarUrl
+                });
             }
 
             return BadRequest(new { Errors = result.Errors.Select(e => new { Code = e.Code, Description = e.Description }) });
@@ -107,7 +112,12 @@ namespace ELearning.Api.Controllers
                 _context.RefreshTokens.Add(refreshToken);
                 await _context.SaveChangesAsync();
 
-                return Ok(new AuthResponseDto { Token = jwtToken, RefreshToken = refreshToken.Token });
+                return Ok(new AuthResponseDto
+                {
+                    Token = jwtToken,
+                    RefreshToken = refreshToken.Token,
+                    AvatarUrl = user.AvatarUrl
+                });
             }
 
             return Unauthorized(new { Message = "B³êdny login lub has³o." });
@@ -142,7 +152,12 @@ namespace ELearning.Api.Controllers
             _context.RefreshTokens.Update(storedToken);
             await _context.SaveChangesAsync();
 
-            return Ok(new AuthResponseDto { Token = newJwtToken, RefreshToken = newRefreshToken.Token });
+            return Ok(new AuthResponseDto
+            {
+                Token = newJwtToken,
+                RefreshToken = newRefreshToken.Token,
+                AvatarUrl = user.AvatarUrl
+            });
         }
 
         [HttpPost("forgot-password")]
@@ -223,7 +238,7 @@ namespace ELearning.Api.Controllers
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(15), // Token wa¿ny tylko 15 minut
+                expires: DateTime.UtcNow.AddMinutes(15),
                 signingCredentials: creds
             );
 

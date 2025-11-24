@@ -116,31 +116,11 @@ body {
 }
 .footer .logo-image { height: 40px; width: auto; }
 
-/* Karty kursów */
+/* Powiadomienia */
 .notification-icon-wrapper { position: relative; cursor: pointer; }
 .notification-dot { position: absolute; top: 0; right: 0; width: 8px; height: 8px; background-color: #FF6B6B; border-radius: 50%; }
 
-.course-card { 
-    background-color: #1B1B1B; 
-    border-radius: 20px; 
-    padding: 20px; 
-    width: 300px; /* Stała szerokość dla lepszego układu siatki */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); 
-    position: relative; 
-    transition: transform 0.2s ease; 
-    display: flex; 
-    flex-direction: column; 
-}
-.course-card:hover { transform: translateY(-5px); }
-
-.card-image-container { height: 160px; border-radius: 12px; position: relative; width: 100%; margin-bottom: 15px; overflow: hidden; background-color: #2a2a2a; }
-.card-image { width: 100%; height: 100%; object-fit: cover; }
-.filled-heart { position: absolute; top: 10px; right: 10px; width: 30px; z-index: 10; cursor: pointer; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)); }
-
-.card-info { display: flex; flex-direction: column; flex-grow: 1; }
-.course-title { font-size: 1.2em; font-weight: bold; margin: 5px 0; line-height: 1.3; }
-.course-instructor { color: #aaa; font-size: 0.9em; margin-bottom: 10px; }
-
+/* Style gwiazdek (potrzebne globalnie, jeśli nie są w StarRating.css) */
 .star-rating { display: flex; gap: 2px; }
 .star-icon-image { width: 16px; height: 16px; }
 

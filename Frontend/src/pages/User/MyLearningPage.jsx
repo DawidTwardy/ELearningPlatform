@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchMyEnrollments } from '../../services/api';
-import { CourseCard } from '../../components/Course/CourseCard'; 
-import { useNavigate } from 'react-router-dom'; // Dodano useNavigate
+import CourseCard from '../../components/Course/CourseCard'; 
+import { useNavigate } from 'react-router-dom';
 import '../../styles/components/App.css';
 import '../../styles/pages/MyLearningPage.css';
 
@@ -9,7 +9,7 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); // Hook do nawigacji
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadEnrollments = async () => {
@@ -32,12 +32,10 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
     if (onCourseClick) {
         onCourseClick(courseId);
     } else {
-        // ZMIANA: Jeśli brak onCourseClick (np. z routingu), nawiguj bezpośrednio
         navigate(`/course-view/${courseId}`);
     }
   };
 
-  // Obsługa przypadku gdy onNavigateToHome nie jest przekazane
   const handleNavigateHome = () => {
       if (onNavigateToHome) onNavigateToHome();
       else navigate('/');
