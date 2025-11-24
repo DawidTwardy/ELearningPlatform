@@ -54,44 +54,124 @@
 
 .courses-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(3, 1fr);
+    /* ZWIĘKSZONY GAP DLA WIĘKSZYCH ODSTĘPÓW */
+    gap: 40px; 
+    margin-bottom: 30px;
+}
+
+@media (max-width: 900px) {
+    .courses-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+    }
+}
+
+@media (max-width: 600px) {
+    .courses-list {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
 }
 
 .course-item-card {
     background-color: #252525;
     border-radius: 10px;
-    padding: 15px;
+    padding: 20px; /* Zwiększony padding wewnątrz karty */
     text-align: left;
-    transition: transform 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
 .course-item-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0,0,0,0.5);
 }
 
 .course-item-img {
     width: 100%;
-    height: 140px;
+    height: 160px; /* Nieco wyższe zdjęcie */
     object-fit: cover;
     border-radius: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
 }
 
 .course-item-info h4 {
-    margin: 0 0 5px 0;
+    margin: 0 0 10px 0;
     font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    /* Opcjonalnie: ograniczenie tytułu do 2 linii */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
-.course-item-info p {
+/* Style dla sekcji ocen */
+.course-rating-display {
+    margin-top: auto; /* Dopycha ocenę do dołu karty */
+}
+
+.stars-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rating-count {
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.no-rating {
     color: #888;
     font-size: 0.9rem;
-    margin: 0;
+    font-style: italic;
 }
 
 .loading-container, .error-container {
     text-align: center;
     margin-top: 50px;
     font-size: 1.2rem;
+    color: #ccc;
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #333;
+}
+
+.pagination-btn {
+    background-color: #646cff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+.pagination-btn:disabled {
+    background-color: #444;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: #535bf2;
+}
+
+.pagination-info {
+    font-size: 1.1rem;
     color: #ccc;
 }
