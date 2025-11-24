@@ -15,7 +15,7 @@ const formatTimestamp = (dateString) => {
     return `${Math.floor(diffInSeconds / 86400)} dni temu`;
 };
 
-const CommentReplyForm = ({ onCancel, onSubmit, isInstructorView }) => {
+const CommentReplyForm = ({ onCancel, onSubmit, isInstructorView, avatarUrl }) => {
   const [replyText, setReplyText] = useState("");
 
   const handleSubmit = (e) => {
@@ -25,7 +25,8 @@ const CommentReplyForm = ({ onCancel, onSubmit, isInstructorView }) => {
     setReplyText("");
   };
 
-  const avatarSrc = isInstructorView ? "/src/AvatarInstructor/usericon_large.png" : "/src/icon/usericon.png";
+  const defaultAvatarSrc = isInstructorView ? "/src/AvatarInstructor/usericon_large.png" : "/src/icon/usericon.png";
+  const avatarSrc = avatarUrl || defaultAvatarSrc;
   const placeholder = "Napisz odpowiedź...";
 
   return (
@@ -70,7 +71,6 @@ const CommentItem = ({
   editingCommentId
 }) => {
   
-  // Logika sprawdzająca właściciela - obsługuje różne formaty zapisu ID (userId/UserId) oraz typy (string/int)
   const commentUserId = comment.userId || comment.UserId;
   const currentUserId = currentUser?.userId || currentUser?.id;
   
@@ -152,6 +152,7 @@ const CommentItem = ({
             onCancel={() => onStartReply(null)}
             onSubmit={(replyText) => onReplySubmit(comment.id, replyText)}
             isInstructorView={isInstructorView}
+            avatarUrl={currentUser?.avatar}
           />
         )}
 
@@ -194,7 +195,6 @@ const DiscussionThread = ({ isInstructorView, courseId }) => {
   
   const authContext = useContext(AuthContext);
   
-  // Funkcja pomocnicza do wyciągania danych z tokena JWT
   const parseJwt = (token) => {
     try {
       const base64Url = token.split('.')[1];
@@ -210,15 +210,14 @@ const DiscussionThread = ({ isInstructorView, courseId }) => {
 
   let contextUser = authContext?.user;
   
-  // Jeśli w context.user jest pusto, próbujemy odzyskać dane z tokena
   if (!contextUser && authContext?.token) {
      const decoded = parseJwt(authContext.token);
      if (decoded) {
-         // WAŻNE: Tutaj również dodajemy logikę pobierania ID, aby pasowała do AuthContext
          contextUser = {
              id: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || decoded.nameid || decoded.sub,
              userName: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || decoded.unique_name || "Użytkownik",
-             email: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || decoded.email
+             email: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || decoded.email,
+             avatarUrl: decoded.avatarUrl
          };
      }
   }
@@ -241,9 +240,11 @@ const DiscussionThread = ({ isInstructorView, courseId }) => {
       }
   };
 
+  const defaultAvatarPath = isInstructorView ? "/src/AvatarInstructor/usericon_large.png" : "/src/icon/usericon.png";
+
   const currentUser = contextUser ? {
     name: contextUser.userName || contextUser.name || contextUser.email || "Użytkownik",
-    avatar: isInstructorView ? "/src/AvatarInstructor/usericon_large.png" : "/src/icon/usericon.png",
+    avatar: contextUser.avatarUrl || defaultAvatarPath,
     userId: contextUser.id || contextUser.userId
   } : null;
 

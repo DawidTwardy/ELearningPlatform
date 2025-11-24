@@ -74,7 +74,16 @@ const authenticatedFetch = async (url, options = {}) => {
 const handleResponse = async (response) => {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.message || `API Error: ${response.status}`);
+        
+        let errorMessage = errorData.message || `API Error: ${response.status}`;
+        
+        if (errorData.errors && Array.isArray(errorData.errors)) {
+            errorMessage = errorData.errors.join('; ');
+        } else if (errorData.errors) {
+            errorMessage = Object.values(errorData.errors).flat().join('; ');
+        }
+        
+        throw new Error(errorMessage || `API Error: ${response.status}`);
     }
     if (response.status === 204) {
         return null;
@@ -215,6 +224,19 @@ const uploadFile = async (file) => {
     });
 };
 
+const updateUserProfile = async (profileData) => {
+    return authenticatedFetch(`${API_BASE_URL}/Profile`, {
+        method: 'PUT',
+        body: JSON.stringify(profileData)
+    });
+};
+
+const fetchUserProfile = async () => {
+    return authenticatedFetch(`${API_BASE_URL}/Profile`, {
+        method: 'GET'
+    });
+};
+
 const downloadCertificate = async (courseId) => {
     const token = getAuthToken();
     
@@ -325,6 +347,8 @@ export {
     deleteComment,
     fetchMyEnrollments,
     uploadFile,
+    updateUserProfile,
+    fetchUserProfile,
     downloadCertificate,
     fetchNotifications,
     markNotificationRead,
@@ -341,5 +365,6 @@ export {
     fetchDailyReview,
     submitDailyReview,
     fetchInstructors,
-    fetchInstructorDetails
+    fetchInstructorDetails,
+    API_BASE_URL
 };
