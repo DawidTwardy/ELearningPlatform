@@ -1,23 +1,23 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace ELearning.Api.Models.CourseContent
 {
     public class LessonResource
     {
-        [Key]
         public int Id { get; set; }
 
         [Required]
-        public string Name { get; set; } = string.Empty; // Np. "Kod Ÿród³owy", "Prezentacja"
+        public string Name { get; set; } = string.Empty;
 
         [Required]
-        public string FileUrl { get; set; } = string.Empty; // Link do pliku
+        public string FileUrl { get; set; } = string.Empty;
 
+       
         public int LessonId { get; set; }
 
-        [ForeignKey("LessonId")]
-        [System.Text.Json.Serialization.JsonIgnore]
-        public Lesson Lesson { get; set; }
+        
+        [JsonIgnore]
+        public virtual Lesson? Lesson { get; set; }
     }
 }

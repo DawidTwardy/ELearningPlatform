@@ -7,31 +7,9 @@ import {
   getEmptyContentForType, 
   LessonContentInput,
   QuizEditor,
+  LessonResourcesEditor 
 } from './CourseEditPage.jsx';
 import { uploadFile } from '../../services/api';
-
-// Helper do wstępnego parsowania, identyczny jak w EditPage
-const deepParseCourseContent = (course) => {
-    if (!course || !course.sections) return course;
-
-    const parsedSections = course.sections.map(section => {
-        if (section.lessons) {
-            section.lessons = section.lessons.map(lesson => {
-                try {
-                    if (typeof lesson.content === 'string' && lesson.content.trim().startsWith('{')) {
-                        lesson.content = JSON.parse(lesson.content);
-                    }
-                } catch (e) {
-                    console.warn(e);
-                }
-                return lesson;
-            });
-        }
-        return section;
-    });
-
-    return { ...course, sections: parsedSections };
-};
 
 const CourseAddPage = ({ onBack }) => {
   const navigate = useNavigate();
@@ -78,35 +56,49 @@ const CourseAddPage = ({ onBack }) => {
             } else {
                 contentStr = lesson.content || "";
             }
+            
+            // WAŻNE: Mapowanie zasobów - Tworzymy czysty obiekt
+            const resourcesToSave = (lesson.resources || [])
+                .filter(res => res.fileUrl || res.url)
+                .map(res => ({
+                    Id: 0, // Przy tworzeniu nowego kursu zawsze 0
+                    Name: res.name || res.fileName || "Plik do pobrania",
+                    FileUrl: res.fileUrl || res.url
+                    // Bez pola Lesson!
+                }));
 
             return {
+                Id: 0,
                 Title: lesson.title,
                 Content: contentStr,
-                // Dla nowych kursów Resources będą tworzone na podstawie Content w backendzie lub możemy je wysłać puste
-                // Tutaj wysyłamy Content jako JSON string, backend to obsłuży przy tworzeniu (CreateCourse).
+                VideoUrl: "", 
+                Resources: resourcesToSave 
             };
         });
         
         const hasQuizQuestions = section.quiz && section.quiz.questions && section.quiz.questions.length > 0;
         
         const quizToSave = hasQuizQuestions ? {
+            Id: 0,
             Title: section.quiz.title || `Test: ${section.title}` || "Test podsumowujący",
             Questions: (section.quiz.questions || []).map(question => {
                 const optionsToSave = (question.options || question.answers || []).map(option => ({
-                    Text: option.text, 
-                    IsCorrect: option.isCorrect
+                    Id: 0,
+                    Text: option.text || "", 
+                    IsCorrect: option.isCorrect || false
                 }));
                 
                 return {
-                    Text: question.text,
+                    Id: 0,
+                    Text: question.text || "Pytanie",
                     QuestionType: question.type || 'single', 
                     Options: optionsToSave 
                 };
             })
         } : null;
 
-
         return {
+            Id: 0,
             Title: section.title, 
             Order: index + 1,
             Lessons: lessonsToSave,
@@ -115,15 +107,18 @@ const CourseAddPage = ({ onBack }) => {
     });
 
     const newCourseData = { 
+        Id: 0,
         Title: title, 
         Description: description || "", 
         ImageUrl: thumbnailUrl || "/src/course/placeholder_default.png", 
-        Price: 0, // Domyślna cena
-        Category: "Ogólny", // Domyślna kategoria
-        Level: "Początkujący", // Domyślny poziom
+        Price: 0, 
+        Category: "Ogólny",
+        Level: "Początkujący",
         Rating: 0, 
         Sections: sectionsToSave
     };
+
+    console.log("Wysyłany payload (Create):", JSON.stringify(newCourseData, null, 2));
 
     const apiUrl = 'http://localhost:7115/api/Courses';
 
@@ -140,27 +135,26 @@ const CourseAddPage = ({ onBack }) => {
         let data = {};
         
         try {
-            data = JSON.parse(text);
+            data = text ? JSON.parse(text) : {};
         } catch (e) {
-            if (response.status >= 500) {
-                throw new Error(`Wystąpił wewnętrzny błąd serwera (Status: ${response.status}). Sprawdź logi backendu.`);
-            }
-            throw new Error(`Nieoczekiwany format odpowiedzi z serwera (Status: ${response.status}).`);
+            console.error("Błąd parsowania:", text);
         }
         
-        if (response.status === 201 || response.status === 200) {
+        if (response.ok) {
              return data;
         } 
         
-        if (response.status === 403) {
-            throw new Error("Brak autoryzacji. Upewnij się, że jesteś zalogowany jako instruktor lub administrator.");
-        }
-        
         if (response.status === 400) {
             const validationErrors = data.errors || data;
-            let message = "Wystąpił błąd walidacji. Sprawdź, czy wszystkie pola są poprawnie wypełnione.";
-            if (validationErrors.errors && Object.keys(validationErrors.errors).length > 0) {
-                message += "\nSzczegóły: " + Object.entries(validationErrors.errors).map(([key, value]) => `${key}: ${value.join(', ')}`).join('; ');
+            console.error("Błędy walidacji:", validationErrors);
+            
+            let message = "Wystąpił błąd walidacji danych.";
+            if (validationErrors.errors) {
+                message += "\n" + Object.entries(validationErrors.errors)
+                    .map(([key, val]) => `${key}: ${val.join(', ')}`)
+                    .join('\n');
+            } else if (data.title) {
+                message += "\n" + data.title;
             }
             throw new Error(message);
         }
@@ -168,17 +162,16 @@ const CourseAddPage = ({ onBack }) => {
         throw new Error(data.title || "Wystąpił błąd podczas tworzenia kursu.");
     })
     .then(result => {
-        const parsedResult = deepParseCourseContent(result); 
-        alert(`Pomyślnie stworzono kurs: ${parsedResult.title}`);
-        navigate('/my-courses'); // Przekierowanie do listy kursów
+        alert(`Pomyślnie stworzono kurs: ${result.title || title}`);
+        navigate('/my-courses');
     })
     .catch(error => {
         console.error(error);
-        alert(`Wystąpił błąd: ${error.message}`);
+        alert(`Błąd: ${error.message}`);
     });
   };
 
-  // --- Funkcje pomocnicze do obsługi stanu formularza ---
+  // --- HANDLERY (Bez zmian) ---
   const updateSectionField = (sectionId, field, value) => {
      setSections(prevSections =>
       prevSections.map(section => 
@@ -241,11 +234,9 @@ const CourseAddPage = ({ onBack }) => {
   
   const handleFileSelect = async (sectionId, lessonId, file) => {
     if (!file) return;
-
     try {
         setUploading(true);
         const result = await uploadFile(file); 
-        
         setSections(prevSections =>
             prevSections.map(section => {
                 if (section.id === sectionId) {
@@ -255,7 +246,6 @@ const CourseAddPage = ({ onBack }) => {
                             if (lesson.id === lessonId) {
                                 return { 
                                     ...lesson, 
-                                    // Ważne: Zapisujemy url z response (result.url)
                                     content: { url: result.url, fileName: file.name, text: '' } 
                                 };
                             }
@@ -266,13 +256,63 @@ const CourseAddPage = ({ onBack }) => {
                 return section;
             })
         );
-        alert("Plik został przesłany.");
+        alert("Plik główny został przesłany.");
     } catch (error) {
         console.error(error);
         alert("Błąd przesyłania pliku: " + error.message);
     } finally {
         setUploading(false);
     }
+  };
+
+  const handleAddResource = async (sectionId, lessonId, file) => {
+      if (!file) return;
+      try {
+          setUploading(true);
+          const result = await uploadFile(file);
+          const newResource = {
+              name: file.name,
+              fileUrl: result.url,
+              id: 0
+          };
+          
+          setSections(prev => prev.map(sec => {
+              if (sec.id !== sectionId) return sec;
+              return {
+                  ...sec,
+                  lessons: sec.lessons.map(les => {
+                      if (les.id !== lessonId) return les;
+                      return {
+                          ...les,
+                          resources: [...(les.resources || []), newResource]
+                      };
+                  })
+              };
+          }));
+          alert(`Dodano zasób: ${file.name}`);
+      } catch (e) {
+          alert("Błąd uploadu zasobu: " + e.message);
+      } finally {
+          setUploading(false);
+      }
+  };
+
+  const handleRemoveResource = (sectionId, lessonId, resourceIndex) => {
+       setSections(prev => prev.map(sec => {
+          if (sec.id !== sectionId) return sec;
+          return {
+              ...sec,
+              lessons: sec.lessons.map(les => {
+                  if (les.id !== lessonId) return les;
+                  const newRes = [...(les.resources || [])];
+                  newRes.splice(resourceIndex, 1);
+                  return {
+                      ...les,
+                      resources: newRes
+                  };
+              })
+          };
+      }));
   };
 
   const addSection = () => {
@@ -304,7 +344,8 @@ const CourseAddPage = ({ onBack }) => {
             id: Date.now(),
             title: `Nowa Lekcja ${section.lessons.length + 1}`,
             type: "video",
-            content: getEmptyContentForType("video")
+            content: getEmptyContentForType("video"),
+            resources: [] 
           };
           return {
             ...section,
@@ -466,6 +507,13 @@ const CourseAddPage = ({ onBack }) => {
                             onTextChange={(field, value) => handleLessonTextChange(section.id, lesson.id, field, value)}
                             onFileChange={(file) => handleFileSelect(section.id, lesson.id, file)}
                           />
+
+                          <LessonResourcesEditor 
+                              resources={lesson.resources}
+                              onAddResource={(file) => handleAddResource(section.id, lesson.id, file)}
+                              onRemoveResource={(resIndex) => handleRemoveResource(section.id, lesson.id, resIndex)}
+                          />
+
                         </div>
                       ))}
                        <button type="button" className="edit-btn-add-lesson" onClick={() => addLesson(section.id)}>

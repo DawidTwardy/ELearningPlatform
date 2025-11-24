@@ -96,11 +96,12 @@ namespace ELearning.Api.Controllers
         {
             var course = await _context.Courses
                 .Include(c => c.Sections)
-                .ThenInclude(s => s.Lessons)
+                    .ThenInclude(s => s.Lessons)
+                        .ThenInclude(l => l.Resources) // WAŻNE: Pobieranie zasobów
                 .Include(c => c.Sections)
-                .ThenInclude(s => s.Quiz)
-                .ThenInclude(q => q.Questions)
-                .ThenInclude(qt => qt.Options)
+                    .ThenInclude(s => s.Quiz)
+                        .ThenInclude(q => q.Questions)
+                            .ThenInclude(qt => qt.Options)
                 .Include(c => c.Instructor)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
@@ -137,7 +138,14 @@ namespace ELearning.Api.Controllers
                         l.Id,
                         l.Title,
                         l.Content,
-                        l.VideoUrl
+                        l.VideoUrl,
+                        // WAŻNE: Mapowanie zasobów do zwrotki
+                        Resources = l.Resources.Select(r => new
+                        {
+                            r.Id,
+                            r.Name,
+                            r.FileUrl
+                        }).ToList()
                     }),
                     Quiz = s.Quiz != null ? new
                     {
@@ -179,6 +187,7 @@ namespace ELearning.Api.Controllers
 
                 if (course.Sections == null) course.Sections = new List<CourseSection>();
 
+                // EF Core automatycznie doda LessonResources, jeśli są w obiekcie course
                 _context.Courses.Add(course);
                 await _context.SaveChangesAsync();
 
@@ -237,6 +246,7 @@ namespace ELearning.Api.Controllers
             var existingCourse = await _context.Courses
                 .Include(c => c.Sections)
                     .ThenInclude(s => s.Lessons)
+                        .ThenInclude(l => l.Resources) // WAŻNE: Pobranie zasobów do aktualizacji
                 .Include(c => c.Sections)
                     .ThenInclude(s => s.Quiz)
                         .ThenInclude(q => q.Questions)
@@ -291,11 +301,13 @@ namespace ELearning.Api.Controllers
                             if (lessonDto.Id == 0)
                             {
                                 hasNewContent = true;
+                                // Dodawanie nowej lekcji wraz z zasobami
                                 existingSection.Lessons.Add(new Lesson
                                 {
                                     Title = lessonDto.Title,
                                     Content = lessonDto.Content,
-                                    VideoUrl = lessonDto.VideoUrl
+                                    VideoUrl = lessonDto.VideoUrl,
+                                    Resources = lessonDto.Resources // EF Core doda to automatycznie
                                 });
                             }
                             else
@@ -306,10 +318,37 @@ namespace ELearning.Api.Controllers
                                     existingLesson.Title = lessonDto.Title;
                                     existingLesson.Content = lessonDto.Content;
                                     existingLesson.VideoUrl = lessonDto.VideoUrl;
+
+                                    // --- LOGIKA AKTUALIZACJI ZASOBÓW ---
+                                    var incomingResIds = lessonDto.Resources.Where(r => r.Id > 0).Select(r => r.Id).ToList();
+                                    var resourcesToDeleteFromLesson = existingLesson.Resources
+                                        .Where(r => !incomingResIds.Contains(r.Id)).ToList();
+
+                                    foreach (var r in resourcesToDeleteFromLesson)
+                                    {
+                                        _context.LessonResources.Remove(r);
+                                    }
+
+                                    foreach (var resDto in lessonDto.Resources)
+                                    {
+                                        if (resDto.Id == 0)
+                                        {
+                                            // Dodaj nowy zasób
+                                            existingLesson.Resources.Add(new LessonResource
+                                            {
+                                                Name = resDto.Name,
+                                                FileUrl = resDto.FileUrl
+                                            });
+                                        }
+                                        // Istniejące zasoby zazwyczaj się nie zmieniają (tylko usuwają/dodają),
+                                        // ale można by tu dodać update nazwy, jeśli byłaby taka opcja w UI.
+                                    }
+                                    // -------------------------------------
                                 }
                             }
                         }
 
+                        // Obsługa Quizu (bez zmian)
                         if (sectionDto.Quiz != null)
                         {
                             if (existingSection.Quiz == null)
@@ -381,7 +420,13 @@ namespace ELearning.Api.Controllers
                     hasNewContent = true;
                     if (sectionDto.Lessons != null)
                     {
-                        foreach (var l in sectionDto.Lessons) l.Id = 0;
+                        foreach (var l in sectionDto.Lessons)
+                        {
+                            l.Id = 0;
+                            // Zasoby w nowej sekcji też muszą mieć Id = 0
+                            if (l.Resources != null)
+                                foreach (var r in l.Resources) r.Id = 0;
+                        }
                     }
                     if (sectionDto.Quiz != null)
                     {

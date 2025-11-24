@@ -184,7 +184,6 @@
     box-sizing: border-box;
 }
 
-/* USUNIĘTO: Stare style .edit-content-editable i .text-editor-wrapper */
 
 .edit-btn-add-lesson {
     background: none;
@@ -260,9 +259,6 @@
 .edit-btn-upload:hover {
     background-color: #666;
 }
-
-/* USUNIĘTO: Wszystkie style .rte-toolbar, .rte-group, .rte-button itd. */
-
 
 /* --- NOWE STYLE DLA REACT-QUILL --- */
 .text-editor-wrapper-quill .ql-toolbar {
@@ -405,4 +401,81 @@
 .edit-btn-add-question:hover {
     background-color: #444;
     border-color: #666;
+}
+
+/* --- STYLE DLA ZASOBÓW LEKCJI --- */
+.resources-editor {
+    margin-top: 15px;
+    border-top: 1px dashed #444;
+    padding-top: 10px;
+}
+
+.resources-editor h5 {
+    color: #aaa;
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+}
+
+.resources-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 10px 0;
+}
+
+.resource-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #1a1a1a;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border: 1px solid #333;
+}
+
+.resource-item a {
+    color: #007BFF;
+    text-decoration: none;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px;
+}
+
+.resource-item a:hover {
+    text-decoration: underline;
+}
+
+.btn-remove-res {
+    background: none;
+    border: none;
+    color: #ff4d4d;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 2px 8px;
+}
+
+.btn-remove-res:hover {
+    text-decoration: underline;
+}
+
+.add-resource-container {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.btn-add-res {
+    background-color: #444;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-add-res:hover {
+    background-color: #555;
 }

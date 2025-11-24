@@ -4,18 +4,15 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { fetchCourseDetails, uploadFile } from '../../services/api';
 
-// Funkcja parsująca strukturę kursu z backendu do stanu komponentu
-// FIX: Dodano obsługę mapowania Resources -> Content
+// --- Funkcje pomocnicze i komponenty (Bez zmian logicznych, ale w pełnej wersji) ---
+
 const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
 
     const parsedSections = course.sections.map(section => {
-        
         if (section.lessons) {
             section.lessons = section.lessons.map(lesson => {
                 let parsedContent = lesson.content;
-                
-                // 1. Próba parsowania JSON z pola Content
                 try {
                     if (typeof lesson.content === 'string' && lesson.content.trim().startsWith('{')) {
                         parsedContent = JSON.parse(lesson.content);
@@ -24,19 +21,6 @@ const deepParseCourseContent = (course) => {
                     console.warn("Błąd parsowania treści lekcji:", e);
                 }
 
-                // 2. FIX: Jeśli Content jest pusty/błędny, ale mamy Resources z bazy, użyj ich
-                // Dzięki temu, jeśli backend zapisał plik w Resources, a wyczyścił Content string,
-                // frontend nadal wyświetli ten plik w edytorze.
-                if ((!parsedContent || !parsedContent.url) && lesson.resources && lesson.resources.length > 0) {
-                    const resource = lesson.resources[0]; // Bierzemy pierwszy zasób
-                    parsedContent = {
-                        url: resource.fileUrl,
-                        fileName: resource.name,
-                        text: ""
-                    };
-                }
-
-                // 3. Wykrywanie typu lekcji
                 let inferredType = 'video';
                 if (parsedContent) {
                     if (parsedContent.text !== undefined && parsedContent.text !== "") {
@@ -53,16 +37,18 @@ const deepParseCourseContent = (course) => {
                 return { 
                     ...lesson, 
                     content: parsedContent || {}, 
-                    type: lesson.type || inferredType 
+                    type: lesson.type || inferredType,
+                    resources: lesson.resources || lesson.Resources || [] 
                 };
             });
         }
-
+        
+        // Fix dla Quizów - upewnienie się, że typ pytania jest poprawny
         if (section.quiz && section.quiz.questions) {
-            section.quiz.questions = section.quiz.questions.map(q => ({
-                ...q,
-                type: q.type || q.questionType || q.QuestionType || 'single'
-            }));
+             section.quiz.questions = section.quiz.questions.map(q => ({
+                 ...q,
+                 type: q.type || q.questionType || q.QuestionType || 'single'
+             }));
         }
 
         return section;
@@ -110,7 +96,7 @@ export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
             </div>
           ) : (
             <div className="file-name-display-empty">
-              Nie wybrano pliku.
+              Nie wybrano pliku głównego.
             </div>
           )}
           
@@ -139,6 +125,47 @@ export const LessonContentInput = ({ lesson, onFileChange, onTextChange }) => {
     default:
       return <div>Wybierz typ lekcji, aby edytować treść.</div>;
   }
+};
+
+export const LessonResourcesEditor = ({ resources, onAddResource, onRemoveResource }) => {
+  const fileInputRef = React.useRef(null);
+
+  const handleFileChange = (e) => {
+      if (e.target.files.length > 0) {
+          onAddResource(e.target.files[0]);
+      }
+      e.target.value = null;
+  };
+
+  return (
+    <div className="resources-editor">
+      <h5>Materiały do pobrania (Załączniki):</h5>
+      <ul className="resources-list">
+        {(resources || []).map((res, idx) => (
+          <li key={res.id || idx} className="resource-item">
+            <a href={res.fileUrl || res.url} target="_blank" rel="noopener noreferrer">
+               {res.name || res.fileName}
+            </a>
+            <button type="button" onClick={() => onRemoveResource(idx)} className="btn-remove-res">
+              Usuń
+            </button>
+          </li>
+        ))}
+        {(!resources || resources.length === 0) && <li style={{color:'#666', fontSize:'0.9em', fontStyle:'italic'}}>Brak dodatkowych zasobów.</li>}
+      </ul>
+      <div className="add-resource-container">
+         <input 
+            type="file" 
+            ref={fileInputRef} 
+            style={{display: 'none'}} 
+            onChange={handleFileChange} 
+         />
+         <button type="button" className="btn-add-res" onClick={() => fileInputRef.current.click()}>
+            + Dodaj plik
+         </button>
+      </div>
+    </div>
+  );
 };
 
 export const OptionEditor = ({ option, questionType, onOptionChange, onCorrectChange, onDeleteOption }) => {
@@ -342,7 +369,6 @@ const CourseEditPage = ({ course, onBack }) => {
   const [sections, setSections] = useState([]); 
   const [openItems, setOpenItems] = useState({});
   const [uploading, setUploading] = useState(false); 
-  // Usunięto stany: price, category, level
 
   useEffect(() => {
     const loadData = async () => {
@@ -355,7 +381,6 @@ const CourseEditPage = ({ course, onBack }) => {
           setDescription(data.description || "");
           setThumbnailUrl(data.imageUrl || data.imageSrc || "/src/course/placeholder_sql.png");
           setSections(data.sections || []);
-          // Nie ustawiamy price/category/level
         } catch (error) {
           console.error("Nie udało się pobrać szczegółów kursu:", error);
           const data = deepParseCourseContent(course);
@@ -390,6 +415,7 @@ const CourseEditPage = ({ course, onBack }) => {
         return; 
     }
 
+    // Funkcja czyszcząca ID (tymczasowe ID frontendu zamienia na 0 dla backendu)
     const prepareSectionsForBackend = (secs) => {
         return secs.map(section => {
             const safeSectionId = (typeof section.id === 'number' && section.id > 2000000000) ? 0 : section.id;
@@ -398,28 +424,26 @@ const CourseEditPage = ({ course, onBack }) => {
                 const safeLessonId = (typeof lesson.id === 'number' && lesson.id > 2000000000) ? 0 : lesson.id;
                 
                 let contentStr = "";
-                let resources = [];
-
+                
                 if (typeof lesson.content === 'object' && lesson.content !== null) {
                     contentStr = JSON.stringify(lesson.content);
-                    
-                    // TWORZENIE ZASOBÓW DLA BACKENDU:
-                    // FIX: Jeśli content zawiera url i fileName, dodajemy go do listy Resources
-                    if (lesson.content.url && lesson.content.fileName) {
-                         // Sprawdźmy, czy zasób już istnieje (ma ID), jeśli nie - stworzymy nowy (ID = 0)
-                         // To kluczowe dla działania UpdateCourse w backendzie
-                         const existingResId = (lesson.resources && lesson.resources.length > 0) ? lesson.resources[0].id : 0;
-                         
-                         resources.push({
-                             Id: existingResId, 
-                             Name: lesson.content.fileName,
-                             FileUrl: lesson.content.url
-                         });
-                    }
-
                 } else if (typeof lesson.content === 'string') {
                     contentStr = lesson.content;
                 }
+
+                // WAŻNE: Mapowanie zasobów z filtrowaniem pól
+                // Tworzymy NOWY obiekt zawierający TYLKO to co backend chce: Id, Name, FileUrl
+                // Unikamy przesyłania pola "Lesson" lub całych obiektów Proxy
+                let resources = (lesson.resources || [])
+                    .filter(res => res.fileUrl || res.url) // Tylko jeśli jest URL
+                    .map(res => {
+                         const resId = (typeof res.id === 'number' && res.id > 2000000000) ? 0 : (res.id || 0);
+                         return {
+                             Id: resId,
+                             Name: res.name || res.fileName || "Plik bez nazwy",
+                             FileUrl: res.fileUrl || res.url
+                         };
+                    });
 
                 return {
                     Id: safeLessonId,
@@ -427,7 +451,7 @@ const CourseEditPage = ({ course, onBack }) => {
                     Content: contentStr,
                     VideoUrl: "", 
                     SectionId: safeSectionId,
-                    Resources: resources // FIX: Dodajemy zasoby do wysłania
+                    Resources: resources // Czysta tablica
                 };
             });
 
@@ -479,12 +503,13 @@ const CourseEditPage = ({ course, onBack }) => {
         title: title,
         description: description,
         imageUrl: thumbnailUrl, 
-        // Wysyłamy domyślne wartości lub te z oryginału, aby ich nie nadpisać na null/0
         price: 0,
         category: "Ogólny",
         level: "Początkujący",
         Sections: sectionsToSend
     };
+
+    console.log("Wysyłany payload (Update):", JSON.stringify(courseDataToSend, null, 2));
     
     const apiUrl = `http://localhost:7115/api/Courses/${course.id}`;
 
@@ -496,32 +521,47 @@ const CourseEditPage = ({ course, onBack }) => {
         },
         body: JSON.stringify(courseDataToSend)
     })
-    .then(response => {
+    .then(async response => {
         if (response.status === 204) {
              alert(`Zapisano zmiany dla kursu: ${title}`);
              onBack();
-        } else if (response.status === 404) {
+             return;
+        } 
+        
+        const text = await response.text();
+        let data = {};
+        try {
+             data = text ? JSON.parse(text) : {};
+        } catch(e) {}
+
+        if (response.status === 404) {
              throw new Error('Kurs nie znaleziony (404).');
-        } else {
-             return response.json().then(data => { 
-                if (response.status === 400) {
-                     const validationErrors = data.errors || data;
-                     let message = "Wystąpił błąd walidacji (400 Bad Request).";
-                     if (validationErrors.errors && Object.keys(validationErrors.errors).length > 0) {
-                         message += "\nSzczegóły: " + Object.entries(validationErrors.errors).map(([key, value]) => `${key}: ${value.join(', ')}`).join('; ');
-                     }
-                     throw new Error(message);
-                }
-                throw new Error(data.title || `Nie udało się zaktualizować kursu. Status: ${response.status}`); 
-             });
+        } 
+        
+        if (response.status === 400) {
+             const validationErrors = data.errors || data;
+             console.error("Szczegóły błędu 400:", validationErrors);
+             
+             let message = "Wystąpił błąd walidacji (400 Bad Request).";
+             if (validationErrors.errors) {
+                 message += "\n" + Object.entries(validationErrors.errors)
+                    .map(([key, val]) => `${key}: ${val.join(', ')}`)
+                    .join('\n');
+             } else if (typeof validationErrors === 'string') {
+                 message += "\n" + validationErrors;
+             }
+             throw new Error(message);
         }
+        
+        throw new Error(data.title || `Nie udało się zaktualizować kursu. Status: ${response.status}`);
     })
     .catch(error => {
         console.error("Błąd podczas aktualizacji kursu:", error);
-        alert(`Wystąpił błąd podczas aktualizacji kursu: ${error.message}`);
+        alert(`Błąd podczas aktualizacji kursu: ${error.message}`);
     });
   };
 
+  // --- HANDLERY (Bez zmian) ---
   const updateSectionField = (sectionId, field, value) => {
      setSections(prevSections =>
       prevSections.map(section => 
@@ -584,15 +624,9 @@ const CourseEditPage = ({ course, onBack }) => {
   
   const handleFileSelect = async (sectionId, lessonId, file) => {
     if (!file) return;
-
     try {
         setUploading(true);
-        
         const result = await uploadFile(file); 
-        
-        // FIX: Używamy result.url zwracanego z UploadController
-        const newFileUrl = result.url; 
-
         setSections(prevSections =>
             prevSections.map(section => {
                 if (section.id === sectionId) {
@@ -602,8 +636,7 @@ const CourseEditPage = ({ course, onBack }) => {
                             lesson.id === lessonId
                                 ? { 
                                     ...lesson, 
-                                    // Aktualizujemy content, aby UI od razu pokazał nazwę pliku
-                                    content: { url: newFileUrl, fileName: file.name, text: '' },
+                                    content: { url: result.url, fileName: file.name, text: '' },
                                   }
                                 : lesson
                         ),
@@ -612,13 +645,63 @@ const CourseEditPage = ({ course, onBack }) => {
                 return section;
             })
         );
-        alert(`Plik ${file.name} został przesłany. Kliknij "Zapisz zmiany", aby zachować.`);
+        alert(`Plik ${file.name} został przesłany (Główna zawartość).`);
     } catch (error) {
         console.error("Błąd przesyłania pliku:", error);
         alert("Błąd przesyłania pliku: " + error.message);
     } finally {
         setUploading(false);
     }
+  };
+  
+  const handleAddResource = async (sectionId, lessonId, file) => {
+      if (!file) return;
+      try {
+          setUploading(true);
+          const result = await uploadFile(file);
+          const newResource = {
+              name: file.name,
+              fileUrl: result.url,
+              id: 0
+          };
+          
+          setSections(prev => prev.map(sec => {
+              if (sec.id !== sectionId) return sec;
+              return {
+                  ...sec,
+                  lessons: sec.lessons.map(les => {
+                      if (les.id !== lessonId) return les;
+                      return {
+                          ...les,
+                          resources: [...(les.resources || []), newResource]
+                      };
+                  })
+              };
+          }));
+          alert(`Dodano zasób: ${file.name}`);
+      } catch (e) {
+          alert("Błąd uploadu zasobu: " + e.message);
+      } finally {
+          setUploading(false);
+      }
+  };
+
+  const handleRemoveResource = (sectionId, lessonId, resourceIndex) => {
+       setSections(prev => prev.map(sec => {
+          if (sec.id !== sectionId) return sec;
+          return {
+              ...sec,
+              lessons: sec.lessons.map(les => {
+                  if (les.id !== lessonId) return les;
+                  const newRes = [...(les.resources || [])];
+                  newRes.splice(resourceIndex, 1);
+                  return {
+                      ...les,
+                      resources: newRes
+                  };
+              })
+          };
+      }));
   };
 
   const addSection = () => {
@@ -645,7 +728,8 @@ const CourseEditPage = ({ course, onBack }) => {
             id: Date.now(),
             title: `Nowa Lekcja ${section.lessons.length + 1}`,
             type: "video",
-            content: getEmptyContentForType("video")
+            content: getEmptyContentForType("video"),
+            resources: []
           };
           return {
             ...section,
@@ -807,6 +891,13 @@ const CourseEditPage = ({ course, onBack }) => {
                             onTextChange={(field, value) => handleLessonTextChange(section.id, lesson.id, field, value)}
                             onFileChange={(file) => handleFileSelect(section.id, lesson.id, file)}
                           />
+                          
+                          <LessonResourcesEditor 
+                              resources={lesson.resources}
+                              onAddResource={(file) => handleAddResource(section.id, lesson.id, file)}
+                              onRemoveResource={(resIndex) => handleRemoveResource(section.id, lesson.id, resIndex)}
+                          />
+
                         </div>
                       ))}
                        <button type="button" className="edit-btn-add-lesson" onClick={() => addLesson(section.id)}>
