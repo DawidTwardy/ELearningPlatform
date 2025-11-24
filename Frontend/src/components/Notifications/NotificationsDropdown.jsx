@@ -27,7 +27,8 @@ const NotificationItem = ({ notification, onRead }) => {
   );
 };
 
-const NotificationsDropdown = ({ onClose }) => {
+// Odbieramy nowe propsy: onEnablePush, isPushSupported
+const NotificationsDropdown = ({ onClose, onEnablePush, isPushSupported }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,11 +66,41 @@ const NotificationsDropdown = ({ onClose }) => {
           <span className="unread-count-badge">{unreadCount}</span>
         )}
       </div>
+
+      {/* Sekcja włączania powiadomień Push */}
+      {isPushSupported && (
+          <div style={{ 
+              padding: '10px 20px', 
+              borderBottom: '1px solid #333', 
+              textAlign: 'center',
+              backgroundColor: '#222'
+          }}>
+              <button 
+                  onClick={onEnablePush}
+                  style={{ 
+                      background: 'transparent', 
+                      border: '1px solid #28A745', 
+                      color: '#28A745', 
+                      borderRadius: '20px', 
+                      padding: '6px 15px', 
+                      cursor: 'pointer',
+                      fontSize: '0.85em',
+                      fontWeight: 'bold',
+                      transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.target.style.backgroundColor = '#28A745'; e.target.style.color = '#FFF'; }}
+                  onMouseOut={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.color = '#28A745'; }}
+              >
+                  🔔 Włącz powiadomienia w tle
+              </button>
+          </div>
+      )}
+
       <div className="notifications-list">
         {loading ? (
             <div style={{padding: '10px', textAlign: 'center'}}>Ładowanie...</div>
         ) : notifications.length === 0 ? (
-            <div style={{padding: '10px', textAlign: 'center'}}>Brak powiadomień</div>
+            <div style={{padding: '10px', textAlign: 'center', color: '#aaa'}}>Brak powiadomień</div>
         ) : (
             notifications.map(notification => (
                 <NotificationItem 

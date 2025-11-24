@@ -144,6 +144,45 @@ const CourseView = ({ course: courseProp, onBack }) => {
         return true;
     };
 
+    const renderResources = () => {
+        const resources = currentContent?.resources || currentContent?.Resources || [];
+        
+        if (!resources || resources.length === 0) return null;
+
+        return (
+            <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#252525', borderRadius: '8px' }}>
+                <h4 style={{ color: '#fff', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    📥 Materiały do pobrania
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {resources.map((res, idx) => (
+                        <a 
+                            key={idx} 
+                            href={`${BASE_URL}${res.fileUrl || res.FileUrl}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                padding: '10px 15px', 
+                                backgroundColor: '#333', 
+                                color: '#E0E0E0', 
+                                textDecoration: 'none', 
+                                borderRadius: '6px',
+                                transition: 'background 0.2s'
+                            }}
+                            onMouseOver={e => e.currentTarget.style.background = '#444'}
+                            onMouseOut={e => e.currentTarget.style.background = '#333'}
+                        >
+                            <span style={{ flex: 1, fontWeight: '500' }}>{res.name || res.Name}</span>
+                            <span style={{ fontSize: '0.8em', color: '#28A745' }}>Pobierz</span>
+                        </a>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     const renderMainWindow = () => {
         if (!currentContent) return <div className="video-placeholder">Wybierz element z listy</div>;
 
@@ -219,6 +258,9 @@ const CourseView = ({ course: courseProp, onBack }) => {
                     <div className="video-section">
                         {renderMainWindow()}
                     </div>
+
+                    {currentContent?.contentType === 'lesson' && renderResources()}
+
                     {currentContent?.contentType !== 'quiz' && (
                         <div style={{ marginTop: '20px', padding: '0 20px' }}>
                             <h2 style={{ fontSize: '24px', marginBottom: '10px', color: '#fff' }}>

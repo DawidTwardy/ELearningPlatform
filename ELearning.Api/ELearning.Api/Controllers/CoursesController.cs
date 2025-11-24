@@ -97,7 +97,6 @@ namespace ELearning.Api.Controllers
             var course = await _context.Courses
                 .Include(c => c.Sections)
                 .ThenInclude(s => s.Lessons)
-                .ThenInclude(l => l.Resources)
                 .Include(c => c.Sections)
                 .ThenInclude(s => s.Quiz)
                 .ThenInclude(q => q.Questions)
@@ -138,8 +137,7 @@ namespace ELearning.Api.Controllers
                         l.Id,
                         l.Title,
                         l.Content,
-                        l.VideoUrl,
-                        Resources = l.Resources.Select(r => new { r.Id, r.Name, r.FileUrl }).ToList()
+                        l.VideoUrl
                     }),
                     Quiz = s.Quiz != null ? new
                     {
@@ -239,7 +237,6 @@ namespace ELearning.Api.Controllers
             var existingCourse = await _context.Courses
                 .Include(c => c.Sections)
                     .ThenInclude(s => s.Lessons)
-                    .ThenInclude(l => l.Resources)
                 .Include(c => c.Sections)
                     .ThenInclude(s => s.Quiz)
                         .ThenInclude(q => q.Questions)
@@ -294,21 +291,12 @@ namespace ELearning.Api.Controllers
                             if (lessonDto.Id == 0)
                             {
                                 hasNewContent = true;
-                                var newLesson = new Lesson
+                                existingSection.Lessons.Add(new Lesson
                                 {
                                     Title = lessonDto.Title,
                                     Content = lessonDto.Content,
                                     VideoUrl = lessonDto.VideoUrl
-                                };
-
-                                if (lessonDto.Resources != null)
-                                {
-                                    foreach (var res in lessonDto.Resources)
-                                    {
-                                        newLesson.Resources.Add(new LessonResource { Name = res.Name, FileUrl = res.FileUrl });
-                                    }
-                                }
-                                existingSection.Lessons.Add(newLesson);
+                                });
                             }
                             else
                             {
@@ -318,34 +306,6 @@ namespace ELearning.Api.Controllers
                                     existingLesson.Title = lessonDto.Title;
                                     existingLesson.Content = lessonDto.Content;
                                     existingLesson.VideoUrl = lessonDto.VideoUrl;
-
-                                    if (lessonDto.Resources != null)
-                                    {
-                                        var incomingResIds = lessonDto.Resources.Where(r => r.Id > 0).Select(r => r.Id).ToList();
-                                        var resToDelete = existingLesson.Resources.Where(r => !incomingResIds.Contains(r.Id)).ToList();
-                                        foreach (var r in resToDelete) _context.LessonResources.Remove(r);
-
-                                        foreach (var resDto in lessonDto.Resources)
-                                        {
-                                            if (resDto.Id == 0)
-                                            {
-                                                existingLesson.Resources.Add(new LessonResource
-                                                {
-                                                    Name = resDto.Name,
-                                                    FileUrl = resDto.FileUrl
-                                                });
-                                            }
-                                            else
-                                            {
-                                                var existingRes = existingLesson.Resources.FirstOrDefault(r => r.Id == resDto.Id);
-                                                if (existingRes != null)
-                                                {
-                                                    existingRes.Name = resDto.Name;
-                                                    existingRes.FileUrl = resDto.FileUrl;
-                                                }
-                                            }
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -377,3 +337,142 @@ namespace ELearning.Api.Controllers
                                 {
                                     if (qDto.Id == 0)
                                     {
+                                        if (qDto.Options != null) foreach (var o in qDto.Options) o.Id = 0;
+                                        existingSection.Quiz.Questions.Add(qDto);
+                                    }
+                                    else
+                                    {
+                                        var existingQ = existingSection.Quiz.Questions.FirstOrDefault(q => q.Id == qDto.Id);
+                                        if (existingQ != null)
+                                        {
+                                            existingQ.Text = qDto.Text;
+                                            existingQ.QuestionType = qDto.QuestionType;
+
+                                            var incomingOIds = qDto.Options.Where(o => o.Id > 0).Select(o => o.Id).ToList();
+                                            var optionsToDelete = existingQ.Options.Where(o => !incomingOIds.Contains(o.Id)).ToList();
+                                            foreach (var o in optionsToDelete) _context.AnswerOptions.Remove(o);
+
+                                            foreach (var oDto in qDto.Options)
+                                            {
+                                                if (oDto.Id == 0) existingQ.Options.Add(oDto);
+                                                else
+                                                {
+                                                    var existingO = existingQ.Options.FirstOrDefault(o => o.Id == oDto.Id);
+                                                    if (existingO != null)
+                                                    {
+                                                        existingO.Text = oDto.Text;
+                                                        existingO.IsCorrect = oDto.IsCorrect;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else if (existingSection.Quiz != null)
+                        {
+                            _context.Quizzes.Remove(existingSection.Quiz);
+                        }
+                    }
+                }
+                else
+                {
+                    hasNewContent = true;
+                    if (sectionDto.Lessons != null)
+                    {
+                        foreach (var l in sectionDto.Lessons) l.Id = 0;
+                    }
+                    if (sectionDto.Quiz != null)
+                    {
+                        sectionDto.Quiz.Id = 0;
+                        if (sectionDto.Quiz.Questions != null)
+                        {
+                            foreach (var q in sectionDto.Quiz.Questions)
+                            {
+                                q.Id = 0;
+                                if (q.Options != null) foreach (var o in q.Options) o.Id = 0;
+                            }
+                        }
+                    }
+                    existingCourse.Sections.Add(sectionDto);
+                }
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                if (hasNewContent)
+                {
+                    var enrolledUserIds = await _context.Enrollments
+                        .Where(e => e.CourseId == id)
+                        .Select(e => e.UserId)
+                        .ToListAsync();
+
+                    if (enrolledUserIds.Any())
+                    {
+                        var notifications = enrolledUserIds.Select(uid => new Notification
+                        {
+                            UserId = uid,
+                            Message = $"Nowa treść została dodana do kursu '{existingCourse.Title}'. Sprawdź co nowego!",
+                            Type = "update",
+                            CreatedAt = DateTime.UtcNow,
+                            RelatedEntityId = id
+                        }).ToList();
+
+                        _context.Notifications.AddRange(notifications);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!CourseExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd zapisu: {ex.Message}");
+                if (ex.InnerException != null) Console.WriteLine($"Inner: {ex.InnerException.Message}");
+
+                return StatusCode(500, new { title = $"Błąd podczas zapisu kursu: {ex.Message}" });
+            }
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Instructor,Admin,User")]
+        public async Task<IActionResult> DeleteCourse(int id)
+        {
+            var course = await _context.Courses.FindAsync(id);
+            if (course == null)
+            {
+                return NotFound();
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (course.InstructorId != userId && !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            _context.Courses.Remove(course);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private bool CourseExists(int id)
+        {
+            return _context.Courses.Any(e => e.Id == id);
+        }
+    }
+}

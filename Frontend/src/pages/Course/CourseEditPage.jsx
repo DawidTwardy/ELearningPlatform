@@ -4,6 +4,8 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { fetchCourseDetails, uploadFile } from '../../services/api';
 
+// Funkcja parsująca strukturę kursu z backendu do stanu komponentu
+// FIX: Dodano obsługę mapowania Resources -> Content
 const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
 
@@ -12,6 +14,8 @@ const deepParseCourseContent = (course) => {
         if (section.lessons) {
             section.lessons = section.lessons.map(lesson => {
                 let parsedContent = lesson.content;
+                
+                // 1. Próba parsowania JSON z pola Content
                 try {
                     if (typeof lesson.content === 'string' && lesson.content.trim().startsWith('{')) {
                         parsedContent = JSON.parse(lesson.content);
@@ -20,9 +24,22 @@ const deepParseCourseContent = (course) => {
                     console.warn("Błąd parsowania treści lekcji:", e);
                 }
 
+                // 2. FIX: Jeśli Content jest pusty/błędny, ale mamy Resources z bazy, użyj ich
+                // Dzięki temu, jeśli backend zapisał plik w Resources, a wyczyścił Content string,
+                // frontend nadal wyświetli ten plik w edytorze.
+                if ((!parsedContent || !parsedContent.url) && lesson.resources && lesson.resources.length > 0) {
+                    const resource = lesson.resources[0]; // Bierzemy pierwszy zasób
+                    parsedContent = {
+                        url: resource.fileUrl,
+                        fileName: resource.name,
+                        text: ""
+                    };
+                }
+
+                // 3. Wykrywanie typu lekcji
                 let inferredType = 'video';
                 if (parsedContent) {
-                    if (parsedContent.text !== undefined) {
+                    if (parsedContent.text !== undefined && parsedContent.text !== "") {
                         inferredType = 'text';
                     } else if (parsedContent.url !== undefined) {
                         if (parsedContent.fileName && parsedContent.fileName.toLowerCase().endsWith('.pdf')) {
@@ -35,7 +52,7 @@ const deepParseCourseContent = (course) => {
 
                 return { 
                     ...lesson, 
-                    content: parsedContent, 
+                    content: parsedContent || {}, 
                     type: lesson.type || inferredType 
                 };
             });
@@ -324,10 +341,8 @@ const CourseEditPage = ({ course, onBack }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState("/src/course/placeholder_sql.png");
   const [sections, setSections] = useState([]); 
   const [openItems, setOpenItems] = useState({});
-  const [price, setPrice] = useState(0);
-  const [category, setCategory] = useState("Ogólny");
-  const [level, setLevel] = useState("Początkujący");
   const [uploading, setUploading] = useState(false); 
+  // Usunięto stany: price, category, level
 
   useEffect(() => {
     const loadData = async () => {
@@ -340,9 +355,7 @@ const CourseEditPage = ({ course, onBack }) => {
           setDescription(data.description || "");
           setThumbnailUrl(data.imageUrl || data.imageSrc || "/src/course/placeholder_sql.png");
           setSections(data.sections || []);
-          setPrice(data.price || 0);
-          setCategory(data.category || "Ogólny");
-          setLevel(data.level || "Początkujący");
+          // Nie ustawiamy price/category/level
         } catch (error) {
           console.error("Nie udało się pobrać szczegółów kursu:", error);
           const data = deepParseCourseContent(course);
@@ -385,8 +398,25 @@ const CourseEditPage = ({ course, onBack }) => {
                 const safeLessonId = (typeof lesson.id === 'number' && lesson.id > 2000000000) ? 0 : lesson.id;
                 
                 let contentStr = "";
+                let resources = [];
+
                 if (typeof lesson.content === 'object' && lesson.content !== null) {
                     contentStr = JSON.stringify(lesson.content);
+                    
+                    // TWORZENIE ZASOBÓW DLA BACKENDU:
+                    // FIX: Jeśli content zawiera url i fileName, dodajemy go do listy Resources
+                    if (lesson.content.url && lesson.content.fileName) {
+                         // Sprawdźmy, czy zasób już istnieje (ma ID), jeśli nie - stworzymy nowy (ID = 0)
+                         // To kluczowe dla działania UpdateCourse w backendzie
+                         const existingResId = (lesson.resources && lesson.resources.length > 0) ? lesson.resources[0].id : 0;
+                         
+                         resources.push({
+                             Id: existingResId, 
+                             Name: lesson.content.fileName,
+                             FileUrl: lesson.content.url
+                         });
+                    }
+
                 } else if (typeof lesson.content === 'string') {
                     contentStr = lesson.content;
                 }
@@ -396,7 +426,8 @@ const CourseEditPage = ({ course, onBack }) => {
                     Title: lesson.title,
                     Content: contentStr,
                     VideoUrl: "", 
-                    SectionId: safeSectionId 
+                    SectionId: safeSectionId,
+                    Resources: resources // FIX: Dodajemy zasoby do wysłania
                 };
             });
 
@@ -448,9 +479,10 @@ const CourseEditPage = ({ course, onBack }) => {
         title: title,
         description: description,
         imageUrl: thumbnailUrl, 
-        price: price,
-        category: category,
-        level: level,
+        // Wysyłamy domyślne wartości lub te z oryginału, aby ich nie nadpisać na null/0
+        price: 0,
+        category: "Ogólny",
+        level: "Początkujący",
         Sections: sectionsToSend
     };
     
@@ -557,6 +589,9 @@ const CourseEditPage = ({ course, onBack }) => {
         setUploading(true);
         
         const result = await uploadFile(file); 
+        
+        // FIX: Używamy result.url zwracanego z UploadController
+        const newFileUrl = result.url; 
 
         setSections(prevSections =>
             prevSections.map(section => {
@@ -565,7 +600,11 @@ const CourseEditPage = ({ course, onBack }) => {
                         ...section,
                         lessons: section.lessons.map(lesson =>
                             lesson.id === lessonId
-                                ? { ...lesson, content: { url: result.dbPath, fileName: file.name, text: '' } }
+                                ? { 
+                                    ...lesson, 
+                                    // Aktualizujemy content, aby UI od razu pokazał nazwę pliku
+                                    content: { url: newFileUrl, fileName: file.name, text: '' },
+                                  }
                                 : lesson
                         ),
                     };
@@ -573,7 +612,7 @@ const CourseEditPage = ({ course, onBack }) => {
                 return section;
             })
         );
-        alert(`Plik ${file.name} został zaktualizowany w widoku edycji.`);
+        alert(`Plik ${file.name} został przesłany. Kliknij "Zapisz zmiany", aby zachować.`);
     } catch (error) {
         console.error("Błąd przesyłania pliku:", error);
         alert("Błąd przesyłania pliku: " + error.message);

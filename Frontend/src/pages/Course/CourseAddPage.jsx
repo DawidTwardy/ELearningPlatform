@@ -10,6 +10,7 @@ import {
 } from './CourseEditPage.jsx';
 import { uploadFile } from '../../services/api';
 
+// Helper do wstępnego parsowania, identyczny jak w EditPage
 const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
 
@@ -32,7 +33,7 @@ const deepParseCourseContent = (course) => {
     return { ...course, sections: parsedSections };
 };
 
-const CourseAddPage = ({ onBack, onCourseCreate }) => {
+const CourseAddPage = ({ onBack }) => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -81,6 +82,8 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
             return {
                 Title: lesson.title,
                 Content: contentStr,
+                // Dla nowych kursów Resources będą tworzone na podstawie Content w backendzie lub możemy je wysłać puste
+                // Tutaj wysyłamy Content jako JSON string, backend to obsłuży przy tworzeniu (CreateCourse).
             };
         });
         
@@ -115,9 +118,9 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
         Title: title, 
         Description: description || "", 
         ImageUrl: thumbnailUrl || "/src/course/placeholder_default.png", 
-        Price: 0,
-        Category: "Ogólny",
-        Level: "Początkujący",
+        Price: 0, // Domyślna cena
+        Category: "Ogólny", // Domyślna kategoria
+        Level: "Początkujący", // Domyślny poziom
         Rating: 0, 
         Sections: sectionsToSave
     };
@@ -155,7 +158,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
         
         if (response.status === 400) {
             const validationErrors = data.errors || data;
-            let message = "Wystąpił błąd walidacji (400 Bad Request). Sprawdź, czy wszystkie pola są poprawnie wypełnione.";
+            let message = "Wystąpił błąd walidacji. Sprawdź, czy wszystkie pola są poprawnie wypełnione.";
             if (validationErrors.errors && Object.keys(validationErrors.errors).length > 0) {
                 message += "\nSzczegóły: " + Object.entries(validationErrors.errors).map(([key, value]) => `${key}: ${value.join(', ')}`).join('; ');
             }
@@ -167,9 +170,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
     .then(result => {
         const parsedResult = deepParseCourseContent(result); 
         alert(`Pomyślnie stworzono kurs: ${parsedResult.title}`);
-        
-        // Przekierowanie do listy kursów instruktora
-        navigate('/instructor/my-courses');
+        navigate('/my-courses'); // Przekierowanie do listy kursów
     })
     .catch(error => {
         console.error(error);
@@ -177,6 +178,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
     });
   };
 
+  // --- Funkcje pomocnicze do obsługi stanu formularza ---
   const updateSectionField = (sectionId, field, value) => {
      setSections(prevSections =>
       prevSections.map(section => 
@@ -253,6 +255,7 @@ const CourseAddPage = ({ onBack, onCourseCreate }) => {
                             if (lesson.id === lessonId) {
                                 return { 
                                     ...lesson, 
+                                    // Ważne: Zapisujemy url z response (result.url)
                                     content: { url: result.url, fileName: file.name, text: '' } 
                                 };
                             }
