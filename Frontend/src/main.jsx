@@ -6,36 +6,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { HelmetProvider } from 'react-helmet-async';
 
-const originalWarn = console.warn;
-const originalError = console.error;
-
-console.warn = (...args) => {
-    if (args[0] && typeof args[0] === 'string' && args[0].includes('findDOMNode')) {
-        return;
-    }
-    originalWarn(...args);
-};
-
-console.error = (...args) => {
-    if (args[0] && typeof args[0] === 'string' && args[0].includes('findDOMNode')) {
-        return;
-    }
-    originalError(...args);
-};
-
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('SW registered: ', registration);
-            })
-            .catch(registrationError => {
-                console.warn('SW registration failed. To normalne w trybie Incognito lub bez HTTPS.', registrationError);
-            });
-    });
-}
-
 ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
         <HelmetProvider>
@@ -43,4 +15,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </HelmetProvider>
       </AuthProvider>
     </BrowserRouter>
+  </React.StrictMode>
 );

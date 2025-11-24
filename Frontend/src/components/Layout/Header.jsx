@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import NotificationsDropdown from '../Notifications/NotificationsDropdown';
-import { fetchNotifications, fetchMyStats } from '../../services/api';
+import { fetchNotifications, fetchMyStats, resolveImageUrl } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import '../../styles/components/Gamification.css'; 
-import { 
-  PAGE_HOME, 
-  PAGE_INSTRUCTORS, 
-  PAGE_ADMIN, 
-  PAGE_MY_LEARNING, 
-  PAGE_MY_COURSES, 
-  PAGE_LOGIN, 
-  PAGE_REGISTER, 
-  PAGE_FAVORITES,
-  PAGE_PROFILE
-} from '../../App.jsx'; 
+
+// Definiujemy stałe lokalnie, aby uniknąć cyklicznej zależności z App.jsx
+const PAGE_HOME = 'home';
+const PAGE_INSTRUCTORS = 'instructors';
+const PAGE_ADMIN = 'admin';
+const PAGE_MY_LEARNING = 'my-learning';
+const PAGE_MY_COURSES = 'my-courses'; 
+const PAGE_LOGIN = 'login';
+const PAGE_REGISTER = 'register';
+const PAGE_FAVORITES = 'favorites';
+const PAGE_PROFILE = 'profile';
 
 const LoggedInMenu = ({ handleLogout, navigateToPage }) => ( 
     <div className="profile-menu">
@@ -24,22 +25,6 @@ const LoggedInMenu = ({ handleLogout, navigateToPage }) => (
     </div>
 );
 
-// Funkcja pomocnicza do konwersji klucza VAPID
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
-   
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-   
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
-
 const Header = ({ 
     currentPage, 
     isLoggedIn, 
@@ -50,65 +35,26 @@ const Header = ({
     setSearchQuery, 
     handleSearchSubmit 
 }) => {
+    const { user } = useAuth(); // Pobieramy usera z kontekstu
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
     const [streak, setStreak] = useState(0);
-    
-    // Stan sprawdzający czy przeglądarka obsługuje Push
-    const [pushSupported, setPushSupported] = useState(false);
 
     useEffect(() => {
         if (isLoggedIn) {
             checkNotifications();
             checkStats();
         }
-        // Sprawdzenie wsparcia dla Service Worker i Push API
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-            setPushSupported(true);
-        }
     }, [isLoggedIn, isNotificationsOpen]);
-
-    // Funkcja subskrypcji przeniesiona tutaj, ale wywoływana będzie z Dropdowna
-    const subscribeToPush = async () => {
-        if (!pushSupported) return;
-        
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            alert('Brak zgody na powiadomienia.');
-            return;
-        }
-
-        try {
-            const responseKey = await fetch('http://localhost:7115/api/Push/public-key');
-            const { publicKey } = await responseKey.json();
-            
-            const registration = await navigator.serviceWorker.ready;
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(publicKey)
-            });
-
-            await fetch('http://localhost:7115/api/Push/subscribe', {
-                method: 'POST',
-                body: JSON.stringify(subscription),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            alert('Powiadomienia włączone pomyślnie!');
-        } catch (e) {
-            console.error(e);
-            alert('Błąd subskrypcji powiadomień.');
-        }
-    };
 
     const checkNotifications = async () => {
         try {
             const data = await fetchNotifications();
-            const unread = data.filter(n => !n.isRead).length > 0;
-            setHasUnread(unread);
+            if (data) {
+                const unread = data.filter(n => !n.isRead).length > 0;
+                setHasUnread(unread);
+            }
         } catch (error) {
             console.error("Błąd sprawdzania powiadomień", error);
         }
@@ -249,8 +195,6 @@ const Header = ({
                                 onClick={() => navigateToPage(PAGE_FAVORITES)} 
                                 style={{ cursor: 'pointer' }}
                             /> 
-                            
-                            {/* Tutaj jest ten dzwoneczek, który otworzy dropdown z opcją Push */}
                             <div className="notification-icon-wrapper">
                                 <img 
                                     src="/src/icon/notification.png" 
@@ -261,25 +205,24 @@ const Header = ({
                                 {hasUnread && <div className="notification-dot"></div>}
                             </div>
                             
+                            {/* Ikona użytkownika z dynamicznym awatarem */}
                             <img 
-                                src="/src/icon/usericon.png" 
+                                src={resolveImageUrl(user?.avatarUrl) || "/src/icon/usericon.png"} 
                                 alt="Profil" 
                                 className="action-icon-image profile-icon-image" 
                                 onClick={toggleMenu} 
+                                onError={(e) => {e.target.onerror = null; e.target.src = "/src/icon/usericon.png"}}
+                                style={{ borderRadius: '50%', objectFit: 'cover' }}
                             />
                         </>
                     )}
                     {isMenuOpen && isLoggedIn && <LoggedInMenu handleLogout={handleLogout} navigateToPage={navigateToPage} />}
-                    
-                    {/* Przekazujemy funkcję onEnablePush i flagę isPushSupported do dropdowna */}
                     {isNotificationsOpen && isLoggedIn && (
                         <NotificationsDropdown 
                             onClose={() => {
                                 setIsNotificationsOpen(false);
                                 checkNotifications(); 
-                            }}
-                            onEnablePush={subscribeToPush}
-                            isPushSupported={pushSupported}
+                            }} 
                         />
                     )}
                 </div>

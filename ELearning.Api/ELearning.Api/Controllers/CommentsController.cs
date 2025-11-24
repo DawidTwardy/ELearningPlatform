@@ -1,11 +1,16 @@
 using ELearning.Api.DTOs.Discussion;
 using ELearning.Api.Models;
 using ELearning.Api.Models.CourseContent;
-using ELearning.Api.Persistence;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using ELearning.Api.Persistence;
 
 namespace ELearning.Api.Controllers
 {
@@ -14,87 +19,85 @@ namespace ELearning.Api.Controllers
     public class CommentsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public CommentsController(ApplicationDbContext context)
+        public CommentsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         [HttpGet("course/{courseId}")]
-        public async Task<ActionResult<IEnumerable<CommentDto>>> GetComments(int courseId)
+        public async Task<IActionResult> GetComments(int courseId)
         {
             var comments = await _context.Comments
                 .Include(c => c.User)
                 .Where(c => c.CourseId == courseId)
-                .OrderByDescending(c => c.CreatedAt)
+                .OrderBy(c => c.Created)
                 .ToListAsync();
 
-            var rootComments = comments.Where(c => c.ParentCommentId == null).ToList();
-            var dtos = rootComments.Select(c => MapToDto(c, comments)).ToList();
+            var commentDtos = comments.Select(c => new CommentDto
+            {
+                Id = c.Id,
+                Content = c.Content,
+                UserName = c.User.UserName,
+                AvatarUrl = c.User.AvatarUrl, // Mapowanie awatara
+                Created = c.Created,
+                ParentCommentId = c.ParentCommentId
+            }).ToList();
 
-            return Ok(dtos);
+            var hierarchy = BuildCommentHierarchy(commentDtos);
+            return Ok(hierarchy);
+        }
+
+        private List<CommentDto> BuildCommentHierarchy(List<CommentDto> allComments)
+        {
+            var rootComments = allComments.Where(c => c.ParentCommentId == null).ToList();
+            foreach (var root in rootComments)
+            {
+                AddReplies(root, allComments);
+            }
+            return rootComments;
+        }
+
+        private void AddReplies(CommentDto parent, List<CommentDto> allComments)
+        {
+            parent.Replies = allComments.Where(c => c.ParentCommentId == parent.Id).ToList();
+            foreach (var reply in parent.Replies)
+            {
+                AddReplies(reply, allComments);
+            }
         }
 
         [HttpPost]
         [Authorize]
-        public async Task<ActionResult<CommentDto>> CreateComment([FromBody] CreateCommentDto dto)
+        public async Task<IActionResult> AddComment([FromBody] CreateCommentDto model)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return Unauthorized();
 
             var comment = new Comment
             {
-                CourseId = dto.CourseId,
-                Content = dto.Content,
-                ParentCommentId = dto.ParentCommentId,
+                Content = model.Content,
+                Created = DateTime.UtcNow,
+                CourseId = model.CourseId,
                 UserId = userId,
-                CreatedAt = DateTime.UtcNow
+                ParentCommentId = model.ParentCommentId
             };
 
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
 
-            if (dto.ParentCommentId.HasValue)
+            return Ok(new CommentDto
             {
-                var parentComment = await _context.Comments
-                    .Include(c => c.User)
-                    .FirstOrDefaultAsync(c => c.Id == dto.ParentCommentId.Value);
-
-                if (parentComment != null && parentComment.UserId != userId)
-                {
-                    var notification = new Notification
-                    {
-                        UserId = parentComment.UserId,
-                        Message = $"Ktoœ odpowiedzia³ na Twój komentarz: \"{dto.Content}\"",
-                        Type = "info",
-                        CreatedAt = DateTime.UtcNow,
-                        RelatedEntityId = dto.CourseId
-                    };
-                    _context.Notifications.Add(notification);
-                    await _context.SaveChangesAsync();
-                }
-            }
-
-            var createdComment = await _context.Comments
-                .Include(c => c.User)
-                .FirstOrDefaultAsync(c => c.Id == comment.Id);
-
-            return Ok(MapToDto(createdComment, new List<Comment>()));
-        }
-
-        [HttpPut("{id}")]
-        [Authorize]
-        public async Task<IActionResult> UpdateComment(int id, [FromBody] UpdateCommentDto dto)
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var comment = await _context.Comments.FindAsync(id);
-
-            if (comment == null) return NotFound();
-            if (comment.UserId != userId) return Forbid();
-
-            comment.Content = dto.Content;
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+                Id = comment.Id,
+                Content = comment.Content,
+                UserName = user.UserName,
+                AvatarUrl = user.AvatarUrl, // Zwracamy awatar zaraz po dodaniu
+                Created = comment.Created,
+                ParentCommentId = comment.ParentCommentId
+            });
         }
 
         [HttpDelete("{id}")]
@@ -102,47 +105,46 @@ namespace ELearning.Api.Controllers
         public async Task<IActionResult> DeleteComment(int id)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var comment = await _context.Comments.Include(c => c.Replies).FirstOrDefaultAsync(c => c.Id == id);
+            var comment = await _context.Comments.FindAsync(id);
+
+            if (comment == null) return NotFound();
+
+            if (comment.UserId != userId && !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            _context.Comments.Remove(comment);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpPut("{id}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateComment(int id, [FromBody] UpdateCommentDto model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var comment = await _context.Comments.FindAsync(id);
 
             if (comment == null) return NotFound();
             if (comment.UserId != userId) return Forbid();
 
-            await DeleteCommentRecursive(comment);
+            comment.Content = model.Content;
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok();
         }
+    }
 
-        private async Task DeleteCommentRecursive(Comment comment)
-        {
-            var replies = await _context.Comments
-                .Include(c => c.Replies)
-                .Where(c => c.ParentCommentId == comment.Id)
-                .ToListAsync();
+    public class CreateCommentDto
+    {
+        public int CourseId { get; set; }
+        public string Content { get; set; }
+        public int? ParentCommentId { get; set; }
+    }
 
-            foreach (var reply in replies)
-            {
-                await DeleteCommentRecursive(reply);
-            }
-            _context.Comments.Remove(comment);
-        }
-
-        private CommentDto MapToDto(Comment comment, List<Comment> allComments)
-        {
-            var dto = new CommentDto
-            {
-                Id = comment.Id,
-                UserId = comment.UserId,
-                Author = comment.User?.UserName ?? "Nieznany",
-                Avatar = "/src/icon/usericon.png",
-                Text = comment.Content,
-                CreatedAt = comment.CreatedAt
-            };
-
-            var replies = allComments.Where(c => c.ParentCommentId == comment.Id).OrderBy(c => c.CreatedAt).ToList();
-            dto.Replies = replies.Select(r => MapToDto(r, allComments)).ToList();
-
-            return dto;
-        }
+    public class UpdateCommentDto
+    {
+        public string Content { get; set; }
     }
 }

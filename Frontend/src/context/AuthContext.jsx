@@ -20,8 +20,9 @@ const parseJwt = (token) => {
 };
 
 export const AuthProvider = ({ children }) => {
+    // Inicjalizacja stanu bezpośrednio z localStorage
+    const [token, setToken] = useState(() => localStorage.getItem('token'));
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('token'));
     const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
 
     const logout = useCallback(() => {
@@ -30,8 +31,10 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken'); 
+        window.location.href = '/login';
     }, []);
 
+    // Konfiguracja axios interceptora
     useEffect(() => {
         const requestInterceptor = axios.interceptors.request.use(
             config => {
@@ -44,60 +47,55 @@ export const AuthProvider = ({ children }) => {
             error => Promise.reject(error)
         );
 
-        const responseInterceptor = axios.interceptors.response.use(
-            response => response,
-            error => {
-                if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                   // Opcjonalna obsługa 401
-                }
-                return Promise.reject(error);
-            }
-        );
-
         return () => {
             axios.interceptors.request.eject(requestInterceptor);
-            axios.interceptors.response.eject(responseInterceptor);
         };
-    }, [logout]);
+    }, []);
 
+    // Dekodowanie tokena przy zmianie (lub starcie aplikacji)
     useEffect(() => {
         if (token) {
-            localStorage.setItem('token', token);
             const decoded = parseJwt(token);
             
             if (decoded) {
                 const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || decoded.role || "User";
                 const name = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || decoded.unique_name || decoded.sub || "Użytkownik";
-                
-                // --- POPRAWKA: Pobieranie ID użytkownika ---
                 const id = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || decoded.nameid || decoded.sub;
 
                 setUser({
-                    id: id,  // Kluczowe dla komentarzy i notatek
+                    id: id,
                     username: name,
                     role: role,
                 });
                 setIsAuthenticated(true);
             } else {
-                logout();
+                // Jeśli token jest uszkodzony/nieprawidłowy, czyścimy
+                localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
+                setToken(null);
+                setUser(null);
+                setIsAuthenticated(false);
             }
         } else {
-            localStorage.removeItem('token');
-            setIsAuthenticated(false);
             setUser(null);
+            setIsAuthenticated(false);
         }
-    }, [token, logout]);
+    }, [token]);
 
     const login = async (username, password) => {
         try {
             const response = await axios.post(`${API_BASE_URL}/Auth/login`, { username, password });
-            const { token, refreshToken } = response.data;
+            const { token: newToken, refreshToken } = response.data;
             
+            // KLUCZOWA POPRAWKA: Zapis synchroniczny przed ustawieniem stanu
             if (refreshToken) {
                 localStorage.setItem('refreshToken', refreshToken);
             }
+            if (newToken) {
+                localStorage.setItem('token', newToken);
+                setToken(newToken); // To wywoła useEffect dekodujący usera
+            }
             
-            setToken(token); 
             return { success: true };
         } catch (error) {
             console.error('Błąd logowania:', error.response ? error.response.data : error.message);
@@ -108,13 +106,17 @@ export const AuthProvider = ({ children }) => {
     const register = async (userData) => {
         try {
             const response = await axios.post(`${API_BASE_URL}/Auth/register`, userData);
-            const { token, refreshToken } = response.data;
+            const { token: newToken, refreshToken } = response.data;
             
+            // KLUCZOWA POPRAWKA: Zapis synchroniczny
             if (refreshToken) {
                 localStorage.setItem('refreshToken', refreshToken);
             }
+            if (newToken) {
+                localStorage.setItem('token', newToken);
+                setToken(newToken);
+            }
             
-            setToken(token);
             return { success: true };
         } catch (error) {
             console.error('Błąd rejestracji:', error.response ? error.response.data : error.message);

@@ -1,240 +1,189 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
-import StarRating from '../../components/Course/StarRating';
-import FavoriteHeart from '../../components/Course/FavoriteHeart';
-import { fetchCourseDetails, fetchUserEnrollment, fetchCourseReviews } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 import '../../styles/pages/CourseDetailsPage.css';
+import { fetchCourseDetails, enrollInCourse, fetchUserEnrollment, fetchCourseReviews, resolveImageUrl } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import CourseRatingForm from './CourseRatingForm';
+import StarRating from '../../components/Course/StarRating';
 
 const CourseDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [course, setCourse] = useState(null);
-  const [reviews, setReviews] = useState([]);
+  const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [expandedSections, setExpandedSections] = useState({});
+  const [reviews, setReviews] = useState([]);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const courseData = await fetchCourseDetails(id);
+      setCourse(courseData);
+
+      const reviewsData = await fetchCourseReviews(id);
+      setReviews(reviewsData);
+
+      if (user) {
+          const status = await fetchUserEnrollment(id);
+          setIsEnrolled(status.isEnrolled);
+      }
+    } catch (error) {
+      console.error("Error loading course details", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [courseData, reviewsData] = await Promise.all([
-            fetchCourseDetails(id),
-            fetchCourseReviews(id)
-        ]);
-        setCourse(courseData);
-        setReviews(reviewsData);
-      } catch (err) {
-        console.error(err);
-        setError('Nie udało się pobrać szczegółów kursu');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
-  }, [id]);
+  }, [id, user]);
 
-  const handleStartCourse = async () => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      await fetchUserEnrollment(id);
-      navigate(`/course-view/${id}`);
-    } catch (err) {
-      if (err.message && (err.message.includes("zapisany") || err.message.includes("enrolled"))) {
-          navigate(`/course-view/${id}`);
-      } else {
-          console.error("Błąd zapisu:", err);
-          navigate(`/course-view/${id}`);
+  const handleEnroll = async () => {
+      if (!user) {
+          navigate('/login');
+          return;
       }
-    }
+      try {
+          await enrollInCourse(id);
+          setIsEnrolled(true);
+          alert("Zapisano na kurs!");
+      } catch (error) {
+          alert("Błąd zapisu na kurs");
+      }
   };
 
-  const toggleSection = (sectionId) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId]
-    }));
+  const handleContinue = () => {
+      navigate(`/course-view/${id}`);
   };
 
-  if (loading) return <div className="loading-spinner">Ładowanie...</div>;
-  if (error) return <div className="error-message">{error}</div>;
-  if (!course) return <div className="not-found">Nie znaleziono kursu</div>;
+  const handleReviewAdded = () => {
+      setShowReviewForm(false);
+      loadData(); 
+  };
 
-  const totalLessonsCount = course.sections?.reduce((acc, section) => acc + (section.lessons?.length || 0), 0) || 0;
+  if (loading) return <div className="loading">Ładowanie...</div>;
+  if (!course) return <div className="error">Kurs nie znaleziony</div>;
 
   return (
-    <div className="page-wrapper">
-      <Helmet>
-        <title>{course.title} | Platforma e-learningowa</title>
-        <meta name="description" content={course.description} />
-      </Helmet>
-      <main className="course-details-main">
-        <div className="course-content-wrapper">
-          
-          <div className="course-header-dark">
-            <h1 className="course-title">{course.title}</h1>
-            <p className="course-subtitle">{course.description}</p>
-            
-            <div className="course-meta">
-              <div className="rating-wrapper">
-                <span className="rating-number">{course.rating || 0}</span>
-                <StarRating rating={course.rating || 0} />
-              </div>
-              <div className="instructor-info">
-                Utworzono przez <strong>{course.instructor?.name || 'Nieznany Instruktor'}</strong>
-              </div>
-              <div className="last-updated">
-                Kategoria: {course.category} • Poziom: {course.level}
-              </div>
-            </div>
-          </div>
-
-          <div className="course-layout-grid">
-            <div className="course-main-column">
+    <div className="course-details-page">
+      <div className="course-hero">
+          <div className="course-hero-content">
+              <h1>{course.title}</h1>
+              <p className="course-description-short">{course.description.substring(0, 150)}...</p>
               
-              <div className="course-image-mobile">
-                 <img 
-                    src={course.imageUrl || '/src/course/placeholder_dotnet.png'} 
-                    alt={course.title} 
-                    onError={(e) => { e.target.onerror = null; e.target.src = '/src/course/placeholder_dotnet.png'; }}
-                  />
+              <div className="course-meta-large">
+                  <div className="instructor-info-large">
+                       {/* Awatar instruktora w sekcji Hero */}
+                       <img 
+                            src={resolveImageUrl(course.instructor?.avatarUrl) || '/src/icon/usericon.png'} 
+                            alt="Instructor" 
+                            className="instructor-avatar-medium"
+                            onError={(e) => {e.target.onerror = null; e.target.src = '/src/icon/usericon.png'}}
+                        />
+                      <span>Instruktor: {course.instructorName}</span>
+                  </div>
+                  <div className="rating-large">
+                      <StarRating rating={course.averageRating} />
+                      <span>({course.reviewsCount} opinii)</span>
+                  </div>
               </div>
 
-              <div className="section-card">
-                <h3>Opis kursu</h3>
-                <div className="course-description-text">
-                  {course.description}
-                </div>
-              </div>
-
-              <div className="section-card">
-                <h3>Program kursu</h3>
-                <div className="course-curriculum-summary">
-                  <span>{course.sections?.length || 0} sekcji</span>
-                  <span className="dot-separator">•</span>
-                  <span>{totalLessonsCount} lekcji</span>
-                </div>
-
-                <div className="curriculum-list">
-                  {course.sections && course.sections.length > 0 ? (
-                    course.sections.map((section) => (
-                      <div key={section.id} className="curriculum-section">
-                        <div 
-                          className="section-header" 
-                          onClick={() => toggleSection(section.id)}
-                        >
-                          <h5 className="section-title2">
-                            {section.title}
-                          </h5>
-                          <span className={`arrow-icon ${expandedSections[section.id] ? 'rotated' : ''}`}>
-                            ▼
-                          </span>
-                        </div>
-                        
-                        {expandedSections[section.id] && (
-                          <div className="section-content">
-                            {section.lessons && section.lessons.length > 0 ? (
-                              <ul className="lessons-list">
-                                {section.lessons.map((lesson) => (
-                                  <li key={lesson.id} className="lesson-item">
-                                    <span className="icon-play">▶</span>
-                                    <span className="lesson-title">{lesson.title}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <div className="no-lessons">Brak lekcji w tej sekcji</div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))
+              <div className="action-buttons">
+                  {isEnrolled ? (
+                      <button onClick={handleContinue} className="btn-primary-large">Kontynuuj naukę</button>
                   ) : (
-                    <p>Brak dostępnych sekcji w tym kursie.</p>
+                      <button onClick={handleEnroll} className="btn-primary-large">
+                          {course.price > 0 ? `Kup za ${course.price} PLN` : "Zapisz się za darmo"}
+                      </button>
                   )}
-                </div>
               </div>
-              
-              <div className="section-card instructor-section">
-                <h3>Instruktor</h3>
-                <div className="instructor-profile">
-                  <div className="instructor-avatar">
-                     {course.instructor?.name ? course.instructor.name[0].toUpperCase() : '?'}
-                  </div>
-                  <div className="instructor-details">
-                    <h4>{course.instructor?.name || 'Instruktor'}</h4>
-                    <p className="instructor-bio">{course.instructor?.bio || 'Brak biografii instruktora.'}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="section-card reviews-section">
-                <h3>Opinie studentów ({reviews.length})</h3>
-                {reviews.length === 0 ? (
-                    <p style={{ color: '#9ca3af' }}>Ten kurs nie ma jeszcze opinii.</p>
-                ) : (
-                    <div className="reviews-list" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {reviews.map((review) => (
-                        <div key={review.id} className="review-item" style={{ borderBottom: '1px solid #333', paddingBottom: '15px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                            <img 
-                                src={review.userAvatar || '/src/icon/usericon.png'} 
-                                style={{ width: '30px', height: '30px', borderRadius: '50%' }} 
-                                alt="User" 
-                            />
-                            <strong style={{ color: '#fff' }}>{review.userName}</strong>
-                            <StarRating rating={review.rating} />
-                        </div>
-                        <p style={{ color: '#d1d5db', margin: '5px 0 0 0' }}>{review.content}</p>
-                        <small style={{ color: '#6b7280' }}>{new Date(review.createdAt).toLocaleDateString()}</small>
-                        </div>
-                    ))}
-                    </div>
-                )}
-              </div>
-
-            </div>
-
-            <div className="course-sidebar-column">
-              <div className="sidebar-card floating-card">
-                <div className="preview-image-container">
-                  <img 
-                    src={course.imageUrl || '/src/course/placeholder_dotnet.png'} 
-                    alt={course.title} 
-                    className="course-preview-image" 
-                    onError={(e) => { e.target.onerror = null; e.target.src = '/src/course/placeholder_dotnet.png'; }}
-                  />
-                </div>
-                <div className="sidebar-content">
-                  <div className="price-container">
-                    <span className="price-tag">
-                      {course.price && course.price > 0 ? `${course.price} PLN` : 'Darmowy'}
-                    </span>
-                  </div>
-                  
-                  <button className="btn-primary full-width" onClick={handleStartCourse}>
-                    Rozpocznij naukę
-                  </button>
-                  
-                  <div className="sidebar-actions">
-                     <button className="btn-text">Udostępnij</button>
-                     <div className="favorite-wrapper">
-                        <FavoriteHeart courseId={course.id} isFavorite={false} />
-                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
-      </main>
+      </div>
+
+      <div className="course-content-layout">
+          <div className="main-column">
+              <section className="description-section">
+                  <h2>Opis kursu</h2>
+                  <div dangerouslySetInnerHTML={{ __html: course.description }} />
+              </section>
+
+              <section className="curriculum-section">
+                  <h2>Program kursu</h2>
+                  <div className="curriculum-list">
+                      {course.sections?.map(section => (
+                          <div key={section.id} className="section-item-details">
+                              <h3>{section.title}</h3>
+                              <ul>
+                                  {section.lessons?.map(lesson => (
+                                      <li key={lesson.id}>{lesson.title}</li>
+                                  ))}
+                              </ul>
+                          </div>
+                      ))}
+                  </div>
+              </section>
+              
+              <section className="reviews-section">
+                  <div className="reviews-header">
+                      <h2>Opinie studentów</h2>
+                      {isEnrolled && !showReviewForm && (
+                          <button onClick={() => setShowReviewForm(true)} className="add-review-btn">
+                              Dodaj opinię
+                          </button>
+                      )}
+                  </div>
+
+                  {showReviewForm && (
+                      <CourseRatingForm 
+                          courseId={id} 
+                          onReviewSubmit={handleReviewAdded} 
+                          onCancel={() => setShowReviewForm(false)}
+                      />
+                  )}
+
+                  <div className="reviews-list">
+                      {reviews.length === 0 ? (
+                          <p>Brak opinii dla tego kursu.</p>
+                      ) : (
+                          reviews.map(review => (
+                              <div key={review.id} className="review-card">
+                                  <div className="review-header">
+                                      <div className="reviewer-info">
+                                          {/* Awatar recenzenta */}
+                                          <img 
+                                            src={resolveImageUrl(review.avatarUrl) || '/src/icon/usericon.png'} 
+                                            alt={review.userName} 
+                                            className="reviewer-avatar"
+                                            onError={(e) => {e.target.onerror = null; e.target.src = '/src/icon/usericon.png'}}
+                                          />
+                                          <span className="reviewer-name">{review.userName}</span>
+                                      </div>
+                                      <span className="review-date">{new Date(review.createdDate).toLocaleDateString()}</span>
+                                  </div>
+                                  <div className="review-rating">
+                                      <StarRating rating={review.rating} />
+                                  </div>
+                                  <p className="review-text">{review.comment}</p>
+                              </div>
+                          ))
+                      )}
+                  </div>
+              </section>
+          </div>
+          
+          <div className="sidebar-column">
+               <div className="course-features">
+                   <h3>Ten kurs zawiera:</h3>
+                   <ul>
+                       <li>Poziom: {course.level}</li>
+                       <li>Kategoria: {course.category}</li>
+                       <li>Certyfikat ukończenia</li>
+                   </ul>
+               </div>
+          </div>
+      </div>
     </div>
   );
 };

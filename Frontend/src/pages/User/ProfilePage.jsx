@@ -7,25 +7,22 @@ import { fetchMyStats, uploadFile, updateUserProfile, fetchUserProfile, API_BASE
 import BadgesList from '../../components/Gamification/BadgesList';
 import { AuthContext } from '../../context/AuthContext';
 
-// Funkcja pomocnicza do budowania pełnego URL obrazu
 const resolveImageUrl = (path) => {
-  if (!path || path.startsWith('http')) {
-    return path;
-  }
-  // Usuń początkowy '/' jeśli istnieje, aby uniknąć podwójnych slashy, a następnie dodaj API_BASE_URL
-  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  if (path.startsWith('blob:')) return path;
   
-  // Zakładamy, że pliki są serwowane przez endpoint /api/
-  return `${baseUrl}/${cleanPath}`;
+  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  const serverUrl = API_BASE_URL.replace(/\/api\/?$/, '');
+  
+  return `${serverUrl}/${cleanPath}`;
 };
-
 
 const ProfilePage = ({ onBack }) => {
   const { user, updateUser } = useContext(AuthContext);
 
   const [avatarFile, setAvatarFile] = useState(null);
-  const [avatarPreview, setAvatarPreview] = useState(resolveImageUrl(user?.avatarUrl) || '/src/icon/usericon.png');
+  const [avatarPreview, setAvatarPreview] = useState('/src/icon/usericon.png');
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [login, setLogin] = useState(user?.userName || '');
@@ -65,13 +62,11 @@ const ProfilePage = ({ onBack }) => {
                   setLogin(profileData.userName || '');
                   setBio(profileData.bio || '');
                   
-                  // Używamy resolveImageUrl do ustawienia poprawnego URL przy ładowaniu
                   const loadedAvatarUrl = resolveImageUrl(profileData.avatarUrl || user?.avatarUrl);
                   setAvatarPreview(loadedAvatarUrl || '/src/icon/usericon.png');
               }
           } catch (e) {
               if (isMounted) {
-                console.error("Błąd ładowania danych profilu:", e);
                 setError("Nie udało się załadować danych profilu.");
               }
           } finally {
@@ -95,7 +90,6 @@ const ProfilePage = ({ onBack }) => {
     const file = e.target.files[0];
     if (file) {
       setAvatarFile(file);
-      // Nadal używamy lokalnego URL do natychmiastowego podglądu
       setAvatarPreview(URL.createObjectURL(file));
     }
   };
@@ -111,47 +105,41 @@ const ProfilePage = ({ onBack }) => {
     setError(null);
     setLoading(true);
 
-    let pathForDb = avatarFile ? null : user?.avatarUrl; // Domyślnie używamy obecnej ścieżki z bazy
+    let pathForDb = avatarFile ? null : user?.avatarUrl; 
     let success = false;
 
     try {
         if (avatarFile) {
             const uploadResult = await uploadFile(avatarFile);
-            // Serwer powinien zwrócić RELATYWNĄ ścieżkę dla DB (np. /uploads/plik.png)
             pathForDb = uploadResult.url; 
-        } 
+        } else if (user?.avatarUrl && !avatarFile) {
+            pathForDb = user.avatarUrl;
+        }
         
-        // Jeśli plik nie był zmieniany, ale ścieżka w preview jest lokalnym URL.createObjectURL, 
-        // to używamy oryginalnej ścieżki z kontekstu użytkownika. W przeciwnym razie jest już w pathForDb.
-        // Jeśli avatarFile jest nullem, a user?.avatarUrl ma wartość, pathForDb zachowa ją.
-
         const profileData = {
             firstName,
             lastName,
             userName: login,
             bio,
-            avatarUrl: pathForDb, // <-- Przesyłamy relatywną ścieżkę do bazy danych
+            avatarUrl: pathForDb,
             currentPassword: currentPassword || null,
             newPassword: newPassword || null
         };
         
         await updateUserProfile(profileData);
         
-        // Zbudowanie pełnego URL dla frontendu
         const fullNewAvatarUrl = resolveImageUrl(pathForDb);
 
-        // Aktualizacja kontekstu, używając RELATYWNEJ ścieżki do bazy danych
         if (updateUser) {
           updateUser({ ...user, firstName, lastName, userName: login, bio, avatarUrl: pathForDb });
         }
         
         setAvatarFile(null); 
-        setAvatarPreview(fullNewAvatarUrl); // Ustawienie preview na PEŁNY URL
+        setAvatarPreview(fullNewAvatarUrl || '/src/icon/usericon.png');
 
         alert("Zmiany w profilu zostały zapisane!");
         success = true;
     } catch (err) {
-        console.error("Błąd podczas zapisywania profilu:", err);
         setError(err.message || "Wystąpił nieznany błąd podczas zapisywania zmian.");
     } finally {
         setLoading(false);
@@ -186,8 +174,8 @@ const ProfilePage = ({ onBack }) => {
                 src={avatarPreview} 
                 alt="Podgląd awatara" 
                 className="profile-avatar-preview"
-                // Wymuszenie przeładowania, jeśli URL się zmienił
                 key={avatarPreview} 
+                onError={(e) => { e.target.onerror = null; e.target.src = '/src/icon/usericon.png'; }}
               />
               <input 
                 type="file" 

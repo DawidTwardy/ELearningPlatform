@@ -1,37 +1,75 @@
 const API_BASE_URL = 'http://localhost:7115/api';
 
-const getAuthToken = () => localStorage.getItem('token');
-const getRefreshToken = () => localStorage.getItem('refreshToken');
+const getAuthToken = () => {
+    const token = localStorage.getItem('token');
+    return token && token !== 'undefined' && token !== 'null' ? token : null;
+};
+
+const getRefreshToken = () => {
+    const token = localStorage.getItem('refreshToken');
+    return token && token !== 'undefined' && token !== 'null' ? token : null;
+};
+
+// --- NOWA FUNKCJA ---
+const resolveImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    if (path.startsWith('blob:')) return path;
+    
+    // Usuwamy /api z końca URL bazowego, aby wskazywał na root serwera (dla plików statycznych)
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    const serverUrl = API_BASE_URL.replace(/\/api\/?$/, '');
+    
+    return `${serverUrl}/${cleanPath}`;
+};
+
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
+const logout = () => {
+    localStorage.clear();
+    window.location.href = '/login';
+    return new Promise(() => {});
+};
 
 const refreshAccessToken = async () => {
     const refreshToken = getRefreshToken();
     const currentToken = getAuthToken();
 
-    if (!refreshToken || !currentToken) return null;
+    if (!refreshToken) {
+        return logout();
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/Auth/refresh-token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: currentToken, refreshToken })
+            body: JSON.stringify({ token: currentToken || "", refreshToken })
         });
 
         if (response.ok) {
             const data = await response.json();
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('refreshToken', data.refreshToken);
-            return data.token;
-        } else {
-            console.error("Refresh token expired or invalid");
-            localStorage.clear();
-            window.location.href = '/login';
-            return null;
+            if (data && data.token) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('refreshToken', data.refreshToken);
+                return data.token;
+            }
         }
+        
+        return logout();
     } catch (error) {
-        console.error("Refresh request failed", error);
-        localStorage.clear();
-        window.location.href = '/login';
-        return null;
+        return logout();
     }
 };
 
@@ -41,8 +79,11 @@ const authenticatedFetch = async (url, options = {}) => {
     const headers = {
         'Content-Type': 'application/json',
         ...options.headers,
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
 
     if (options.body instanceof FormData) {
         delete headers['Content-Type'];
@@ -52,21 +93,46 @@ const authenticatedFetch = async (url, options = {}) => {
         let response = await fetch(url, { ...options, headers });
 
         if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            
-            if (newToken) {
-                const newHeaders = {
-                    ...headers,
-                    'Authorization': `Bearer ${newToken}`
-                };
-                response = await fetch(url, { ...options, headers: newHeaders });
-            } else {
-                throw new Error("Sesja wygasła. Zaloguj się ponownie.");
+            if (isRefreshing) {
+                try {
+                    const newToken = await new Promise((resolve, reject) => {
+                        failedQueue.push({ resolve, reject });
+                    });
+                    
+                    headers['Authorization'] = `Bearer ${newToken}`;
+                    return await fetch(url, { ...options, headers }).then(handleResponse);
+                } catch (err) {
+                    throw err;
+                }
+            }
+
+            isRefreshing = true;
+
+            try {
+                const newToken = await refreshAccessToken();
+                
+                processQueue(null, newToken);
+                
+                headers['Authorization'] = `Bearer ${newToken}`;
+                response = await fetch(url, { ...options, headers });
+                
+                if (response.status === 401) {
+                     return logout();
+                }
+            } catch (error) {
+                processQueue(error, null);
+                throw error;
+            } finally {
+                isRefreshing = false;
             }
         }
 
         return handleResponse(response);
     } catch (error) {
+        if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+             console.error("Błąd połączenia z serwerem API:", error);
+             throw new Error("Błąd połączenia z serwerem. Sprawdź swoje połączenie internetowe.");
+        }
         throw error;
     }
 };
@@ -366,5 +432,6 @@ export {
     submitDailyReview,
     fetchInstructors,
     fetchInstructorDetails,
+    resolveImageUrl, 
     API_BASE_URL
 };
