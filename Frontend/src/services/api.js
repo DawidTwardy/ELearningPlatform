@@ -226,10 +226,10 @@ const fetchUserNote = async (lessonId) => {
     return authenticatedFetch(`${API_BASE_URL}/Notes/lesson/${lessonId}`, { method: 'GET' });
 };
 
-const saveUserNote = async (lessonId, content) => {
+const saveUserNote = async (lessonId, content, title) => {
     return authenticatedFetch(`${API_BASE_URL}/Notes`, {
         method: 'POST',
-        body: JSON.stringify({ lessonId, content })
+        body: JSON.stringify({ lessonId, content, title })
     });
 };
 

@@ -4,5 +4,6 @@ namespace ELearning.Api.DTOs.Notes
     {
         public int LessonId { get; set; }
         public string Content { get; set; }
+        public string Title { get; set; }
     }
 }

@@ -1,12 +1,11 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using ELearning.Api.Models.CourseContent;
 
 namespace ELearning.Api.Models
 {
     public class UserNote
     {
-        [Key]
         public int Id { get; set; }
 
         [Required]
@@ -15,14 +14,12 @@ namespace ELearning.Api.Models
         [ForeignKey("UserId")]
         public ApplicationUser User { get; set; }
 
-        [Required]
         public int LessonId { get; set; }
 
-        [ForeignKey("LessonId")]
-        public Lesson Lesson { get; set; }
+        public string Content { get; set; }
 
-        public string Content { get; set; } = string.Empty;
+        public string Title { get; set; } = "Moje Notatki";
 
-        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+        public DateTime LastUpdated { get; set; }
     }
 }

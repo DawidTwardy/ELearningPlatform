@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import StarRating from '../../components/Course/StarRating';
 import FavoriteHeart from '../../components/Course/FavoriteHeart';
 import { fetchCourseDetails, fetchUserEnrollment, fetchCourseReviews } from '../../services/api';
@@ -19,7 +20,6 @@ const CourseDetailsPage = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Pobieramy równolegle szczegóły kursu oraz opinie
         const [courseData, reviewsData] = await Promise.all([
             fetchCourseDetails(id),
             fetchCourseReviews(id)
@@ -71,6 +71,10 @@ const CourseDetailsPage = () => {
 
   return (
     <div className="page-wrapper">
+      <Helmet>
+        <title>{course.title} | Platforma e-learningowa</title>
+        <meta name="description" content={course.description} />
+      </Helmet>
       <main className="course-details-main">
         <div className="course-content-wrapper">
           

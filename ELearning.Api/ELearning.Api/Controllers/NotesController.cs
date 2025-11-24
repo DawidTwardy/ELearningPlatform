@@ -1,6 +1,6 @@
 using ELearning.Api.DTOs.Notes;
 using ELearning.Api.Models;
-using ELearning.Api.Persistence;
+using ELearning.Api.Persistence; // <--- ZMIANA: Tu by³o .Data, a powinno byæ .Persistence
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -33,10 +33,15 @@ namespace ELearning.Api.Controllers
 
             if (note == null)
             {
-                return Ok(new NoteDto { LessonId = lessonId, Content = "" });
+                return Ok(new NoteDto { LessonId = lessonId, Content = "", Title = "Moje Notatki" });
             }
 
-            return Ok(new NoteDto { LessonId = lessonId, Content = note.Content });
+            return Ok(new NoteDto
+            {
+                LessonId = lessonId,
+                Content = note.Content,
+                Title = note.Title ?? "Moje Notatki"
+            });
         }
 
         [HttpPost]
@@ -55,6 +60,7 @@ namespace ELearning.Api.Controllers
                     UserId = userId,
                     LessonId = dto.LessonId,
                     Content = dto.Content,
+                    Title = string.IsNullOrWhiteSpace(dto.Title) ? "Moje Notatki" : dto.Title,
                     LastUpdated = DateTime.UtcNow
                 };
                 _context.UserNotes.Add(note);
@@ -62,6 +68,7 @@ namespace ELearning.Api.Controllers
             else
             {
                 note.Content = dto.Content;
+                note.Title = string.IsNullOrWhiteSpace(dto.Title) ? "Moje Notatki" : dto.Title;
                 note.LastUpdated = DateTime.UtcNow;
             }
 

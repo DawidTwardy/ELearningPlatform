@@ -1,11 +1,13 @@
 .notes-wrapper {
-    background-color: #1e1e1e;
+    background-color: #1f2937;
+    padding: 1.5rem;
     border-radius: 12px;
-    padding: 25px 30px;
-    margin-top: 20px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    border: 1px solid #374151;
     display: flex;
     flex-direction: column;
+    gap: 1rem;
+    color: #f3f4f6;
+    height: 100%;
     min-height: 400px;
 }
 
@@ -13,65 +15,133 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #333;
-    padding-bottom: 10px;
+    border-bottom: 1px solid #374151;
+    padding-bottom: 0.75rem;
 }
 
-.notes-header h3 {
-    color: #E0E0E0;
-    margin: 0;
+.notes-title-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
 }
 
-.notes-info {
-    font-size: 0.85em;
-    color: #aaa;
-    font-style: italic;
+.notes-title-input {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #60a5fa;
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    width: 100%;
+    max-width: 300px;
+    transition: all 0.2s;
+}
+
+.notes-title-input:hover {
+    border-color: #374151;
+    background-color: #111827;
+}
+
+.notes-title-input:focus {
+    outline: none;
+    border-color: #60a5fa;
+    background-color: #111827;
+    color: #fff;
+}
+
+.edit-icon {
+    color: #6b7280;
+    opacity: 0.5;
+}
+
+.notes-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.icon-btn {
+    background: transparent;
+    border: 1px solid #4b5563;
+    color: #9ca3af;
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.icon-btn:hover:not(:disabled) {
+    background-color: #374151;
+    color: #fff;
+    border-color: #60a5fa;
+}
+
+.icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.notes-status-bar {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: -0.5rem;
+    text-align: right;
 }
 
 .notes-textarea {
-    flex-grow: 1;
-    width: 100%;
-    background-color: #2a2a2a;
-    border: 1px solid #444;
+    flex: 1;
+    background-color: #111827;
+    border: 1px solid #374151;
     border-radius: 8px;
-    padding: 15px;
-    color: #fff;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 1rem;
-    resize: none;
+    padding: 1rem;
+    color: #e5e7eb;
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 250px;
     outline: none;
-    margin-bottom: 15px;
-    line-height: 1.5;
-    min-height: 300px;
+    transition: border-color 0.2s;
 }
 
 .notes-textarea:focus {
-    border-color: #28A745;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+}
+
+.notes-textarea::placeholder {
+    color: #4b5563;
 }
 
 .notes-actions {
     display: flex;
     justify-content: flex-end;
+    padding-top: 0.5rem;
 }
 
 .save-note-btn {
-    background-color: #28A745;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #2563eb;
     color: white;
     border: none;
+    padding: 0.6rem 1.2rem;
     border-radius: 6px;
-    padding: 10px 20px;
-    font-weight: bold;
+    font-weight: 500;
     cursor: pointer;
     transition: background-color 0.2s;
 }
 
-.save-note-btn:hover {
-    background-color: #218838;
+.save-note-btn:hover:not(:disabled) {
+    background-color: #1d4ed8;
 }
 
 .save-note-btn:disabled {
-    background-color: #444;
+    background-color: #4b5563;
     cursor: not-allowed;
-    color: #aaa;
 }

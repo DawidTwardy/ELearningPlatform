@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchCourseDetails, markLessonCompleted, fetchCompletedLessons, fetchCompletedQuizzes, downloadCertificate, createReview } from '../../services/api';
+import { 
+    fetchCourseDetails, 
+    markLessonCompleted, 
+    fetchCompletedLessons, 
+    fetchCompletedQuizzes, 
+    downloadCertificate, 
+    createReview,
+    fetchUserEnrollment // Dodano import
+} from '../../services/api';
 import QuizView from './QuizView';
 import DiscussionThread from './DiscussionThread';
 import PersonalNotes from '../../components/Lesson/PersonalNotes';
 import CourseRatingForm from '../Course/CourseRatingForm';
+import StudyPlanner from '../../components/Course/StudyPlanner'; // Dodano import
 import '../../styles/pages/CourseView.css';
 
 const BASE_URL = 'http://localhost:7115';
@@ -19,6 +28,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
     const [expandedSections, setExpandedSections] = useState({});
     const [completedLessonIds, setCompletedLessonIds] = useState([]); 
     const [completedQuizIds, setCompletedQuizIds] = useState([]); 
+    const [enrollmentDate, setEnrollmentDate] = useState(null); // Dodano stan daty
     const [error, setError] = useState(null);
     const [showRatingForm, setShowRatingForm] = useState(false);
     
@@ -42,10 +52,12 @@ const CourseView = ({ course: courseProp, onBack }) => {
             try {
                 setLoading(true);
                 
-                const [courseData, completedIds, completedQuizzes] = await Promise.all([
+                // Dodano pobieranie enrollmentData
+                const [courseData, completedIds, completedQuizzes, enrollmentData] = await Promise.all([
                     fetchCourseDetails(courseId),
                     fetchCompletedLessons(courseId).catch(() => []), 
-                    fetchCompletedQuizzes(courseId).catch(() => [])
+                    fetchCompletedQuizzes(courseId).catch(() => []),
+                    fetchUserEnrollment(courseId).catch(() => null)
                 ]);
                 
                 if (!courseData) throw new Error("Brak danych");
@@ -53,6 +65,13 @@ const CourseView = ({ course: courseProp, onBack }) => {
                 setCourse(courseData);
                 setCompletedLessonIds(completedIds);
                 setCompletedQuizIds(completedQuizzes);
+
+                // Ustawienie daty zapisu
+                if (enrollmentData && enrollmentData.enrollmentDate) {
+                    setEnrollmentDate(enrollmentData.enrollmentDate);
+                } else {
+                    setEnrollmentDate(new Date().toISOString()); 
+                }
                 
                 const sections = courseData.sections || courseData.Sections || [];
                 if (sections.length > 0) {
@@ -250,6 +269,10 @@ const CourseView = ({ course: courseProp, onBack }) => {
     const courseSections = course.sections || course.Sections || [];
     const isCompleted = isCourseFullyCompleted();
 
+    // Obliczenia dla StudyPlanner
+    const totalLessons = courseSections.reduce((acc, sec) => acc + (sec.lessons || sec.Lessons || []).length, 0);
+    const completedLessonsCount = completedLessonIds.length;
+
     return (
         <div className="course-view-container">
             <div className="course-view-content">
@@ -380,6 +403,13 @@ const CourseView = ({ course: courseProp, onBack }) => {
                         );
                     })}
                     
+                    {/* Dodano Study Planner w pasku bocznym */}
+                    <StudyPlanner 
+                        totalLessons={totalLessons}
+                        completedLessons={completedLessonsCount}
+                        enrollmentDate={enrollmentDate}
+                    />
+
                     {isCompleted && (
                         <button 
                             className="rate-course-button" 
