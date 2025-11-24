@@ -32,28 +32,31 @@ namespace ELearning.Api.Controllers
             return Ok(notifications);
         }
 
-        // --- DODANO: Metoda do tworzenia powiadomieñ ---
         [HttpPost]
-        public async Task<IActionResult> CreateNotification([FromBody] Notification notification)
+        public async Task<IActionResult> CreateNotification([FromBody] CreateNotificationDto dto)
         {
-            if (notification == null) return BadRequest();
+            if (dto == null) return BadRequest();
 
-            // Ustawiamy domyœlne wartoœci
-            notification.CreatedAt = DateTime.UtcNow;
-            notification.IsRead = false;
-
-            // Jeœli userId nie zosta³ podany, zwracamy b³¹d (dla zg³oszeñ b³êdów userId to instruktor)
-            if (string.IsNullOrEmpty(notification.UserId))
+            if (string.IsNullOrEmpty(dto.UserId))
             {
                 return BadRequest(new { message = "Odbiorca (UserId) jest wymagany." });
             }
+
+            var notification = new Notification
+            {
+                UserId = dto.UserId,
+                Message = dto.Message,
+                Type = dto.Type,
+                RelatedEntityId = dto.RelatedEntityId,
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false
+            };
 
             _context.Notifications.Add(notification);
             await _context.SaveChangesAsync();
 
             return Ok(notification);
         }
-        // -----------------------------------------------
 
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
@@ -68,6 +71,14 @@ namespace ELearning.Api.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        public class CreateNotificationDto
+        {
+            public string UserId { get; set; }
+            public string Message { get; set; }
+            public string Type { get; set; }
+            public int? RelatedEntityId { get; set; }
         }
     }
 }

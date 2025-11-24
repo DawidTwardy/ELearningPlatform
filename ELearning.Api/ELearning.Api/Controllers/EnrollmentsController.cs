@@ -31,6 +31,25 @@ namespace ELearning.Api.Controllers
             return Ok(exists);
         }
 
+        [HttpGet("{courseId}/status")]
+        public async Task<ActionResult<object>> GetEnrollmentStatus(int courseId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var enrollment = await _context.Enrollments
+                .FirstOrDefaultAsync(e => e.CourseId == courseId && e.UserId == userId);
+
+            if (enrollment == null) return NotFound();
+
+            return Ok(new
+            {
+                enrollment.EnrollmentDate,
+                enrollment.Progress,
+                enrollment.IsCompleted
+            });
+        }
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetMyEnrollments()
         {
@@ -43,7 +62,7 @@ namespace ELearning.Api.Controllers
 
             var enrollments = await _context.Enrollments
                 .Include(e => e.Course)
-                .ThenInclude(c => c.Instructor) // WA¯NE: Pobieramy dane instruktora
+                .ThenInclude(c => c.Instructor)
                 .Where(e => e.UserId == userId)
                 .Select(e => new
                 {
@@ -59,7 +78,6 @@ namespace ELearning.Api.Controllers
                         e.Course.Category,
                         e.Course.Level,
                         ImageUrl = !string.IsNullOrEmpty(e.Course.ImageUrl) ? e.Course.ImageUrl : "/src/course/placeholder_ai.png",
-                        // Teraz Instructor nie bêdzie nullem, jeœli jest przypisany w bazie
                         InstructorName = e.Course.Instructor != null ? e.Course.Instructor.UserName : "Instruktor"
                     }
                 })
@@ -89,7 +107,7 @@ namespace ELearning.Api.Controllers
 
             if (existingEnrollment != null)
             {
-                
+
                 return Ok(new { message = "Jesteœ ju¿ zapisany na ten kurs.", enrollmentId = existingEnrollment.Id, alreadyEnrolled = true });
             }
 

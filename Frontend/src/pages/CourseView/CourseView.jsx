@@ -240,12 +240,12 @@ const CourseView = ({ course: courseProp, onBack }) => {
                 return;
             }
 
-            // POPRAWKA: Usunięto pole 'title', którego nie ma w modelu backendowym
-            // Tytuł wklejamy na początek wiadomości
+            // POPRAWKA: Dodano relatedEntityId (ID kursu), aby powiązać zgłoszenie z kursem
             await createNotification({
                 userId: instructorId,
                 message: `[Zgłoszenie błędu: ${currentContent?.title || "Lekcja"}] Użytkownik zgłosił błąd w kursie "${course.title}". Treść: ${reportReason}`,
-                type: 'alert'
+                type: 'alert',
+                relatedEntityId: parseInt(courseId)
             });
 
             alert("Zgłoszenie zostało wysłane do instruktora.");

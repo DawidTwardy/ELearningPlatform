@@ -9,7 +9,7 @@ namespace ELearning.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // Zmiana: Usuniêto Roles = "Instructor,Admin", aby ka¿dy twórca kursu mia³ dostêp
+    [Authorize]
     public class AnalyticsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -29,7 +29,6 @@ namespace ELearning.Api.Controllers
 
             if (course == null) return NotFound();
 
-            // Weryfikacja: czy u¿ytkownik jest w³aœcicielem kursu lub administratorem
             if (course.InstructorId != userId && !User.IsInRole("Admin")) return Forbid();
 
             var enrollments = await _context.Enrollments
@@ -75,6 +74,19 @@ namespace ELearning.Api.Controllers
                 .OrderBy(x => x.Date)
                 .ToList();
 
+            // Pobieranie zg³oszeñ b³êdów dla tego kursu
+            var reports = await _context.Notifications
+                .Where(n => n.RelatedEntityId == courseId && n.Type == "alert")
+                .OrderByDescending(n => n.CreatedAt)
+                .Select(n => new CourseReportDto
+                {
+                    Id = n.Id,
+                    Message = n.Message,
+                    CreatedAt = n.CreatedAt,
+                    IsRead = n.IsRead
+                })
+                .ToListAsync();
+
             var result = new CourseAnalyticsDto
             {
                 CourseId = course.Id,
@@ -82,7 +94,8 @@ namespace ELearning.Api.Controllers
                 TotalStudents = totalStudents,
                 AverageQuizScore = Math.Round(avgQuizScore, 2),
                 CompletionRate = Math.Round(completionRate, 2),
-                EnrollmentGrowth = enrollmentGrowth
+                EnrollmentGrowth = enrollmentGrowth,
+                Reports = reports
             };
 
             return Ok(result);

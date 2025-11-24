@@ -105,7 +105,7 @@ const fetchCourseDetails = async (courseId) => {
 };
 
 const fetchInstructorCourses = async () => {
-    return authenticatedFetch(`${API_BASE_URL}/Courses/instructor`, { method: 'GET' });
+    return authenticatedFetch(`${API_BASE_URL}/Courses/my-courses`, { method: 'GET' });
 };
 
 const searchCourses = async (query) => {
@@ -144,13 +144,13 @@ const fetchCourseProgress = async (courseId) => {
 };
 
 const fetchCompletedLessons = async (courseId) => {
-    const data = await authenticatedFetch(`${API_BASE_URL}/Progress/course/${courseId}`, { method: 'GET' });
-    return Array.isArray(data) ? data.map(p => p.lessonId) : [];
+    const data = await authenticatedFetch(`${API_BASE_URL}/Progress/course/${courseId}/completed-lessons`, { method: 'GET' });
+    return Array.isArray(data) ? data : [];
 };
 
 const fetchCompletedQuizzes = async (courseId) => {
-    const data = await authenticatedFetch(`${API_BASE_URL}/Progress/course/${courseId}/quizzes`, { method: 'GET' });
-    return Array.isArray(data) ? data.map(q => q.quizId) : [];
+    const data = await authenticatedFetch(`${API_BASE_URL}/Progress/course/${courseId}/completed-quizzes`, { method: 'GET' });
+    return Array.isArray(data) ? data : [];
 };
 
 const markLessonCompleted = async (lessonId) => {

@@ -84,6 +84,42 @@ const CourseAnalyticsPage = () => {
                     </BarChart>
                 </ResponsiveContainer>
             </div>
+
+            {/* Nowa sekcja: Zgłoszenia Błędów */}
+            <div className="analytics-chart-card" style={{ marginTop: '20px' }}>
+                <h3 style={{ color: '#fff', marginBottom: '15px' }}>Zgłoszenia od Użytkowników</h3>
+                {analytics.reports && analytics.reports.length > 0 ? (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', color: '#e0e0e0' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid #555' }}>
+                                    <th style={{ padding: '10px', textAlign: 'left' }}>Data</th>
+                                    <th style={{ padding: '10px', textAlign: 'left' }}>Treść zgłoszenia</th>
+                                    <th style={{ padding: '10px', textAlign: 'left' }}>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {analytics.reports.map((report) => (
+                                    <tr key={report.id} style={{ borderBottom: '1px solid #444', backgroundColor: report.isRead ? 'transparent' : 'rgba(211, 47, 47, 0.1)' }}>
+                                        <td style={{ padding: '10px' }}>
+                                            {new Date(report.createdAt).toLocaleDateString()} {new Date(report.createdAt).toLocaleTimeString()}
+                                        </td>
+                                        <td style={{ padding: '10px' }}>{report.message}</td>
+                                        <td style={{ padding: '10px' }}>
+                                            {report.isRead ? 
+                                                <span style={{ color: '#aaa' }}>Przeczytane</span> : 
+                                                <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>Nowe</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p style={{ color: '#aaa' }}>Brak zgłoszeń dla tego kursu.</p>
+                )}
+            </div>
         </div>
     );
 };
