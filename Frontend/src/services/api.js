@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:7115/api';
+// const API_BASE_URL = 'http://localhost:7115/api'; // Stary adres lokalny
+const API_BASE_URL = 'https://elearning-api-s80m.onrender.com/api'; // Nowy adres produkcyjny
 
 const getAuthToken = () => {
     const token = localStorage.getItem('token');
