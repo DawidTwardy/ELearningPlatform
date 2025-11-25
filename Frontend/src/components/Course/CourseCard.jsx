@@ -30,13 +30,24 @@ const CourseCard = ({
       navigate(`/courses/${course.id}`);
   };
 
-  const ratingValue = parseFloat(course.averageRating) || 0;
-  // Sprawdzamy, czy reviewsCount jest liczbą większą od 0
-  // Czasami z backendu może przyjść string, więc parsujemy
-  const reviewsCount = parseInt(course.reviewsCount) || 0;
+  const ratingValue = parseFloat(course.averageRating || course.AverageRating) || 0;
+  const reviewsCount = parseInt(course.reviewsCount || course.ReviewsCount) || 0;
   const hasReviews = reviewsCount > 0;
 
-  const displayImage = resolveImageUrl(course.imageUrl || course.imageSrc);
+  // Pobieranie nazwy instruktora z różnych możliwych pól (zależnie od endpointu API)
+  const instructorName = course.instructorName 
+      || course.InstructorName 
+      || course.instructor?.name 
+      || course.Instructor?.Name 
+      || "Instruktor";
+
+  // Pobieranie ID instruktora
+  const instructorId = course.instructorId || course.InstructorId || course.instructor?.id || course.Instructor?.Id;
+
+  // Pobieranie awatara instruktora
+  const instructorAvatar = course.instructor?.avatarUrl || course.Instructor?.AvatarUrl;
+
+  const displayImage = resolveImageUrl(course.imageUrl || course.imageSrc || course.ImageUrl);
 
   return (
     <div className="course-card" onClick={handleCardClick}>
@@ -66,24 +77,26 @@ const CourseCard = ({
       </div>
       
       <div className="course-info">
-        <div className="course-category">{course.category}</div>
         <h3 className="course-title" title={course.title}>{course.title}</h3>
         
         {showInstructor && (
             <div className="course-instructor">
                 <img 
-                    src={resolveImageUrl(course.instructor?.avatarUrl) || '/src/icon/usericon.png'} 
-                    alt="Instructor" 
+                    src={resolveImageUrl(instructorAvatar) || '/src/icon/usericon.png'} 
+                    alt={instructorName} 
                     className="instructor-avatar-small"
                     onError={(e) => {e.target.onerror = null; e.target.src = '/src/icon/usericon.png'}}
                 />
-                <Link to={`/instructor/${course.instructorId}`} className="instructor-link">
-                    {course.instructorName || "Instruktor"}
-                </Link>
+                {instructorId ? (
+                    <Link to={`/instructor/${instructorId}`} className="instructor-link">
+                        {instructorName}
+                    </Link>
+                ) : (
+                    <span className="instructor-name-text">{instructorName}</span>
+                )}
             </div>
         )}
 
-        {/* ZMIANA: Logika wyśrodkowania "Brak opinii" */}
         <div className="course-meta" style={{ justifyContent: hasReviews ? 'flex-start' : 'center' }}>
             {hasReviews ? (
                 <>

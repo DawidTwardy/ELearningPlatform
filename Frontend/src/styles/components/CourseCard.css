@@ -11,7 +11,7 @@
     cursor: pointer;
     border: none;
     color: #FFFFFF;
-    min-height: 360px; /* Lekko zwiększona wysokość */
+    min-height: 360px;
 }
 
 .course-card:hover { 
@@ -91,10 +91,10 @@
     margin-bottom: 15px;
     display: flex;
     align-items: center;
-    justify-content: center; 
+    justify-content: flex-start; /* ZMIANA: Wyrównanie do lewej */
 }
 
-/* ZMIANA: Powiększone zdjęcie instruktora (40px) */
+/* ZMIANA: Powiększone zdjęcie instruktora */
 .instructor-avatar-small {
     width: 40px; 
     height: 40px;
@@ -123,28 +123,28 @@
     gap: 8px; 
     margin-top: auto;
     width: 100%;
-    min-height: 30px;
+    min-height: 40px;
 }
 
 /* Styl kontenera gwiazdek */
-.stars-container-full .star-rating {
+.course-meta .star-rating {
     display: flex;
     justify-content: center; 
     width: auto;
     padding: 0;
-    gap: 3px; 
+    gap: 10px; /* Duży odstęp między gwiazdkami */
 }
 
-/* ZMIANA: Powiększone gwiazdki (28px) */
-.stars-container-full .star-icon-image {
-    width: 28px; 
-    height: 28px;
+/* ZMIANA: Bardzo duże gwiazdki (36px) */
+.course-meta .star-icon-image {
+    width: 36px; 
+    height: 36px;
 }
 
 .rating-count {
-    font-size: 0.95rem;
+    font-size: 1rem; 
     color: #888;
-    margin-left: 5px;
+    margin-left: 12px;
     font-weight: 500;
 }
 
