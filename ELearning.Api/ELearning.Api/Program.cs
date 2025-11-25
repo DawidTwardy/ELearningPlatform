@@ -11,8 +11,13 @@ using System.Text.Json.Serialization;
 using WebPush;
 using ELearning.Api.Persistence;
 using ELearning.Api.Models.Gamification;
+using QuestPDF.Infrastructure; // Dodano using dla QuestPDF
 
 var builder = WebApplication.CreateBuilder(args);
+
+// KONFIGURACJA LICENCJI QUESTPDF (Wymagane w nowszych wersjach biblioteki)
+// Ustawiamy licencjê Community, aby unikn¹æ b³êdu przy generowaniu PDF
+QuestPDF.Settings.License = LicenseType.Community;
 
 var frontendUrl = builder.Configuration["FrontendUrl"];
 
@@ -192,10 +197,6 @@ static async Task SeedRolesAndAdminUser(UserManager<ApplicationUser> userManager
         {
             await userManager.AddToRoleAsync(adminUser, adminRole);
         }
-
-        // Opcjonalnie reset has³a admina przy ka¿dym uruchomieniu (dla deweloperki)
-        // await userManager.RemovePasswordAsync(adminUser);
-        // await userManager.AddPasswordAsync(adminUser, adminPassword);
     }
 }
 
