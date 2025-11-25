@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchMyEnrollments, fetchCourseDetails, resolveImageUrl } from '../../services/api'; // Dodano fetchCourseDetails
+import { fetchMyEnrollments, fetchCourseDetails, resolveImageUrl } from '../../services/api';
 import CourseCard from '../../components/Course/CourseCard';
 import { useNavigate } from 'react-router-dom';
 import '../../styles/components/App.css';
@@ -127,10 +127,19 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
                 key={item.id || item.Id}
                 course={mappedCourse}
                 onClick={() => handleContinue(mappedCourse.id)}
-                progress={progressValue}
+                // progress={progressValue} // USUNIĘTO: Domyślny pasek postępu w CourseCard jest ukryty
                 showFavoriteButton={false}
                 showInstructor={true}
               >
+                  {/* DODANO: Niestandardowy pasek postępu z tekstem */}
+                  <div className="progress-bar-container">
+                      <div 
+                          className={`progress-bar-fill ${progressValue === 100 ? 'completed' : ''}`} 
+                          style={{ width: `${progressValue}%` }} 
+                      />
+                      <span className="progress-bar-text">{progressValue}%</span>
+                  </div>
+
                   <button 
                       className="card-continue-button"
                       onClick={(e) => { e.stopPropagation(); handleContinue(mappedCourse.id); }}

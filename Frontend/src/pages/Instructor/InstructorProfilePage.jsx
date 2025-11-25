@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchInstructorDetails, resolveImageUrl } from '../../services/api';
+import { fetchInstructorDetails, resolveImageUrl, fetchCourseDetails } from '../../services/api';
 import StarRating from '../../components/Course/StarRating';
 import '../../styles/pages/InstructorProfilePage.css';
 
@@ -11,15 +11,34 @@ const InstructorProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Paginacja
   const [currentPage, setCurrentPage] = useState(1);
   const coursesPerPage = 9;
 
   useEffect(() => {
-    const fetchInstructor = async () => {
+    const loadInstructorData = async () => {
       try {
         setLoading(true);
         const data = await fetchInstructorDetails(id);
+        
+        if (data.courses && data.courses.length > 0) {
+            const enrichedCourses = await Promise.all(
+                data.courses.map(async (course) => {
+                    try {
+                        const details = await fetchCourseDetails(course.id);
+                        return {
+                            ...course,
+                            rating: details.averageRating ?? details.rating ?? course.rating ?? 0,
+                            reviewsCount: details.reviewsCount ?? 0
+                        };
+                    } catch (e) {
+                        console.warn("Nie udało się pobrać szczegółów kursu:", course.id);
+                        return course;
+                    }
+                })
+            );
+            data.courses = enrichedCourses;
+        }
+
         setInstructor(data);
       } catch (err) {
         console.error(err);
@@ -29,14 +48,13 @@ const InstructorProfilePage = () => {
       }
     };
 
-    fetchInstructor();
+    loadInstructorData();
   }, [id]);
 
   if (loading) return <div className="loading-container">Ładowanie profilu...</div>;
   if (error) return <div className="error-container">{error}</div>;
   if (!instructor) return <div className="error-container">Nie znaleziono instruktora.</div>;
 
-  // Logika paginacji
   const courses = instructor.courses || [];
   const indexOfLastCourse = currentPage * coursesPerPage;
   const indexOfFirstCourse = indexOfLastCourse - coursesPerPage;
@@ -74,7 +92,6 @@ const InstructorProfilePage = () => {
         <div className="profile-details">
           <h1>{displayName}</h1>
           
-          {/* ZMIANA: Używamy dangerouslySetInnerHTML, aby interpretować HTML z bazy (np. z edytora tekstu) */}
           <div 
             className="profile-bio" 
             dangerouslySetInnerHTML={{ __html: instructor.bio || "Brak opisu." }}
@@ -112,9 +129,6 @@ const InstructorProfilePage = () => {
                         
                         <div className="course-item-info">
                             <h4>{course.title}</h4>
-                            <p className="course-category" style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '10px' }}>
-                                {course.category || 'Ogólne'}
-                            </p>
                             
                             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                                 {rating > 0 ? (
