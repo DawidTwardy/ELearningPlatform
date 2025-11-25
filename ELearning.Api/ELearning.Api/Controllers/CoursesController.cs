@@ -24,6 +24,8 @@ namespace ELearning.Api.Controllers
         {
             var query = _context.Courses
                 .Include(c => c.Instructor)
+                .Include(c => c.Enrollments) // Dodano Enrollments do listy
+                .Include(c => c.Reviews)     // Dodano Reviews do listy
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
@@ -49,8 +51,10 @@ namespace ELearning.Api.Controllers
                 c.Price,
                 ImageSrc = c.ImageUrl,
                 ImageUrl = c.ImageUrl,
-                Rating = c.Rating,
-                RatingCount = c.RatingCount,
+                // Obliczamy wartości dynamicznie
+                AverageRating = c.Reviews.Any() ? c.Reviews.Average(r => r.Rating) : 0,
+                ReviewsCount = c.Reviews.Count,
+                StudentsCount = c.Enrollments.Count,
                 Instructor = c.Instructor != null ? new { Name = c.Instructor.UserName, Bio = "Instruktor" } : null
             });
 
@@ -71,6 +75,8 @@ namespace ELearning.Api.Controllers
             var courses = await _context.Courses
                 .Where(c => c.InstructorId == userId)
                 .Include(c => c.Instructor)
+                .Include(c => c.Enrollments) // Dodano
+                .Include(c => c.Reviews)     // Dodano
                 .ToListAsync();
 
             var result = courses.Select(c => new
@@ -83,8 +89,9 @@ namespace ELearning.Api.Controllers
                 c.Price,
                 ImageSrc = c.ImageUrl,
                 ImageUrl = c.ImageUrl,
-                Rating = c.Rating,
-                RatingCount = c.RatingCount,
+                AverageRating = c.Reviews.Any() ? c.Reviews.Average(r => r.Rating) : 0,
+                ReviewsCount = c.Reviews.Count,
+                StudentsCount = c.Enrollments.Count,
                 Instructor = c.Instructor != null ? new { Name = c.Instructor.UserName, Bio = "Instruktor" } : null
             });
 
@@ -103,12 +110,19 @@ namespace ELearning.Api.Controllers
                         .ThenInclude(q => q.Questions)
                             .ThenInclude(qt => qt.Options)
                 .Include(c => c.Instructor)
+                .Include(c => c.Enrollments) // WAŻNE: Pobieramy zapisy
+                .Include(c => c.Reviews)     // WAŻNE: Pobieramy opinie
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)
             {
                 return NotFound();
             }
+
+            // Obliczamy średnią ocenę na podstawie tabeli Reviews
+            double avgRating = course.Reviews.Any() ? course.Reviews.Average(r => r.Rating) : 0;
+            int reviewsCount = course.Reviews.Count;
+            int studentsCount = course.Enrollments.Count;
 
             var result = new
             {
@@ -120,13 +134,17 @@ namespace ELearning.Api.Controllers
                 course.Price,
                 ImageSrc = course.ImageUrl,
                 ImageUrl = course.ImageUrl,
-                Rating = course.Rating,
-                RatingCount = course.RatingCount,
-                // --- WAŻNE: Dodano InstructorId ---
+
+                // Mapujemy na nazwy oczekiwane przez Frontend
+                AverageRating = avgRating,
+                ReviewsCount = reviewsCount,
+                StudentsCount = studentsCount,
+
                 InstructorId = course.InstructorId,
                 Instructor = course.Instructor != null ? new
                 {
                     Name = course.Instructor.UserName,
+                    AvatarUrl = course.Instructor.AvatarUrl, // Dodajemy AvatarUrl jeśli istnieje w modelu User
                     AvatarSrc = "/src/icon/usericon.png",
                     Bio = "Instruktor"
                 } : null,
@@ -201,7 +219,9 @@ namespace ELearning.Api.Controllers
                     course.Price,
                     ImageSrc = course.ImageUrl,
                     ImageUrl = course.ImageUrl,
-                    Rating = 0,
+                    AverageRating = 0,
+                    ReviewsCount = 0,
+                    StudentsCount = 0,
                     Instructor = new { Name = User.Identity?.Name ?? "Ja", Bio = "Instruktor" },
                     Sections = course.Sections.Select(s => new
                     {
