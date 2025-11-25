@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import '../../styles/pages/CourseEditPage.css';
 import { 
   getEmptyContentForType, 
@@ -9,7 +9,7 @@ import {
   QuizEditor,
   LessonResourcesEditor 
 } from './CourseEditPage.jsx';
-import { uploadFile } from '../../services/api';
+import { uploadFile, resolveImageUrl } from '../../services/api';
 
 const CourseAddPage = ({ onBack }) => {
   const navigate = useNavigate();
@@ -25,6 +25,22 @@ const CourseAddPage = ({ onBack }) => {
       ...prev,
       [id]: !prev[id]
     }));
+  };
+
+  const handleThumbnailChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const result = await uploadFile(file);
+      setThumbnailUrl(result.url);
+    } catch (error) {
+      console.error(error);
+      alert("Błąd przesyłania zdjęcia: " + error.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = (e) => {
@@ -57,14 +73,12 @@ const CourseAddPage = ({ onBack }) => {
                 contentStr = lesson.content || "";
             }
             
-            // WAŻNE: Mapowanie zasobów - Tworzymy czysty obiekt
             const resourcesToSave = (lesson.resources || [])
                 .filter(res => res.fileUrl || res.url)
                 .map(res => ({
-                    Id: 0, // Przy tworzeniu nowego kursu zawsze 0
+                    Id: 0, 
                     Name: res.name || res.fileName || "Plik do pobrania",
                     FileUrl: res.fileUrl || res.url
-                    // Bez pola Lesson!
                 }));
 
             return {
@@ -171,7 +185,6 @@ const CourseAddPage = ({ onBack }) => {
     });
   };
 
-  // --- HANDLERY (Bez zmian) ---
   const updateSectionField = (sectionId, field, value) => {
      setSections(prevSections =>
       prevSections.map(section => 
@@ -423,16 +436,40 @@ const CourseAddPage = ({ onBack }) => {
                   />
                 </div>
               </div>
+              
               <div className="edit-form-group" style={{marginTop: '20px'}}>
-                <label htmlFor="courseThumbnail">URL Miniaturki</label>
-                <input
-                  type="text"
-                  id="courseThumbnail"
-                  className="edit-input"
-                  value={thumbnailUrl}
-                  onChange={(e) => setThumbnailUrl(e.target.value)}
-                  placeholder="Np. /src/course/placeholder_nowy.png"
-                />
+                <label>Miniaturka Kursu</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '10px' }}>
+                    {thumbnailUrl && (
+                        <div style={{ 
+                            width: '120px', 
+                            height: '80px', 
+                            backgroundColor: '#333', 
+                            borderRadius: '8px', 
+                            overflow: 'hidden',
+                            border: '1px solid #555'
+                        }}>
+                            <img 
+                                src={resolveImageUrl(thumbnailUrl)} 
+                                alt="Miniaturka" 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {e.target.src = '/src/course/placeholder_default.png'}}
+                            />
+                        </div>
+                    )}
+                    <label className="edit-btn-upload">
+                        Wybierz obraz
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleThumbnailChange}
+                            style={{ display: 'none' }}
+                        />
+                    </label>
+                    <span style={{color: '#aaa', fontSize: '0.9rem'}}>
+                        {thumbnailUrl ? 'Obraz wybrany' : 'Brak wybranego obrazu'}
+                    </span>
+                </div>
               </div>
             </div>
           )}

@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../../styles/pages/CourseEditPage.css';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
-import { fetchCourseDetails, uploadFile } from '../../services/api';
-
-// --- Funkcje pomocnicze i komponenty (Bez zmian logicznych, ale w pełnej wersji) ---
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
+import { fetchCourseDetails, uploadFile, resolveImageUrl } from '../../services/api';
 
 const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
@@ -43,7 +41,6 @@ const deepParseCourseContent = (course) => {
             });
         }
         
-        // Fix dla Quizów - upewnienie się, że typ pytania jest poprawny
         if (section.quiz && section.quiz.questions) {
              section.quiz.questions = section.quiz.questions.map(q => ({
                  ...q,
@@ -365,7 +362,7 @@ export const QuizEditor = ({ quiz, onQuizChange }) => {
 const CourseEditPage = ({ course, onBack }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [thumbnailUrl, setThumbnailUrl] = useState("/src/course/placeholder_sql.png");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [sections, setSections] = useState([]); 
   const [openItems, setOpenItems] = useState({});
   const [uploading, setUploading] = useState(false); 
@@ -401,6 +398,22 @@ const CourseEditPage = ({ course, onBack }) => {
     }));
   };
 
+  const handleThumbnailChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const result = await uploadFile(file);
+      setThumbnailUrl(result.url);
+    } catch (error) {
+      console.error(error);
+      alert("Błąd przesyłania zdjęcia: " + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSave = (e) => {
     e.preventDefault();
     
@@ -415,7 +428,6 @@ const CourseEditPage = ({ course, onBack }) => {
         return; 
     }
 
-    // Funkcja czyszcząca ID (tymczasowe ID frontendu zamienia na 0 dla backendu)
     const prepareSectionsForBackend = (secs) => {
         return secs.map(section => {
             const safeSectionId = (typeof section.id === 'number' && section.id > 2000000000) ? 0 : section.id;
@@ -431,11 +443,8 @@ const CourseEditPage = ({ course, onBack }) => {
                     contentStr = lesson.content;
                 }
 
-                // WAŻNE: Mapowanie zasobów z filtrowaniem pól
-                // Tworzymy NOWY obiekt zawierający TYLKO to co backend chce: Id, Name, FileUrl
-                // Unikamy przesyłania pola "Lesson" lub całych obiektów Proxy
                 let resources = (lesson.resources || [])
-                    .filter(res => res.fileUrl || res.url) // Tylko jeśli jest URL
+                    .filter(res => res.fileUrl || res.url) 
                     .map(res => {
                          const resId = (typeof res.id === 'number' && res.id > 2000000000) ? 0 : (res.id || 0);
                          return {
@@ -451,7 +460,7 @@ const CourseEditPage = ({ course, onBack }) => {
                     Content: contentStr,
                     VideoUrl: "", 
                     SectionId: safeSectionId,
-                    Resources: resources // Czysta tablica
+                    Resources: resources 
                 };
             });
 
@@ -561,7 +570,6 @@ const CourseEditPage = ({ course, onBack }) => {
     });
   };
 
-  // --- HANDLERY (Bez zmian) ---
   const updateSectionField = (sectionId, field, value) => {
      setSections(prevSections =>
       prevSections.map(section => 
@@ -808,15 +816,38 @@ const CourseEditPage = ({ course, onBack }) => {
                 </div>
               </div>
               <div className="edit-form-group" style={{marginTop: '20px'}}>
-                <label htmlFor="courseThumbnail">URL Miniaturki</label>
-                <input
-                  type="text"
-                  id="courseThumbnail"
-                  className="edit-input"
-                  value={thumbnailUrl}
-                  onChange={(e) => setThumbnailUrl(e.target.value)}
-                  placeholder="Np. /src/course/placeholder_nowy.png"
-                />
+                <label>Miniaturka Kursu</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '10px' }}>
+                    {thumbnailUrl && (
+                        <div style={{ 
+                            width: '120px', 
+                            height: '80px', 
+                            backgroundColor: '#333', 
+                            borderRadius: '8px', 
+                            overflow: 'hidden',
+                            border: '1px solid #555'
+                        }}>
+                            <img 
+                                src={resolveImageUrl(thumbnailUrl)} 
+                                alt="Miniaturka" 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {e.target.src = '/src/course/placeholder_default.png'}}
+                            />
+                        </div>
+                    )}
+                    <label className="edit-btn-upload">
+                        Wybierz obraz
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleThumbnailChange}
+                            style={{ display: 'none' }}
+                        />
+                    </label>
+                    <span style={{color: '#aaa', fontSize: '0.9rem'}}>
+                        {thumbnailUrl ? 'Obraz wybrany' : 'Brak wybranego obrazu'}
+                    </span>
+                </div>
               </div>
             </div>
           )}
