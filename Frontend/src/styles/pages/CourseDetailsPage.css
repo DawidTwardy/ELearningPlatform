@@ -69,13 +69,19 @@
 .rating-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px; 
+}
+
+/* POWIĘKSZONE GWIAZDKI: Główna ocena kursu (w nagłówku) */
+.rating-badge .star-icon-image {
+  width: 28px;  
+  height: 28px;
 }
 
 .rating-number {
   font-weight: 700;
   color: #e59819;
-  font-size: 16px;
+  font-size: 20px; 
 }
 
 .rating-count {
@@ -251,6 +257,12 @@
 
 .review-rating {
     margin-bottom: 8px;
+}
+
+/* POWIĘKSZONE GWIAZDKI: Opinie studentów */
+.review-rating .star-icon-image {
+    width: 20px; 
+    height: 20px;
 }
 
 .review-text {

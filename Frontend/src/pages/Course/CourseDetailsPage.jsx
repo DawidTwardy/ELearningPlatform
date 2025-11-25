@@ -104,6 +104,7 @@ const CourseDetailsPage = () => {
                 {course.reviewsCount > 0 ? (
                   <>
                     <span className="rating-number">{course.averageRating?.toFixed(1) || '0.0'}</span>
+                    {/* Gwiazdki są teraz stylowane przez CSS w klasie .rating-badge .star-icon-image */}
                     <StarRating rating={course.averageRating || 0} />
                     <span className="rating-count">({course.reviewsCount} opinii)</span>
                   </>
@@ -219,27 +220,13 @@ const CourseDetailsPage = () => {
                 </div>
             </div>
             
-            {/* NOWY PRZYCISK ZGŁOŚ KURS (Dla widoku mobilnego) */}
-            {isAuthenticated && (
-                <div className="section-card">
-                     <button
-                        onClick={() => setIsReportModalOpen(true)}
-                        className="btn-primary btn-full"
-                        style={{ background: '#d32f2f' }}
-                    >
-                        <AlertTriangle size={18} style={{ marginRight: '8px' }} />
-                        Zgłoś kurs do moderacji
-                    </button>
-                </div>
-            )}
-            
           </div>
 
           <div className="course-sidebar-column">
             <div className="sidebar-card"> 
               <div className="preview-media">
                 <img 
-                  src={resolveImageUrl(course.thumbnailUrl) || '/src/course/placeholder_ai.png'} 
+                  src={resolveImageUrl(course.imageUrl) || '/src/course/placeholder_ai.png'} 
                   alt={course.title} 
                   className="course-thumbnail-large"
                   onError={(e) => {e.target.src = '/src/course/placeholder_ai.png'}}
@@ -265,7 +252,6 @@ const CourseDetailsPage = () => {
                     </button>
                   )}
                   
-                  {/* NOWY PRZYCISK ZGŁOŚ KURS (Dla widoku sidebar) */}
                   {isAuthenticated && (
                        <button 
                             onClick={() => setIsReportModalOpen(true)}
