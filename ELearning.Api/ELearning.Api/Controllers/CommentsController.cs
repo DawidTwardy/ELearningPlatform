@@ -40,8 +40,9 @@ namespace ELearning.Api.Controllers
             {
                 Id = c.Id,
                 Content = c.Content,
-                UserName = c.User.UserName,
-                AvatarUrl = c.User.AvatarUrl,
+                // Zabezpieczenie: Jeœli u¿ytkownik zosta³ usuniêty (c.User jest null), wstawiamy domyœlne wartoœci
+                UserName = c.User != null ? c.User.UserName : "Nieznany u¿ytkownik",
+                AvatarUrl = c.User != null ? c.User.AvatarUrl : null,
                 Created = c.Created,
                 ParentCommentId = c.ParentCommentId
             }).ToList();
@@ -144,7 +145,8 @@ namespace ELearning.Api.Controllers
             comment.Content = model.Content;
             await _context.SaveChangesAsync();
 
-            return Ok();
+            // ZMIANA: Zwracamy NoContent (204) zamiast pustego Ok (200), aby frontend nie próbowa³ parsowaæ JSONa
+            return NoContent();
         }
     }
 

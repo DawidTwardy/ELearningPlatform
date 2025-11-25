@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using WebPush;
 using ELearning.Api.Persistence;
+using ELearning.Api.Models.Gamification;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -136,6 +137,7 @@ using (var scope = app.Services.CreateScope())
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
         await SeedRolesAndAdminUser(userManager, roleManager);
+        await SeedBadges(context);
     }
     catch (Exception ex)
     {
@@ -191,7 +193,27 @@ static async Task SeedRolesAndAdminUser(UserManager<ApplicationUser> userManager
             await userManager.AddToRoleAsync(adminUser, adminRole);
         }
 
-        await userManager.RemovePasswordAsync(adminUser);
-        await userManager.AddPasswordAsync(adminUser, adminPassword);
+        // Opcjonalnie reset has³a admina przy ka¿dym uruchomieniu (dla deweloperki)
+        // await userManager.RemovePasswordAsync(adminUser);
+        // await userManager.AddPasswordAsync(adminUser, adminPassword);
+    }
+}
+
+static async Task SeedBadges(ApplicationDbContext context)
+{
+    if (!await context.Badges.AnyAsync())
+    {
+        var badges = new List<Badge>
+        {
+            new Badge { Name = "Pilny Student", Description = "Ukoñczono pierwsz¹ lekcjê", IconUrl = "student.png", CriteriaType = "LessonCount", CriteriaThreshold = 1 },
+            new Badge { Name = "Weteran Nauki", Description = "Ukoñczono 5 lekcji", IconUrl = "veteran.png", CriteriaType = "LessonCount", CriteriaThreshold = 5 },
+            new Badge { Name = "Quiz Master", Description = "Zaliczono 3 quizy", IconUrl = "quiz.png", CriteriaType = "QuizCount", CriteriaThreshold = 3 },
+            new Badge { Name = "Systematycznoœæ", Description = "3 dni nauki z rzêdu", IconUrl = "streak.png", CriteriaType = "Streak", CriteriaThreshold = 3 },
+            new Badge { Name = "Zbieracz Punktów", Description = "Zdob¹dŸ 100 punktów", IconUrl = "points100.png", CriteriaType = "Points", CriteriaThreshold = 100 },
+            new Badge { Name = "Mistrz Wiedzy", Description = "Zdob¹dŸ 500 punktów", IconUrl = "points500.png", CriteriaType = "Points", CriteriaThreshold = 500 }
+        };
+
+        context.Badges.AddRange(badges);
+        await context.SaveChangesAsync();
     }
 }

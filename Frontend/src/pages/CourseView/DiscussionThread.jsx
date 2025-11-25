@@ -24,14 +24,13 @@ const DiscussionThread = ({ courseId }) => {
         }
     }, [courseId]);
 
-    // Zmiana: Dodano parametr silent, aby nie migać "Loadingiem" przy odświeżaniu po edycji
     const loadComments = async (silent = false) => {
         try {
             if (!silent) setLoading(true);
             const data = await fetchComments(courseId);
             setComments(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error("Błąd pobierania komentarzy:", error);
+            console.error(error);
             if (!silent) setComments([]);
         } finally {
             if (!silent) setLoading(false);
@@ -43,9 +42,9 @@ const DiscussionThread = ({ courseId }) => {
         try {
             await createComment(courseId, newCommentContent);
             setNewCommentContent("");
-            loadComments(true); // Ciche odświeżenie
+            loadComments(true);
         } catch (error) {
-            console.error("Błąd dodawania komentarza:", error);
+            console.error(error);
             alert("Nie udało się dodać komentarza.");
         }
     };
@@ -58,9 +57,9 @@ const DiscussionThread = ({ courseId }) => {
             await createComment(courseId, content, parentId);
             setReplyContent({ ...replyContent, [parentId]: '' });
             setActiveReplyId(null);
-            loadComments(true); // Ciche odświeżenie
+            loadComments(true);
         } catch (error) {
-            console.error("Błąd dodawania odpowiedzi:", error);
+            console.error(error);
             alert("Nie udało się dodać odpowiedzi.");
         }
     };
@@ -68,7 +67,6 @@ const DiscussionThread = ({ courseId }) => {
     const startEditing = (comment) => {
         setEditingCommentId(comment.id);
         setEditContent(comment.content);
-        // Zamykamy ewentualne okno odpowiedzi, żeby nie przeszkadzało
         setActiveReplyId(null);
     };
 
@@ -78,9 +76,9 @@ const DiscussionThread = ({ courseId }) => {
             await updateComment(commentId, editContent);
             setEditingCommentId(null);
             setEditContent("");
-            loadComments(true); // Ciche odświeżenie listy, żeby zaktualizować treść
+            loadComments(true);
         } catch (error) {
-            console.error("Błąd edycji komentarza:", error);
+            console.error(error);
             alert("Nie udało się edytować komentarza.");
         }
     };
@@ -89,9 +87,9 @@ const DiscussionThread = ({ courseId }) => {
         if (!window.confirm("Czy na pewno chcesz usunąć ten komentarz?")) return;
         try {
             await deleteComment(commentId);
-            loadComments(true); // Ciche odświeżenie
+            loadComments(true);
         } catch (error) {
-            console.error("Błąd usuwania komentarza:", error);
+            console.error(error);
             alert("Nie udało się usunąć komentarza.");
         }
     };
@@ -113,7 +111,7 @@ const DiscussionThread = ({ courseId }) => {
             setReportReason('');
         } catch (error) {
             console.error(error);
-            alert("Wystąpił błąd podczas wysyłania zgłoszenia: " + (error.message || "Błąd sieci"));
+            alert("Wystąpił błąd podczas wysyłania zgłoszenia.");
         }
     };
 
@@ -131,7 +129,7 @@ const DiscussionThread = ({ courseId }) => {
                             onError={(e) => {e.target.onerror = null; e.target.src = '/src/icon/usericon.png'}}
                             style={{ width: '32px', height: '32px', borderRadius: '50%', marginRight: '10px', objectFit: 'cover' }}
                         />
-                        <span className="comment-author">{comment.userName}</span>
+                        <span className="comment-author">{comment.userName || "Użytkownik"}</span>
                     </div>
                     <span className="comment-date">{new Date(comment.created).toLocaleDateString()}</span>
                 </div>
@@ -142,7 +140,7 @@ const DiscussionThread = ({ courseId }) => {
                             value={editContent}
                             onChange={(e) => setEditContent(e.target.value)}
                             className="comment-input"
-                            autoFocus // Automatycznie ustawia kursor w polu edycji
+                            autoFocus
                         />
                         <div className="comment-actions">
                             <button onClick={() => submitEdit(comment.id)} className="save-btn">Zapisz</button>
@@ -153,7 +151,6 @@ const DiscussionThread = ({ courseId }) => {
                     <div className="comment-content">{comment.content}</div>
                 )}
 
-                {/* Ukrywamy przyciski akcji, jeśli trwa edycja tego komentarza */}
                 {!isEditing && (
                     <div className="comment-actions">
                         <button onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)} className="reply-btn">

@@ -1,3 +1,4 @@
+using ELearning.Api.Interfaces;
 using ELearning.Api.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +15,12 @@ namespace ELearning.Api.Controllers
     public class GamificationController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IGamificationService _gamificationService;
 
-        public GamificationController(ApplicationDbContext context)
+        public GamificationController(ApplicationDbContext context, IGamificationService gamificationService)
         {
             _context = context;
+            _gamificationService = gamificationService;
         }
 
         [HttpGet("my-stats")]
@@ -29,6 +32,10 @@ namespace ELearning.Api.Controllers
             {
                 return Unauthorized();
             }
+
+            // WYMUSZENIE SPRAWDZENIA ODZNAK PRZED POBRANIEM DANYCH
+            // Dziêki temu, jeœli u¿ytkownik ma punkty, ale odznaka nie "wskoczy³a", teraz zostanie dodana.
+            await _gamificationService.CheckBadgesAsync(userId);
 
             var user = await _context.Users
                 .Include(u => u.UserBadges)

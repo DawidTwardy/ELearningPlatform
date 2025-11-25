@@ -60,10 +60,11 @@ namespace ELearning.Api.Controllers
                 return NotFound("U¿ytkownik nie znaleziony.");
             }
 
+            // Fix: Use null-coalescing operator to preserve existing value if model value is null
             user.FirstName = model.FirstName ?? user.FirstName;
             user.LastName = model.LastName ?? user.LastName;
-            user.Bio = model.Bio;
-            user.AvatarUrl = model.AvatarUrl;
+            user.Bio = model.Bio ?? user.Bio; // Also good practice for Bio
+            user.AvatarUrl = model.AvatarUrl ?? user.AvatarUrl; // FIXED: Prevents setting null
 
 
             if (!string.IsNullOrEmpty(model.UserName) && user.UserName != model.UserName)
