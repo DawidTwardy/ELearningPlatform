@@ -11,7 +11,7 @@ using System.Text.Json.Serialization;
 using WebPush;
 using ELearning.Api.Persistence;
 using ELearning.Api.Models.Gamification;
-using QuestPDF.Infrastructure; // Dodano using dla QuestPDF
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,15 +19,25 @@ var builder = WebApplication.CreateBuilder(args);
 // Ustawiamy licencjê Community, aby unikn¹æ b³êdu przy generowaniu PDF
 QuestPDF.Settings.License = LicenseType.Community;
 
-var frontendUrl = builder.Configuration["FrontendUrl"];
+// ******************************************************************
+// ZMIANA CORS: Nowa, liberalna polityka 'AllowAll' (Rozwi¹zuje b³¹d 'Same Origin')
+// ******************************************************************
 
 builder.Services.AddCors(options =>
 {
+    // 1. Definiujemy politykê, która zezwala na ka¿de Ÿród³o, metodê i nag³ówek.
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+
+    // Stara, nieu¿ywana polityka (mo¿na j¹ usun¹æ, ale zostawiamy dla kontekstu)
     options.AddPolicy("AllowFrontend", policy =>
     {
-        var origin = !string.IsNullOrEmpty(frontendUrl) ? frontendUrl : "http://localhost:5173";
-
-        policy.WithOrigins(origin)
+        var frontendUrl = builder.Configuration["FrontendUrl"] ?? "http://localhost:5173";
+        policy.WithOrigins(frontendUrl)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -120,7 +130,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontend");
+// 2. ZASTOSOWANIE NOWEJ, LIBERALNEJ POLITYKI CORS
+app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
@@ -211,10 +222,4 @@ static async Task SeedBadges(ApplicationDbContext context)
             new Badge { Name = "Quiz Master", Description = "Zaliczono 3 quizy", IconUrl = "quiz.png", CriteriaType = "QuizCount", CriteriaThreshold = 3 },
             new Badge { Name = "Systematycznoœæ", Description = "3 dni nauki z rzêdu", IconUrl = "streak.png", CriteriaType = "Streak", CriteriaThreshold = 3 },
             new Badge { Name = "Zbieracz Punktów", Description = "Zdob¹dŸ 100 punktów", IconUrl = "points100.png", CriteriaType = "Points", CriteriaThreshold = 100 },
-            new Badge { Name = "Mistrz Wiedzy", Description = "Zdob¹dŸ 500 punktów", IconUrl = "points500.png", CriteriaType = "Points", CriteriaThreshold = 500 }
-        };
-
-        context.Badges.AddRange(badges);
-        await context.SaveChangesAsync();
-    }
-}
+            new Badge { Name = "Mistrz Wiedzy", Description = "Zdob¹dŸ 50
