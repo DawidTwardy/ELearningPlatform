@@ -3,6 +3,8 @@ import '../../styles/pages/CourseEditPage.css';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { fetchCourseDetails, uploadFile, resolveImageUrl } from '../../services/api';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { GripVertical } from 'lucide-react';
 
 const deepParseCourseContent = (course) => {
     if (!course || !course.sections) return course;
@@ -429,7 +431,7 @@ const CourseEditPage = ({ course, onBack }) => {
     }
 
     const prepareSectionsForBackend = (secs) => {
-        return secs.map(section => {
+        return secs.map((section, index) => { 
             const safeSectionId = (typeof section.id === 'number' && section.id > 2000000000) ? 0 : section.id;
 
             const lessons = (section.lessons || []).map(lesson => {
@@ -498,7 +500,7 @@ const CourseEditPage = ({ course, onBack }) => {
             return {
                 Id: safeSectionId,
                 Title: section.title,
-                Order: section.order || 0,
+                Order: index + 1,
                 Lessons: lessons,
                 Quiz: quiz
             };
@@ -765,6 +767,58 @@ const CourseEditPage = ({ course, onBack }) => {
       }
   };
 
+  // --- DRAG & DROP HANDLER ---
+  const onDragEnd = (result) => {
+    const { source, destination, type } = result;
+    
+    if (!destination) return; // Upuszczono poza listę
+
+    if (type === 'section') {
+        // Przenoszenie sekcji
+        const newSections = Array.from(sections);
+        const [removed] = newSections.splice(source.index, 1);
+        newSections.splice(destination.index, 0, removed);
+        setSections(newSections);
+    } else if (type === 'lesson') {
+        // Przenoszenie lekcji (również między sekcjami)
+        const sourceSectionId = parseInt(source.droppableId.split('-')[1]);
+        const destSectionId = parseInt(destination.droppableId.split('-')[1]);
+
+        const newSections = [...sections];
+        
+        const sourceSectionIndex = newSections.findIndex(s => s.id === sourceSectionId);
+        const destSectionIndex = newSections.findIndex(s => s.id === destSectionId);
+
+        if (sourceSectionIndex === -1 || destSectionIndex === -1) return;
+
+        const sourceLessons = [...newSections[sourceSectionIndex].lessons];
+        const [removed] = sourceLessons.splice(source.index, 1);
+
+        if (sourceSectionId === destSectionId) {
+            // Ta sama sekcja
+            sourceLessons.splice(destination.index, 0, removed);
+            newSections[sourceSectionIndex] = { 
+                ...newSections[sourceSectionIndex], 
+                lessons: sourceLessons 
+            };
+        } else {
+            // Inna sekcja
+            const destLessons = [...newSections[destSectionIndex].lessons];
+            destLessons.splice(destination.index, 0, removed);
+            
+            newSections[sourceSectionIndex] = { 
+                ...newSections[sourceSectionIndex], 
+                lessons: sourceLessons 
+            };
+            newSections[destSectionIndex] = { 
+                ...newSections[destSectionIndex], 
+                lessons: destLessons 
+            };
+        }
+        setSections(newSections);
+    }
+  };
+
   return (
     <main className="main-content">
       <div className="edit-course-container">
@@ -852,109 +906,174 @@ const CourseEditPage = ({ course, onBack }) => {
             </div>
           )}
 
-          <h3>Zawartość Kursu</h3>
+          <h3>Zawartość Kursu (Przeciągnij, aby zmienić kolejność)</h3>
           
-          <div className="sections-list">
-            {sections.map(section => {
-              const lessonsId = `lessons-${section.id}`;
-              const quizId = `quiz-${section.id}`;
-              const areLessonsOpen = !!openItems[lessonsId];
-              const isQuizOpen = !!openItems[quizId];
-              
-              return (
-                <div key={section.id} className="section-item">
-                   <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                        <input
-                            type="text"
-                            className="edit-input-section"
-                            value={section.title}
-                            onChange={(e) => updateSectionField(section.id, 'title', e.target.value)} 
-                            style={{ flex: 1, margin: 0 }}
-                        />
-                        <button 
-                            type="button" 
-                            className="edit-btn-secondary" 
-                            onClick={() => deleteSection(section.id)}
-                            style={{ backgroundColor: '#ff4444', color: 'white', borderColor: '#ff4444' }}
-                        >
-                            Usuń Sekcję
-                        </button>
-                  </div>
-                  
-                  <h4 
-                    className={`collapsible-header ${areLessonsOpen ? 'open' : ''}`}
-                    onClick={() => toggleItem(lessonsId)}
-                  >
-                    Lekcje w sekcji ({section.lessons?.length || 0})
-                  </h4>
-                  
-                  {areLessonsOpen && (
-                    <div className="lessons-list">
-                      {section.lessons?.map(lesson => (
-                        <div key={lesson.id} className="lesson-item">
-                          <div className="lesson-item-header">
-                            <input
-                              type="text"
-                              className="edit-input-lesson"
-                              value={lesson.title}
-                              onChange={(e) => updateLessonField(section.id, lesson.id, 'title', e.target.value)} 
-                            />
-                            <select
-                              className="edit-lesson-type"
-                              value={lesson.type || 'video'}
-                              onChange={(e) => handleLessonTypeChange(section.id, lesson.id, e.target.value)}
-                            >
-                              <option value="video">Wideo</option>
-                              <option value="pdf">PDF</option>
-                              <option value="text">Tekst</option>
-                            </select>
-                             <button 
-                                type="button" 
-                                className="edit-btn-secondary" 
-                                onClick={() => deleteLesson(section.id, lesson.id)}
-                                style={{ backgroundColor: '#ff4444', color: 'white', borderColor: '#ff4444', padding: '5px 10px', marginLeft: '10px', fontSize: '12px' }}
-                            >
-                                Usuń
-                            </button>
-                          </div>
-                          <LessonContentInput 
-                            lesson={lesson}
-                            onTextChange={(field, value) => handleLessonTextChange(section.id, lesson.id, field, value)}
-                            onFileChange={(file) => handleFileSelect(section.id, lesson.id, file)}
-                          />
-                          
-                          <LessonResourcesEditor 
-                              resources={lesson.resources}
-                              onAddResource={(file) => handleAddResource(section.id, lesson.id, file)}
-                              onRemoveResource={(resIndex) => handleRemoveResource(section.id, lesson.id, resIndex)}
-                          />
+          {/* WRAPPER DRAG DROP CONTEXT */}
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="all-sections" type="section">
+              {(provided) => (
+                <div 
+                    className="sections-list" 
+                    ref={provided.innerRef} 
+                    {...provided.droppableProps}
+                >
+                  {sections.map((section, index) => {
+                    const lessonsId = `lessons-${section.id}`;
+                    const quizId = `quiz-${section.id}`;
+                    const areLessonsOpen = !!openItems[lessonsId];
+                    const isQuizOpen = !!openItems[quizId];
+                    
+                    return (
+                      <Draggable 
+                          key={section.id} 
+                          draggableId={`section-${section.id}`} 
+                          index={index}
+                      >
+                        {(provided) => (
+                          <div 
+                              className="section-item"
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              style={{ ...provided.draggableProps.style, marginBottom: '20px' }}
+                          >
+                            <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+                                  {/* HANDLER DLA SEKCJI */}
+                                  <div 
+                                      {...provided.dragHandleProps}
+                                      style={{ cursor: 'grab', color: '#aaa', display: 'flex', alignItems: 'center' }}
+                                      title="Przesuń sekcję"
+                                  >
+                                      <GripVertical size={24} />
+                                  </div>
 
-                        </div>
-                      ))}
-                       <button type="button" className="edit-btn-add-lesson" onClick={() => addLesson(section.id)}>
-                        + Dodaj lekcję
-                      </button>
-                    </div>
-                  )}
-                  
-                  <h4 
-                    className={`collapsible-header ${isQuizOpen ? 'open' : ''}`}
-                    onClick={() => toggleItem(quizId)}
-                  >
-                    Test podsumowujący ({section.quiz?.questions?.length || 0} pytań)
-                  </h4>
-                  
-                  {isQuizOpen && (
-                    <QuizEditor 
-                      quiz={section.quiz}
-                      onQuizChange={(newQuiz) => updateSectionField(section.id, 'quiz', newQuiz)}
-                    />
-                  )}
-                  
+                                  <input
+                                      type="text"
+                                      className="edit-input-section"
+                                      value={section.title}
+                                      onChange={(e) => updateSectionField(section.id, 'title', e.target.value)} 
+                                      style={{ flex: 1, margin: 0 }}
+                                  />
+                                  <button 
+                                      type="button" 
+                                      className="edit-btn-secondary" 
+                                      onClick={() => deleteSection(section.id)}
+                                      style={{ backgroundColor: '#ff4444', color: 'white', borderColor: '#ff4444' }}
+                                  >
+                                      Usuń Sekcję
+                                  </button>
+                            </div>
+                            
+                            <h4 
+                              className={`collapsible-header ${areLessonsOpen ? 'open' : ''}`}
+                              onClick={() => toggleItem(lessonsId)}
+                            >
+                              Lekcje w sekcji ({section.lessons?.length || 0})
+                            </h4>
+                            
+                            {areLessonsOpen && (
+                              <Droppable droppableId={`lessons-${section.id}`} type="lesson">
+                                {(provided) => (
+                                  <div 
+                                      className="lessons-list"
+                                      ref={provided.innerRef}
+                                      {...provided.droppableProps}
+                                      style={{ minHeight: '10px' }}
+                                  >
+                                    {section.lessons?.map((lesson, lessonIndex) => (
+                                      <Draggable 
+                                          key={lesson.id} 
+                                          draggableId={`lesson-${lesson.id}`} 
+                                          index={lessonIndex}
+                                      >
+                                        {(provided) => (
+                                          <div 
+                                              className="lesson-item"
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              style={{ ...provided.draggableProps.style, marginBottom: '15px' }}
+                                          >
+                                            <div className="lesson-item-header">
+                                              {/* HANDLER DLA LEKCJI */}
+                                              <div 
+                                                  {...provided.dragHandleProps}
+                                                  style={{ cursor: 'grab', color: '#aaa', marginRight: '10px', display: 'flex', alignItems: 'center' }}
+                                                  title="Przesuń lekcję"
+                                              >
+                                                  <GripVertical size={20} />
+                                              </div>
+
+                                              <input
+                                                type="text"
+                                                className="edit-input-lesson"
+                                                value={lesson.title}
+                                                onChange={(e) => updateLessonField(section.id, lesson.id, 'title', e.target.value)} 
+                                              />
+                                              <select
+                                                className="edit-lesson-type"
+                                                value={lesson.type || 'video'}
+                                                onChange={(e) => handleLessonTypeChange(section.id, lesson.id, e.target.value)}
+                                              >
+                                                <option value="video">Wideo</option>
+                                                <option value="pdf">PDF</option>
+                                                <option value="text">Tekst</option>
+                                              </select>
+                                               <button 
+                                                  type="button" 
+                                                  className="edit-btn-secondary" 
+                                                  onClick={() => deleteLesson(section.id, lesson.id)}
+                                                  style={{ backgroundColor: '#ff4444', color: 'white', borderColor: '#ff4444', padding: '5px 10px', marginLeft: '10px', fontSize: '12px' }}
+                                              >
+                                                  Usuń
+                                              </button>
+                                            </div>
+                                            <LessonContentInput 
+                                              lesson={lesson}
+                                              onTextChange={(field, value) => handleLessonTextChange(section.id, lesson.id, field, value)}
+                                              onFileChange={(file) => handleFileSelect(section.id, lesson.id, file)}
+                                            />
+                                            
+                                            <LessonResourcesEditor 
+                                                resources={lesson.resources}
+                                                onAddResource={(file) => handleAddResource(section.id, lesson.id, file)}
+                                                onRemoveResource={(resIndex) => handleRemoveResource(section.id, lesson.id, resIndex)}
+                                            />
+                                          </div>
+                                        )}
+                                      </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                    <button type="button" className="edit-btn-add-lesson" onClick={() => addLesson(section.id)}>
+                                      + Dodaj lekcję
+                                    </button>
+                                  </div>
+                                )}
+                              </Droppable>
+                            )}
+                            
+                            <h4 
+                              className={`collapsible-header ${isQuizOpen ? 'open' : ''}`}
+                              onClick={() => toggleItem(quizId)}
+                            >
+                              Test podsumowujący ({section.quiz?.questions?.length || 0} pytań)
+                            </h4>
+                            
+                            {isQuizOpen && (
+                              <QuizEditor 
+                                quiz={section.quiz}
+                                onQuizChange={(newQuiz) => updateSectionField(section.id, 'quiz', newQuiz)}
+                              />
+                            )}
+                            
+                          </div>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </Droppable>
+          </DragDropContext>
           
           <button type="button" className="edit-btn-add-section" onClick={addSection}>
             + Dodaj sekcję
