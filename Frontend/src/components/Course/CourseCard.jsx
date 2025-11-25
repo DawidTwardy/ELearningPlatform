@@ -31,27 +31,25 @@ const CourseCard = ({
   };
 
   const ratingValue = parseFloat(course.averageRating || course.rating || 0);
+  const reviewsCount = course.reviewsCount || course.ratingCount || 0;
 
-  // --- POPRAWIONA LOGIKA DLA NAZWY INSTRUKTORA ---
+  // --- LOGIKA DLA NAZWY INSTRUKTORA ---
   let instructorName = "Instruktor";
   
   if (course.instructorName) {
-      // Przypadek 1: DTO ma pole instructorName (np. FavoritesPage)
       instructorName = course.instructorName;
   } else if (typeof course.instructor === 'string') {
-      // Przypadek 2: Pole instructor jest stringiem (np. MyLearningPage)
       instructorName = course.instructor;
   } else if (course.instructor && typeof course.instructor === 'object') {
-      // Przypadek 3: Pole instructor jest obiektem (np. HomePage z API)
-      // Sprawdzamy różne warianty nazwy pola zwracane przez backend
       if (course.instructor.name) instructorName = course.instructor.name;
       else if (course.instructor.Name) instructorName = course.instructor.Name;
       else if (course.instructor.userName) instructorName = course.instructor.userName;
       else if (course.instructor.fullName) instructorName = course.instructor.fullName;
+      else if (course.instructor.Name) instructorName = course.instructor.Name; 
   }
 
   // Logika dla awatara
-  const instructorAvatar = course.instructor?.avatarUrl || course.instructorAvatar || null;
+  const instructorAvatar = course.instructorAvatar || course.instructor?.avatarUrl || null;
   const instructorId = course.instructorId || course.instructor?.id;
 
   return (
@@ -89,10 +87,16 @@ const CourseCard = ({
         )}
 
         <div className="course-meta">
-            <div className="stars-container-full">
-                <StarRating rating={ratingValue} />
-            </div>
-            <span className="rating-count">({course.reviewsCount || course.ratingCount || 0})</span>
+            {ratingValue > 0 ? (
+                <>
+                    <div className="stars-container-full">
+                        <StarRating rating={ratingValue} />
+                    </div>
+                    <span className="rating-count">({reviewsCount})</span>
+                </>
+            ) : (
+                <span className="no-reviews-text">Brak opinii</span>
+            )}
         </div>
 
         {typeof progress === 'number' && (

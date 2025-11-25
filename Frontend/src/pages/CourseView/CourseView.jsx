@@ -32,17 +32,17 @@ const CourseView = ({ course: courseProp, onBack }) => {
     const [expandedSections, setExpandedSections] = useState({});
     const [completedLessonIds, setCompletedLessonIds] = useState([]); 
     const [completedQuizIds, setCompletedQuizIds] = useState([]); 
-    const [enrollmentDate, setEnrollmentDate] = useState(null); // Zmieniono z let na useState(null)
+    const [enrollmentDate, setEnrollmentDate] = useState(null); 
     const [error, setError] = useState(null);
     const [showRatingForm, setShowRatingForm] = useState(false);
     
     const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
     
-    const [activeTab, setActiveTab] = useState('discussion');
-    
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [reportReason, setReportReason] = useState('');
 
+    const [activeTab, setActiveTab] = useState('discussion');
+    
     const videoRef = useRef(null);
 
     const getCourseId = () => {
@@ -79,8 +79,6 @@ const CourseView = ({ course: courseProp, onBack }) => {
                 if (enrollmentData && enrollmentData.enrollmentDate) {
                     setEnrollmentDate(enrollmentData.enrollmentDate);
                 } else {
-                    // Ustawiamy bieżącą datę jako domyślny EnrollmentDate, jeśli nie ma zapisu. 
-                    // Ważne, aby StudyPlanner miał datę.
                     setEnrollmentDate(new Date().toISOString()); 
                 }
                 

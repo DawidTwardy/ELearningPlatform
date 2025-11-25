@@ -11,24 +11,23 @@
     cursor: pointer;
     border: none;
     color: #FFFFFF;
-    min-height: 350px; /* Zwiększono nieco minimalną wysokość */
+    min-height: 360px; /* Lekko zwiększona wysokość */
 }
 
 .course-card:hover { 
     transform: translateY(-5px); 
 }
 
-/* --- ZMIANA: KSZTAŁT ZDJĘCIA --- */
+/* --- KSZTAŁT ZDJĘCIA KURS (Kapsułka) --- */
 .course-thumbnail { 
     height: 160px; 
-    /* Ustawienie dużego promienia tworzy kształt "kapsułki" (półkola po bokach) */
     border-radius: 80px; 
     position: relative; 
     width: 100%; 
     margin-bottom: 15px; 
     overflow: hidden; 
     background-color: #2a2a2a; 
-    border: 2px solid #333; /* Opcjonalna ramka dla lepszego kontrastu */
+    border: 2px solid #333; 
 }
 
 .placeholder-image {
@@ -49,8 +48,8 @@
 
 .favorite-btn-wrapper {
     position: absolute;
-    top: 15px; /* Dostosowano pozycję ze względu na zaokrąglenie */
-    right: 25px; /* Przesunięto do środka, żeby nie ucięło na zaokrągleniu */
+    top: 15px; 
+    right: 25px; 
     width: 30px;
     height: 30px;
     z-index: 10;
@@ -83,25 +82,26 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-align: center; /* Wyśrodkowanie tytułu pasuje do pigułkowatego zdjęcia */
+    text-align: center; 
 }
 
 .course-instructor { 
     color: #aaa; 
-    font-size: 0.9em; 
+    font-size: 0.95em;
     margin-bottom: 15px;
     display: flex;
     align-items: center;
-    justify-content: center; /* Wyśrodkowanie instruktora */
+    justify-content: center; 
 }
 
+/* ZMIANA: Powiększone zdjęcie instruktora (40px) */
 .instructor-avatar-small {
-    width: 24px;
-    height: 24px;
+    width: 40px; 
+    height: 40px;
     border-radius: 50%;
-    margin-right: 8px;
+    margin-right: 10px;
     object-fit: cover;
-    border: 1px solid #333;
+    border: 1px solid #444;
 }
 
 .instructor-link, .instructor-name-text {
@@ -114,35 +114,44 @@
     color: #fff;
 }
 
-/* --- ZMIANA: GWIAZDKI NA CAŁĄ SZEROKOŚĆ --- */
+/* --- Gwiazdki i ocena --- */
 .course-meta {
     display: flex;
-    flex-direction: column; /* Układ pionowy: gwiazdki nad liczbą */
+    flex-direction: row; 
     align-items: center;
-    gap: 5px;
+    justify-content: center; 
+    gap: 8px; 
     margin-top: auto;
     width: 100%;
+    min-height: 30px;
 }
 
-.stars-container-full {
-    width: 100%;
-}
-
-/* Nadpisujemy style wewnątrz StarRating dla tego widoku */
+/* Styl kontenera gwiazdek */
 .stars-container-full .star-rating {
     display: flex;
-    justify-content: space-between; /* Rozciągnij gwiazdki na całą szerokość */
-    width: 100%;
-    padding: 0 10px; /* Lekki odstęp od krawędzi */
+    justify-content: center; 
+    width: auto;
+    padding: 0;
+    gap: 3px; 
 }
 
+/* ZMIANA: Powiększone gwiazdki (28px) */
 .stars-container-full .star-icon-image {
-    width: 24px; /* Nieco większe gwiazdki */
-    height: 24px;
+    width: 28px; 
+    height: 28px;
 }
 
 .rating-count {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
+    color: #888;
+    margin-left: 5px;
+    font-weight: 500;
+}
+
+/* Styl dla braku opinii */
+.no-reviews-text {
+    font-size: 0.95rem;
     color: #777;
-    margin-top: 2px;
+    font-style: italic;
+    opacity: 0.8;
 }

@@ -68,6 +68,8 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
                 title: courseData.title || courseData.Title,
                 imageSrc: courseData.imageUrl || courseData.ImageUrl || "/src/course/placeholder_ai.png",
                 instructor: courseData.instructorName || courseData.InstructorName || "Instruktor",
+                // ZMIANA: Dodano mapowanie awatara
+                instructorAvatar: courseData.instructorAvatar || courseData.InstructorAvatar,
                 rating: 0,
                 iconColor: '#2a2a2a' 
             };
