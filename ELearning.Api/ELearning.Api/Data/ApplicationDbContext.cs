@@ -22,13 +22,18 @@ namespace ELearning.Api.Persistence
         public DbSet<UserQuizAttempt> UserQuizAttempts { get; set; }
         public DbSet<UserAnswer> UserAnswers { get; set; }
         public DbSet<Comment> Comments { get; set; }
-        public DbSet<CourseReview> Reviews { get; set; }
+        public DbSet<CourseReview> Reviews { get; set; } // PRZYWRÓCONA NAZWA 'Reviews'
         public DbSet<UserBadge> UserBadges { get; set; }
         public DbSet<Badge> Badges { get; set; }
         public DbSet<UserNote> UserNotes { get; set; }
         public DbSet<PushSubscription> PushSubscriptions { get; set; }
         public DbSet<LessonResource> LessonResources { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+
+        // DODANE DLA ADMIN PANELU
+        public DbSet<CourseReport> CourseReports { get; set; }
+        public DbSet<CommentReport> CommentReports { get; set; }
+        // KONIEC DODAWANIA
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -46,6 +51,23 @@ namespace ELearning.Api.Persistence
                 .HasOne(ub => ub.Badge)
                 .WithMany(b => b.UserBadges)
                 .HasForeignKey(ub => ub.BadgeId);
+
+            // Relacje dla nowych modeli Report (wymagane w AdminController)
+            builder.Entity<CourseReport>()
+                .HasOne(cr => cr.Course)
+                .WithMany(c => c.Reports)
+                .HasForeignKey(cr => cr.CourseId);
+
+            builder.Entity<CommentReport>()
+                .HasOne(cr => cr.Comment)
+                .WithMany(c => c.Reports)
+                .HasForeignKey(cr => cr.CommentId);
+
+            // Upewnienie się, że Comment.User jest poprawnie mapowany
+            builder.Entity<Comment>()
+                .HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserId);
         }
     }
 }

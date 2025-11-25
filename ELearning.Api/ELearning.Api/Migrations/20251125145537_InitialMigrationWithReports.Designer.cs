@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ELearning.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251124101048_NotesTitle")]
-    partial class NotesTitle
+    [Migration("20251125145537_InitialMigrationWithReports")]
+    partial class InitialMigrationWithReports
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -20,13 +20,21 @@ namespace ELearning.Api.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
 
-            modelBuilder.Entity("ApplicationUser", b =>
+            modelBuilder.Entity("ELearning.Api.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("AvatarUrl")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Bio")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -99,6 +107,35 @@ namespace ELearning.Api.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("ELearning.Api.Models.CommentReport", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CommentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReportedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReporterId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommentId");
+
+                    b.HasIndex("ReporterId");
+
+                    b.ToTable("CommentReports");
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.Course", b =>
@@ -182,7 +219,7 @@ namespace ELearning.Api.Migrations
                     b.Property<int>("CourseId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("Created")
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("ParentCommentId")
@@ -209,14 +246,14 @@ namespace ELearning.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Content")
+                    b.Property<string>("Comment")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("CourseId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreatedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Rating")
@@ -232,7 +269,7 @@ namespace ELearning.Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CourseReviews");
+                    b.ToTable("Reviews");
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.CourseContent.CourseSection", b =>
@@ -418,6 +455,35 @@ namespace ELearning.Api.Migrations
                     b.ToTable("UserQuizAttempts");
                 });
 
+            modelBuilder.Entity("ELearning.Api.Models.CourseReport", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReportedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReporterId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("ReporterId");
+
+                    b.ToTable("CourseReports");
+                });
+
             modelBuilder.Entity("ELearning.Api.Models.Enrollment", b =>
                 {
                     b.Property<int>("Id")
@@ -480,130 +546,25 @@ namespace ELearning.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Badges");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CriteriaThreshold = 1,
-                            CriteriaType = "LessonCount",
-                            Description = "Ukończ pierwszą lekcję",
-                            IconUrl = "/badges/first_step.png",
-                            Name = "Pierwszy krok"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            CriteriaThreshold = 1,
-                            CriteriaType = "QuizCount",
-                            Description = "Zalicz pierwszy quiz",
-                            IconUrl = "/badges/rookie.png",
-                            Name = "Debiutant"
-                        },
-                        new
-                        {
-                            Id = 6,
-                            CriteriaThreshold = 100,
-                            CriteriaType = "Points",
-                            Description = "Zdobądź pierwsze 100 punktów",
-                            IconUrl = "/badges/starter_points.png",
-                            Name = "Na start"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CriteriaThreshold = 5,
-                            CriteriaType = "LessonCount",
-                            Description = "Ukończ 5 lekcji",
-                            IconUrl = "/badges/student.png",
-                            Name = "Pilny Student"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CriteriaThreshold = 3,
-                            CriteriaType = "QuizCount",
-                            Description = "Zalicz 3 quizy",
-                            IconUrl = "/badges/quiz_master.png",
-                            Name = "Mistrz Quizów"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CriteriaThreshold = 3,
-                            CriteriaType = "Streak",
-                            Description = "Utrzymaj streak przez 3 dni",
-                            IconUrl = "/badges/marathon.png",
-                            Name = "Systematyczność"
-                        },
-                        new
-                        {
-                            Id = 7,
-                            CriteriaThreshold = 20,
-                            CriteriaType = "LessonCount",
-                            Description = "Ukończ 20 lekcji",
-                            IconUrl = "/badges/veteran.png",
-                            Name = "Weteran"
-                        },
-                        new
-                        {
-                            Id = 8,
-                            CriteriaThreshold = 10,
-                            CriteriaType = "QuizCount",
-                            Description = "Zalicz 10 quizów",
-                            IconUrl = "/badges/genius.png",
-                            Name = "Geniusz"
-                        },
-                        new
-                        {
-                            Id = 9,
-                            CriteriaThreshold = 7,
-                            CriteriaType = "Streak",
-                            Description = "Ucz się codziennie przez 7 dni",
-                            IconUrl = "/badges/week_streak.png",
-                            Name = "Tydzień z głowy"
-                        },
-                        new
-                        {
-                            Id = 10,
-                            CriteriaThreshold = 1000,
-                            CriteriaType = "Points",
-                            Description = "Zdobądź 1000 punktów",
-                            IconUrl = "/badges/collector.png",
-                            Name = "Kolekcjoner"
-                        },
-                        new
-                        {
-                            Id = 11,
-                            CriteriaThreshold = 30,
-                            CriteriaType = "Streak",
-                            Description = "Utrzymaj streak przez 30 dni!",
-                            IconUrl = "/badges/legend.png",
-                            Name = "Legenda"
-                        });
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.Gamification.UserBadge", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("AwardedAt")
+                    b.Property<string>("UserId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("BadgeId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<DateTime>("AwardedAt")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Id");
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "BadgeId");
 
                     b.HasIndex("BadgeId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("UserBadges");
                 });
@@ -888,10 +849,29 @@ namespace ELearning.Api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("ELearning.Api.Models.CommentReport", b =>
+                {
+                    b.HasOne("ELearning.Api.Models.CourseContent.Comment", "Comment")
+                        .WithMany("Reports")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("Reporter");
+                });
+
             modelBuilder.Entity("ELearning.Api.Models.Course", b =>
                 {
-                    b.HasOne("ApplicationUser", "Instructor")
-                        .WithMany()
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "Instructor")
+                        .WithMany("Courses")
                         .HasForeignKey("InstructorId");
 
                     b.Navigation("Instructor");
@@ -918,10 +898,9 @@ namespace ELearning.Api.Migrations
 
                     b.HasOne("ELearning.Api.Models.CourseContent.Comment", "ParentComment")
                         .WithMany("Replies")
-                        .HasForeignKey("ParentCommentId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("ParentCommentId");
 
-                    b.HasOne("ApplicationUser", "User")
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -942,7 +921,7 @@ namespace ELearning.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ApplicationUser", "User")
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1043,7 +1022,7 @@ namespace ELearning.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ApplicationUser", "User")
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1054,6 +1033,25 @@ namespace ELearning.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ELearning.Api.Models.CourseReport", b =>
+                {
+                    b.HasOne("ELearning.Api.Models.Course", "Course")
+                        .WithMany("Reports")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("Reporter");
+                });
+
             modelBuilder.Entity("ELearning.Api.Models.Enrollment", b =>
                 {
                     b.HasOne("ELearning.Api.Models.Course", "Course")
@@ -1062,7 +1060,7 @@ namespace ELearning.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ApplicationUser", "User")
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1076,12 +1074,12 @@ namespace ELearning.Api.Migrations
             modelBuilder.Entity("ELearning.Api.Models.Gamification.UserBadge", b =>
                 {
                     b.HasOne("ELearning.Api.Models.Gamification.Badge", "Badge")
-                        .WithMany()
+                        .WithMany("UserBadges")
                         .HasForeignKey("BadgeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ApplicationUser", "User")
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "User")
                         .WithMany("UserBadges")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1100,7 +1098,7 @@ namespace ELearning.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ApplicationUser", "User")
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1113,7 +1111,7 @@ namespace ELearning.Api.Migrations
 
             modelBuilder.Entity("ELearning.Api.Models.Notification", b =>
                 {
-                    b.HasOne("ApplicationUser", "User")
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1124,7 +1122,7 @@ namespace ELearning.Api.Migrations
 
             modelBuilder.Entity("ELearning.Api.Models.PushSubscription", b =>
                 {
-                    b.HasOne("ApplicationUser", "User")
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1135,7 +1133,7 @@ namespace ELearning.Api.Migrations
 
             modelBuilder.Entity("ELearning.Api.Models.RefreshToken", b =>
                 {
-                    b.HasOne("ApplicationUser", "User")
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1146,7 +1144,7 @@ namespace ELearning.Api.Migrations
 
             modelBuilder.Entity("ELearning.Api.Models.UserNote", b =>
                 {
-                    b.HasOne("ApplicationUser", "User")
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1166,7 +1164,7 @@ namespace ELearning.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("ApplicationUser", null)
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1175,7 +1173,7 @@ namespace ELearning.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("ApplicationUser", null)
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1190,7 +1188,7 @@ namespace ELearning.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ApplicationUser", null)
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1199,21 +1197,25 @@ namespace ELearning.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("ApplicationUser", null)
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("ApplicationUser", b =>
+            modelBuilder.Entity("ELearning.Api.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("Courses");
+
                     b.Navigation("UserBadges");
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.Course", b =>
                 {
                     b.Navigation("Enrollments");
+
+                    b.Navigation("Reports");
 
                     b.Navigation("Reviews");
 
@@ -1223,6 +1225,8 @@ namespace ELearning.Api.Migrations
             modelBuilder.Entity("ELearning.Api.Models.CourseContent.Comment", b =>
                 {
                     b.Navigation("Replies");
+
+                    b.Navigation("Reports");
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.CourseContent.CourseSection", b =>
@@ -1250,6 +1254,11 @@ namespace ELearning.Api.Migrations
             modelBuilder.Entity("ELearning.Api.Models.CourseContent.UserQuizAttempt", b =>
                 {
                     b.Navigation("UserAnswers");
+                });
+
+            modelBuilder.Entity("ELearning.Api.Models.Gamification.Badge", b =>
+                {
+                    b.Navigation("UserBadges");
                 });
 #pragma warning restore 612, 618
         }

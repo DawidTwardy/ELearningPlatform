@@ -24,5 +24,9 @@ namespace ELearning.Api.Models.CourseContent
         public Comment? ParentComment { get; set; }
 
         public List<Comment> Replies { get; set; } = new List<Comment>();
+
+       
+        public ICollection<CommentReport> Reports { get; set; } = new List<CommentReport>();
+      
     }
 }

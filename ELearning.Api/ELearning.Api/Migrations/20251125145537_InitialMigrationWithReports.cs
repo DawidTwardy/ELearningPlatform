@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ELearning.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialMigrationWithReports : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,6 +32,11 @@ namespace ELearning.Api.Migrations
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     FirstName = table.Column<string>(type: "TEXT", nullable: false),
                     LastName = table.Column<string>(type: "TEXT", nullable: false),
+                    Bio = table.Column<string>(type: "TEXT", nullable: false),
+                    AvatarUrl = table.Column<string>(type: "TEXT", nullable: false),
+                    Points = table.Column<int>(type: "INTEGER", nullable: false),
+                    CurrentStreak = table.Column<int>(type: "INTEGER", nullable: false),
+                    LastActivityDate = table.Column<DateTime>(type: "TEXT", nullable: true),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -50,6 +55,23 @@ namespace ELearning.Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Badges",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: false),
+                    IconUrl = table.Column<string>(type: "TEXT", nullable: false),
+                    CriteriaType = table.Column<string>(type: "TEXT", nullable: false),
+                    CriteriaThreshold = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Badges", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -170,6 +192,8 @@ namespace ELearning.Api.Migrations
                     Category = table.Column<string>(type: "TEXT", nullable: false),
                     Level = table.Column<string>(type: "TEXT", nullable: false),
                     ImageUrl = table.Column<string>(type: "TEXT", nullable: false),
+                    Rating = table.Column<double>(type: "REAL", nullable: false),
+                    RatingCount = table.Column<int>(type: "INTEGER", nullable: false),
                     InstructorId = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
@@ -183,13 +207,132 @@ namespace ELearning.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Notifications",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    Message = table.Column<string>(type: "TEXT", nullable: false),
+                    Type = table.Column<string>(type: "TEXT", nullable: false),
+                    IsRead = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    RelatedEntityId = table.Column<int>(type: "INTEGER", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Notifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Notifications_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PushSubscriptions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    Endpoint = table.Column<string>(type: "TEXT", nullable: false),
+                    P256dh = table.Column<string>(type: "TEXT", nullable: false),
+                    Auth = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PushSubscriptions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PushSubscriptions_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RefreshTokens",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Token = table.Column<string>(type: "TEXT", nullable: false),
+                    Expires = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Revoked = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    ReplacedByToken = table.Column<string>(type: "TEXT", nullable: true),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserNotes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    LessonId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Content = table.Column<string>(type: "TEXT", nullable: false),
+                    Title = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserNotes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserNotes_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserBadges",
+                columns: table => new
+                {
+                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    BadgeId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Id = table.Column<int>(type: "INTEGER", nullable: false),
+                    AwardedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserBadges", x => new { x.UserId, x.BadgeId });
+                    table.ForeignKey(
+                        name: "FK_UserBadges_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserBadges_Badges_BadgeId",
+                        column: x => x.BadgeId,
+                        principalTable: "Badges",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Comments",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Content = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UserId = table.Column<string>(type: "TEXT", nullable: false),
                     CourseId = table.Column<int>(type: "INTEGER", nullable: false),
                     ParentCommentId = table.Column<int>(type: "INTEGER", nullable: true)
@@ -207,10 +350,37 @@ namespace ELearning.Api.Migrations
                         name: "FK_Comments_Comments_ParentCommentId",
                         column: x => x.ParentCommentId,
                         principalTable: "Comments",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Comments_Courses_CourseId",
+                        column: x => x.CourseId,
+                        principalTable: "Courses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CourseReports",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    CourseId = table.Column<int>(type: "INTEGER", nullable: false),
+                    ReporterId = table.Column<string>(type: "TEXT", nullable: false),
+                    Reason = table.Column<string>(type: "TEXT", nullable: false),
+                    ReportedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CourseReports", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CourseReports_AspNetUsers_ReporterId",
+                        column: x => x.ReporterId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CourseReports_Courses_CourseId",
                         column: x => x.CourseId,
                         principalTable: "Courses",
                         principalColumn: "Id",
@@ -248,7 +418,8 @@ namespace ELearning.Api.Migrations
                     CourseId = table.Column<int>(type: "INTEGER", nullable: false),
                     EnrollmentDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Progress = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsCompleted = table.Column<bool>(type: "INTEGER", nullable: false)
+                    IsCompleted = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CertificateId = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -263,6 +434,63 @@ namespace ELearning.Api.Migrations
                         name: "FK_Enrollments_Courses_CourseId",
                         column: x => x.CourseId,
                         principalTable: "Courses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Reviews",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    CourseId = table.Column<int>(type: "INTEGER", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    Rating = table.Column<int>(type: "INTEGER", nullable: false),
+                    Comment = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Reviews", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Reviews_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Reviews_Courses_CourseId",
+                        column: x => x.CourseId,
+                        principalTable: "Courses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CommentReports",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    CommentId = table.Column<int>(type: "INTEGER", nullable: false),
+                    ReporterId = table.Column<string>(type: "TEXT", nullable: false),
+                    Reason = table.Column<string>(type: "TEXT", nullable: false),
+                    ReportedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CommentReports", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CommentReports_AspNetUsers_ReporterId",
+                        column: x => x.ReporterId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CommentReports_Comments_CommentId",
+                        column: x => x.CommentId,
+                        principalTable: "Comments",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -330,6 +558,27 @@ namespace ELearning.Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_LessonCompletions_Lessons_LessonId",
+                        column: x => x.LessonId,
+                        principalTable: "Lessons",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "LessonResources",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    FileUrl = table.Column<string>(type: "TEXT", nullable: false),
+                    LessonId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LessonResources", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_LessonResources_Lessons_LessonId",
                         column: x => x.LessonId,
                         principalTable: "Lessons",
                         principalColumn: "Id",
@@ -485,6 +734,16 @@ namespace ELearning.Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_CommentReports_CommentId",
+                table: "CommentReports",
+                column: "CommentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommentReports_ReporterId",
+                table: "CommentReports",
+                column: "ReporterId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Comments_CourseId",
                 table: "Comments",
                 column: "CourseId");
@@ -498,6 +757,16 @@ namespace ELearning.Api.Migrations
                 name: "IX_Comments_UserId",
                 table: "Comments",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CourseReports_CourseId",
+                table: "CourseReports",
+                column: "CourseId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CourseReports_ReporterId",
+                table: "CourseReports",
+                column: "ReporterId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Courses_InstructorId",
@@ -530,9 +799,24 @@ namespace ELearning.Api.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_LessonResources_LessonId",
+                table: "LessonResources",
+                column: "LessonId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Lessons_SectionId",
                 table: "Lessons",
                 column: "SectionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notifications_UserId",
+                table: "Notifications",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PushSubscriptions_UserId",
+                table: "PushSubscriptions",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Questions_QuizId",
@@ -544,6 +828,21 @@ namespace ELearning.Api.Migrations
                 table: "Quizzes",
                 column: "SectionId",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_UserId",
+                table: "RefreshTokens",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Reviews_CourseId",
+                table: "Reviews",
+                column: "CourseId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Reviews_UserId",
+                table: "Reviews",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserAnswers_AnswerOptionId",
@@ -559,6 +858,16 @@ namespace ELearning.Api.Migrations
                 name: "IX_UserAnswers_QuestionId",
                 table: "UserAnswers",
                 column: "QuestionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserBadges_BadgeId",
+                table: "UserBadges",
+                column: "BadgeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserNotes_UserId",
+                table: "UserNotes",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserQuizAttempts_QuizId",
@@ -590,7 +899,10 @@ namespace ELearning.Api.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "Comments");
+                name: "CommentReports");
+
+            migrationBuilder.DropTable(
+                name: "CourseReports");
 
             migrationBuilder.DropTable(
                 name: "Enrollments");
@@ -599,10 +911,34 @@ namespace ELearning.Api.Migrations
                 name: "LessonCompletions");
 
             migrationBuilder.DropTable(
+                name: "LessonResources");
+
+            migrationBuilder.DropTable(
+                name: "Notifications");
+
+            migrationBuilder.DropTable(
+                name: "PushSubscriptions");
+
+            migrationBuilder.DropTable(
+                name: "RefreshTokens");
+
+            migrationBuilder.DropTable(
+                name: "Reviews");
+
+            migrationBuilder.DropTable(
                 name: "UserAnswers");
 
             migrationBuilder.DropTable(
+                name: "UserBadges");
+
+            migrationBuilder.DropTable(
+                name: "UserNotes");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "Comments");
 
             migrationBuilder.DropTable(
                 name: "Lessons");
@@ -612,6 +948,9 @@ namespace ELearning.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "UserQuizAttempts");
+
+            migrationBuilder.DropTable(
+                name: "Badges");
 
             migrationBuilder.DropTable(
                 name: "Questions");

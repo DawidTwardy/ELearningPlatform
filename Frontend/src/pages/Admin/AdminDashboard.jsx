@@ -1,44 +1,103 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../../styles/pages/AdminDashboard.css'; 
 import CourseCard from '../../components/Course/CourseCard'; 
-
-const MOCK_REPORTED_COURSES = [
-    { id: 2, title: "Kurs Pythona", instructor: "Jan Kowalski", rating: 4.5, imageSrc: "/src/course/placeholder_python.png"},
-    { id: 3, title: "Kurs AI", instructor: "Michał Nowak", rating: 4, imageSrc: "/src/course/placeholder_ai.png" },
-];
-
-const MOCK_REPORTED_COMMENTS = [
-  { id: 'c1', text: "To jest nieodpowiedni komentarz!", author: "Anna Zając", course: "Kurs Nauki SQL" },
-  { id: 'c2', text: "Instruktor podaje błędne informacje w tej lekcji.", author: "Marek B", course: "Kurs Pythona" },
-];
+import { 
+  fetchReportedCourses, 
+  ignoreCourseReport, 
+  deleteReportedCourse, 
+  fetchReportedComments, 
+  keepComment, 
+  deleteReportedComment 
+} from '../../services/api';
 
 const AdminDashboard = ({ onAdminViewCourse }) => {
-  const [courses, setCourses] = useState(MOCK_REPORTED_COURSES);
-  const [comments, setComments] = useState(MOCK_REPORTED_COMMENTS);
+  const [courses, setCourses] = useState([]);
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleDeleteCourse = (courseId, courseTitle) => {
+  const fetchModerationData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [fetchedCourses, fetchedComments] = await Promise.all([
+        fetchReportedCourses(),
+        fetchReportedComments()
+      ]);
+      
+      // Mapowanie danych z DTO do formatu oczekiwanego przez komponenty frontendu
+      setCourses(fetchedCourses.map(c => ({ 
+        id: c.id, 
+        title: c.title, 
+        instructor: c.instructor, 
+        rating: c.rating, 
+        imageSrc: c.imageSrc 
+      })));
+      
+      setComments(fetchedComments.map(c => ({
+        id: c.id,
+        text: c.text,
+        author: c.author,
+        course: c.courseTitle
+      })));
+    } catch (err) {
+      setError("Nie udało się pobrać danych moderacyjnych: " + err.message);
+      console.error("Błąd pobierania danych moderacyjnych:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchModerationData();
+  }, []);
+
+  const handleDeleteCourse = async (courseId, courseTitle) => {
     if (window.confirm(`Czy na pewno chcesz usunąć kurs "${courseTitle}"? Tej akcji nie można cofnąć.`)) {
-      setCourses(courses.filter(c => c.id !== courseId));
-      alert(`Usunięto kurs ${courseTitle}`);
+      try {
+        await deleteReportedCourse(courseId);
+        setCourses(courses.filter(c => c.id !== courseId));
+        alert(`Usunięto kurs ${courseTitle}`);
+      } catch (err) {
+        alert("Błąd podczas usuwania kursu: " + err.message);
+      }
     }
   };
   
-  const handleIgnoreCourseReport = (courseId) => {
+  const handleIgnoreCourseReport = async (courseId) => {
+    try {
+      await ignoreCourseReport(courseId);
       setCourses(courses.filter(c => c.id !== courseId));
       alert(`Zgłoszenie kursu ${courseId} zostało zignorowane.`);
+    } catch (err) {
+      alert("Błąd podczas ignorowania zgłoszenia: " + err.message);
+    }
   };
 
-  const handleKeepComment = (commentId) => {
-     setComments(comments.filter(c => c.id !== commentId));
-     alert(`Zgłoszenie komentarza ${commentId} zostało zignorowane. Komentarz pozostaje widoczny.`);
+  const handleKeepComment = async (commentId) => {
+    try {
+      await keepComment(commentId);
+      setComments(comments.filter(c => c.id !== commentId));
+      alert(`Zgłoszenie komentarza ${commentId} zostało zignorowane. Komentarz pozostaje widoczny.`);
+    } catch (err) {
+      alert("Błąd podczas ignorowania zgłoszenia komentarza: " + err.message);
+    }
   };
 
-  const handleDeleteComment = (commentId) => {
+  const handleDeleteComment = async (commentId) => {
      if (window.confirm(`Czy na pewno chcesz usunąć ten komentarz?`)) {
-        setComments(comments.filter(c => c.id !== commentId));
-        alert(`Usunięto komentarz`);
+        try {
+          await deleteReportedComment(commentId);
+          setComments(comments.filter(c => c.id !== commentId));
+          alert(`Usunięto komentarz`);
+        } catch (err) {
+          alert("Błąd podczas usuwania komentarza: " + err.message);
+        }
      }
   };
+
+  if (loading) return <main className="main-content"><p>Ładowanie danych moderacyjnych...</p></main>;
+  if (error) return <main className="main-content"><p className="error-message">{error}</p></main>;
 
   return (
     <main className="main-content">
@@ -47,69 +106,77 @@ const AdminDashboard = ({ onAdminViewCourse }) => {
       <div className="admin-section-container">
         <h3 className="admin-section-title">Zgłoszone Kursy ({courses.length})</h3>
         <div className="courses-list">
-          {courses.map(course => (
-            <CourseCard 
-              key={course.id}
-              course={course}
-              showFavoriteButton={false}
-              showInstructor={true}
-              onEdit={null} 
-              onClick={() => onAdminViewCourse(course)}
-            >
-              <div className="admin-course-actions">
-                <button 
-                  className="admin-btn-ignore"
-                  onClick={(e) => { e.stopPropagation(); handleIgnoreCourseReport(course.id); }}
-                >
-                  Ignoruj
-                </button>
-                <button 
-                  className="admin-btn-delete-course" 
-                  onClick={(e) => { e.stopPropagation(); handleDeleteCourse(course.id, course.title); }}
-                >
-                  Usuń Kurs
-                </button>
-              </div>
-            </CourseCard>
-          ))}
+          {courses.length === 0 ? (
+            <p>Brak zgłoszonych kursów.</p>
+          ) : (
+            courses.map(course => (
+              <CourseCard 
+                key={course.id}
+                course={course}
+                showFavoriteButton={false}
+                showInstructor={true}
+                onEdit={null} 
+                onClick={() => onAdminViewCourse(course)}
+              >
+                <div className="admin-course-actions">
+                  <button 
+                    className="admin-btn-ignore"
+                    onClick={(e) => { e.stopPropagation(); handleIgnoreCourseReport(course.id); }}
+                  >
+                    Ignoruj
+                  </button>
+                  <button 
+                    className="admin-btn-delete-course" 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteCourse(course.id, course.title); }}
+                  >
+                    Usuń Kurs
+                  </button>
+                </div>
+              </CourseCard>
+            ))
+          )}
         </div>
       </div>
 
       <div className="admin-section-container">
         <h3 className="admin-section-title">Zgłoszone Komentarze ({comments.length})</h3>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Treść Komentarza</th>
-              <th>Autor</th>
-              <th>Kurs</th>
-              <th>Akcje</th>
-            </tr>
-          </thead>
-          <tbody>
-            {comments.map(comment => (
-              <tr key={comment.id}>
-                <td className="admin-comment-text">"{comment.text}"</td>
-                <td>{comment.author}</td>
-                <td>{comment.course}</td>
-                <td className="admin-actions">
-                  <button 
-                    className="admin-btn-keep"
-                    onClick={() => handleKeepComment(comment.id)}
-                  >
-                    Zachowaj
-                  </button>
-                  <button 
-                    className="admin-btn-delete-comment"
-                    onClick={() => handleDeleteComment(comment.id)}
-                  >
-                    Usuń
-                  </button>
-                </td>
+        {comments.length === 0 ? (
+          <p>Brak zgłoszonych komentarzy.</p>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Treść Komentarza</th>
+                <th>Autor</th>
+                <th>Kurs</th>
+                <th>Akcje</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {comments.map(comment => (
+                <tr key={comment.id}>
+                  <td className="admin-comment-text">"{comment.text}"</td>
+                  <td>{comment.author}</td>
+                  <td>{comment.course}</td>
+                  <td className="admin-actions">
+                    <button 
+                      className="admin-btn-keep"
+                      onClick={() => handleKeepComment(comment.id)}
+                    >
+                      Zachowaj
+                    </button>
+                    <button 
+                      className="admin-btn-delete-comment"
+                      onClick={() => handleDeleteComment(comment.id)}
+                    >
+                      Usuń
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </main>
   );

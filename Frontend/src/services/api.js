@@ -392,6 +392,40 @@ const fetchInstructorDetails = async (instructorId) => {
     return handleResponse(response);
 };
 
+// --- NOWE FUNKCJE DLA ADMINA ---
+
+const fetchReportedCourses = async () => {
+    return authenticatedFetch(`${API_BASE_URL}/Admin/reported-courses`, { method: 'GET' });
+};
+
+const ignoreCourseReport = async (courseId) => {
+    return authenticatedFetch(`${API_BASE_URL}/Admin/courses/${courseId}/ignore-report`, { 
+        method: 'POST',
+        body: JSON.stringify({})
+    });
+};
+
+const deleteReportedCourse = async (courseId) => {
+    return authenticatedFetch(`${API_BASE_URL}/Admin/courses/${courseId}`, { method: 'DELETE' });
+};
+
+
+const fetchReportedComments = async () => {
+    return authenticatedFetch(`${API_BASE_URL}/Admin/reported-comments`, { method: 'GET' });
+};
+
+const keepComment = async (commentId) => {
+    return authenticatedFetch(`${API_BASE_URL}/Admin/comments/${commentId}/keep`, { 
+        method: 'POST',
+        body: JSON.stringify({})
+    });
+};
+
+const deleteReportedComment = async (commentId) => {
+    return authenticatedFetch(`${API_BASE_URL}/Admin/comments/${commentId}`, { method: 'DELETE' });
+};
+
+
 export {
     loginUser,
     registerUser,
@@ -433,5 +467,11 @@ export {
     fetchInstructors,
     fetchInstructorDetails,
     resolveImageUrl, 
+    fetchReportedCourses,
+    ignoreCourseReport,
+    deleteReportedCourse,
+    fetchReportedComments,
+    keepComment,
+    deleteReportedComment,
     API_BASE_URL
 };

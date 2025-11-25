@@ -106,6 +106,35 @@ namespace ELearning.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("ELearning.Api.Models.CommentReport", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CommentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReportedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReporterId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommentId");
+
+                    b.HasIndex("ReporterId");
+
+                    b.ToTable("CommentReports");
+                });
+
             modelBuilder.Entity("ELearning.Api.Models.Course", b =>
                 {
                     b.Property<int>("Id")
@@ -421,6 +450,35 @@ namespace ELearning.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("UserQuizAttempts");
+                });
+
+            modelBuilder.Entity("ELearning.Api.Models.CourseReport", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReportedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReporterId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("ReporterId");
+
+                    b.ToTable("CourseReports");
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.Enrollment", b =>
@@ -788,6 +846,25 @@ namespace ELearning.Api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("ELearning.Api.Models.CommentReport", b =>
+                {
+                    b.HasOne("ELearning.Api.Models.CourseContent.Comment", "Comment")
+                        .WithMany("Reports")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("Reporter");
+                });
+
             modelBuilder.Entity("ELearning.Api.Models.Course", b =>
                 {
                     b.HasOne("ELearning.Api.Models.ApplicationUser", "Instructor")
@@ -953,6 +1030,25 @@ namespace ELearning.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ELearning.Api.Models.CourseReport", b =>
+                {
+                    b.HasOne("ELearning.Api.Models.Course", "Course")
+                        .WithMany("Reports")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ELearning.Api.Models.ApplicationUser", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("Reporter");
+                });
+
             modelBuilder.Entity("ELearning.Api.Models.Enrollment", b =>
                 {
                     b.HasOne("ELearning.Api.Models.Course", "Course")
@@ -1116,6 +1212,8 @@ namespace ELearning.Api.Migrations
                 {
                     b.Navigation("Enrollments");
 
+                    b.Navigation("Reports");
+
                     b.Navigation("Reviews");
 
                     b.Navigation("Sections");
@@ -1124,6 +1222,8 @@ namespace ELearning.Api.Migrations
             modelBuilder.Entity("ELearning.Api.Models.CourseContent.Comment", b =>
                 {
                     b.Navigation("Replies");
+
+                    b.Navigation("Reports");
                 });
 
             modelBuilder.Entity("ELearning.Api.Models.CourseContent.CourseSection", b =>

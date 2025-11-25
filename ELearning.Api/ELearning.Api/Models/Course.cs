@@ -36,5 +36,9 @@ namespace ELearning.Api.Models
         public ICollection<CourseSection> Sections { get; set; } = new List<CourseSection>();
         public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
         public ICollection<CourseReview> Reviews { get; set; } = new List<CourseReview>();
+
+       
+        public ICollection<CourseReport> Reports { get; set; } = new List<CourseReport>();
+        
     }
 }
