@@ -1,23 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 import { 
   fetchCourseDetails, 
   enrollInCourse, 
   fetchUserEnrollment, 
   resolveImageUrl,
-  fetchCourseReviews 
+  fetchCourseReviews,
+  createCourseReport 
 } from '../../services/api';
 import StarRating from '../../components/Course/StarRating';
+import { useAuth } from '../../context/AuthContext';
 import '../../styles/pages/CourseDetailsPage.css';
 
 const CourseDetailsPage = () => {
   const { id: courseId } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [reviews, setReviews] = useState([]);
+  
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
 
   useEffect(() => {
     const loadCourseData = async () => {
@@ -57,6 +65,20 @@ const CourseDetailsPage = () => {
       } else {
          alert('Błąd podczas zapisywania na kurs. Spróbuj ponownie.');
       }
+    }
+  };
+  
+  const handleReportSubmit = async () => {
+    if (!reportReason.trim() || !isAuthenticated) return;
+    
+    try {
+        await createCourseReport(parseInt(courseId), `Zgłoszenie kursu: ${reportReason}`);
+        alert("Zgłoszenie zostało wysłane do moderacji.");
+        setReportReason('');
+        setIsReportModalOpen(false);
+    } catch (error) {
+        console.error(error);
+        alert("Wystąpił błąd podczas wysyłania zgłoszenia: " + (error.message || "Błąd sieci"));
     }
   };
 
@@ -196,6 +218,21 @@ const CourseDetailsPage = () => {
                     )}
                 </div>
             </div>
+            
+            {/* NOWY PRZYCISK ZGŁOŚ KURS (Dla widoku mobilnego) */}
+            {isAuthenticated && (
+                <div className="section-card">
+                     <button
+                        onClick={() => setIsReportModalOpen(true)}
+                        className="btn-primary btn-full"
+                        style={{ background: '#d32f2f' }}
+                    >
+                        <AlertTriangle size={18} style={{ marginRight: '8px' }} />
+                        Zgłoś kurs do moderacji
+                    </button>
+                </div>
+            )}
+            
           </div>
 
           <div className="course-sidebar-column">
@@ -227,6 +264,18 @@ const CourseDetailsPage = () => {
                       Zapisz się za darmo
                     </button>
                   )}
+                  
+                  {/* NOWY PRZYCISK ZGŁOŚ KURS (Dla widoku sidebar) */}
+                  {isAuthenticated && (
+                       <button 
+                            onClick={() => setIsReportModalOpen(true)}
+                            className="btn-primary btn-full"
+                            style={{ background: '#333', color: '#ccc' }}
+                        >
+                            <AlertTriangle size={18} style={{ marginRight: '8px' }} />
+                            Zgłoś kurs
+                        </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -234,6 +283,77 @@ const CourseDetailsPage = () => {
 
         </div>
       </div>
+      
+      {isReportModalOpen && (
+        <div style={{
+            position: 'fixed',
+            top: 0, left: 0,
+            width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 2000
+        }}>
+            <div style={{
+                backgroundColor: '#1f1f1f',
+                padding: '25px',
+                borderRadius: '8px',
+                width: '400px',
+                maxWidth: '90%',
+                border: '1px solid #333'
+            }}>
+                <h3 style={{ color: '#fff', marginBottom: '15px' }}>Zgłoś kurs do moderacji</h3>
+                <p style={{ color: '#aaa', fontSize: '0.9em', marginBottom: '10px' }}>
+                    Opisz, dlaczego ten kurs powinien zostać sprawdzony przez administratora (np. nieodpowiednia treść, plagiat, błędy).
+                </p>
+                <textarea
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    style={{
+                        width: '100%',
+                        minHeight: '100px',
+                        padding: '10px',
+                        backgroundColor: '#333',
+                        border: '1px solid #444',
+                        borderRadius: '4px',
+                        color: '#fff',
+                        marginBottom: '20px',
+                        resize: 'vertical'
+                    }}
+                    placeholder="Treść zgłoszenia..."
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                    <button
+                        onClick={() => setIsReportModalOpen(false)}
+                        style={{
+                            padding: '8px 15px',
+                            background: 'transparent',
+                            border: '1px solid #666',
+                            color: '#ccc',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Anuluj
+                    </button>
+                    <button
+                        onClick={handleReportSubmit}
+                        style={{
+                            padding: '8px 15px',
+                            background: '#d32f2f',
+                            border: 'none',
+                            color: '#fff',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Wyślij zgłoszenie
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
