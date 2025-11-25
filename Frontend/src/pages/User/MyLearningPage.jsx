@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { fetchMyEnrollments } from '../../services/api';
-import CourseCard from '../../components/Course/CourseCard'; 
+import { fetchMyEnrollments, fetchCourseDetails, resolveImageUrl } from '../../services/api'; // Dodano fetchCourseDetails
+import CourseCard from '../../components/Course/CourseCard';
 import { useNavigate } from 'react-router-dom';
 import '../../styles/components/App.css';
 import '../../styles/pages/MyLearningPage.css';
@@ -15,8 +15,41 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
     const loadEnrollments = async () => {
       try {
         setLoading(true);
-        const data = await fetchMyEnrollments();
-        setEnrolledCourses(data);
+        // 1. Pobierz listę zapisów (często zwraca niepełne dane o kursie)
+        const enrollmentsData = await fetchMyEnrollments();
+        
+        // 2. "Dopytaj" o szczegóły każdego kursu, aby uzyskać prawdziwe reviewsCount i rating
+        // Używamy Promise.all, aby pobrać dane równolegle
+        const enrichedEnrollments = await Promise.all(
+            enrollmentsData.map(async (item) => {
+                const courseId = item.course?.id || item.courseId || item.id;
+                
+                if (!courseId) return item;
+
+                try {
+                    // Pobieramy PEŁNE dane kursu, gdzie reviewsCount na pewno jest poprawne
+                    const fullDetails = await fetchCourseDetails(courseId);
+                    
+                    // Nadpisujemy obiekt course w enrollmencie danymi ze szczegółów
+                    return {
+                        ...item,
+                        course: {
+                            ...(item.course || {}),
+                            ...fullDetails, // To nadpisze reviewsCount i averageRating poprawnymi wartościami
+                            // Upewniamy się, że ID jest zachowane
+                            id: courseId 
+                        }
+                    };
+                } catch (err) {
+                    console.warn(`Nie udało się pobrać szczegółów dla kursu ${courseId}`, err);
+                    return item; // W razie błędu zwracamy to co mamy
+                }
+            })
+        );
+
+        console.log("Pobrane i uzupełnione kursy:", enrichedEnrollments);
+        setEnrolledCourses(enrichedEnrollments);
+
       } catch (err) {
         console.error("Błąd pobierania kursów:", err);
         setError("Nie udało się załadować Twoich kursów.");
@@ -60,18 +93,31 @@ const MyLearningPage = ({ onCourseClick, onNavigateToHome }) => {
       ) : (
         <div className="courses-list">
           {enrolledCourses.map((item) => {
-            const courseData = item.course || item.Course;
+            const courseData = item.course || item.Course || item;
             if (!courseData) return null;
+
+            // Teraz reviewsCount pochodzi z fetchCourseDetails, więc powinno być poprawne
+            const rawReviewsCount = 
+                courseData.reviewsCount ?? 
+                courseData.ReviewsCount ?? 
+                courseData.ratingsCount ?? 
+                0;
+
+            const countReviews = parseInt(rawReviewsCount) || 0;
+            const ratingVal = parseFloat(courseData.averageRating ?? courseData.AverageRating ?? 0);
 
             const mappedCourse = {
                 id: courseData.id || courseData.Id,
                 title: courseData.title || courseData.Title,
-                imageSrc: courseData.imageUrl || courseData.ImageUrl || "/src/course/placeholder_ai.png",
-                instructor: courseData.instructorName || courseData.InstructorName || "Instruktor",
-                // ZMIANA: Dodano mapowanie awatara
-                instructorAvatar: courseData.instructorAvatar || courseData.InstructorAvatar,
-                rating: 0,
-                iconColor: '#2a2a2a' 
+                category: courseData.category || courseData.Category || 'Ogólne',
+                imageSrc: resolveImageUrl(courseData.imageUrl || courseData.ImageUrl || courseData.thumbnailUrl),
+                instructorName: courseData.instructorName || courseData.InstructorName || "Instruktor",
+                instructorId: courseData.instructorId || courseData.InstructorId,
+                instructor: {
+                    avatarUrl: courseData.instructorAvatar || courseData.InstructorAvatar || courseData.instructor?.avatarUrl
+                },
+                averageRating: ratingVal,
+                reviewsCount: countReviews // Przekazujemy liczbę do CourseCard
             };
 
             const progressValue = item.progress !== undefined ? item.progress : (item.Progress || 0);

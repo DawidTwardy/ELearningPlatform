@@ -30,34 +30,34 @@ const CourseCard = ({
       navigate(`/courses/${course.id}`);
   };
 
-  const ratingValue = parseFloat(course.averageRating || course.rating || 0);
-  const reviewsCount = course.reviewsCount || course.ratingCount || 0;
+  const ratingValue = parseFloat(course.averageRating) || 0;
+  // Sprawdzamy, czy reviewsCount jest liczbą większą od 0
+  // Czasami z backendu może przyjść string, więc parsujemy
+  const reviewsCount = parseInt(course.reviewsCount) || 0;
+  const hasReviews = reviewsCount > 0;
 
-  // --- LOGIKA DLA NAZWY INSTRUKTORA ---
-  let instructorName = "Instruktor";
-  
-  if (course.instructorName) {
-      instructorName = course.instructorName;
-  } else if (typeof course.instructor === 'string') {
-      instructorName = course.instructor;
-  } else if (course.instructor && typeof course.instructor === 'object') {
-      if (course.instructor.name) instructorName = course.instructor.name;
-      else if (course.instructor.Name) instructorName = course.instructor.Name;
-      else if (course.instructor.userName) instructorName = course.instructor.userName;
-      else if (course.instructor.fullName) instructorName = course.instructor.fullName;
-      else if (course.instructor.Name) instructorName = course.instructor.Name; 
-  }
-
-  // Logika dla awatara
-  const instructorAvatar = course.instructorAvatar || course.instructor?.avatarUrl || null;
-  const instructorId = course.instructorId || course.instructor?.id;
+  const displayImage = resolveImageUrl(course.imageUrl || course.imageSrc);
 
   return (
     <div className="course-card" onClick={handleCardClick}>
       <div className="course-thumbnail">
-        <div className={`placeholder-image ${getPlaceholderClass(course.category)}`}>
-             {/* Tu ewentualnie ikona kategorii */}
+        {displayImage ? (
+            <img 
+                src={displayImage} 
+                alt={course.title} 
+                className="course-image"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                }}
+            />
+        ) : null}
+        
+        <div className={`placeholder-image ${getPlaceholderClass(course.category)}`} style={{ display: displayImage ? 'none' : 'flex' }}>
+            {getCategoryIcon(course.category)}
         </div>
+
         {showFavoriteButton && onToggleFavorite && (
              <div className="favorite-btn-wrapper">
                 <FavoriteHeart isFavorite={isFavorite} onToggle={() => onToggleFavorite(course.id)} />
@@ -66,36 +66,34 @@ const CourseCard = ({
       </div>
       
       <div className="course-info">
+        <div className="course-category">{course.category}</div>
         <h3 className="course-title" title={course.title}>{course.title}</h3>
         
         {showInstructor && (
             <div className="course-instructor">
                 <img 
-                    src={resolveImageUrl(instructorAvatar) || '/src/icon/usericon.png'} 
+                    src={resolveImageUrl(course.instructor?.avatarUrl) || '/src/icon/usericon.png'} 
                     alt="Instructor" 
                     className="instructor-avatar-small"
                     onError={(e) => {e.target.onerror = null; e.target.src = '/src/icon/usericon.png'}}
                 />
-                {instructorId ? (
-                    <Link to={`/instructor/${instructorId}`} className="instructor-link">
-                        {instructorName}
-                    </Link>
-                ) : (
-                    <span className="instructor-name-text">{instructorName}</span>
-                )}
+                <Link to={`/instructor/${course.instructorId}`} className="instructor-link">
+                    {course.instructorName || "Instruktor"}
+                </Link>
             </div>
         )}
 
-        <div className="course-meta">
-            {ratingValue > 0 ? (
+        {/* ZMIANA: Logika wyśrodkowania "Brak opinii" */}
+        <div className="course-meta" style={{ justifyContent: hasReviews ? 'flex-start' : 'center' }}>
+            {hasReviews ? (
                 <>
-                    <div className="stars-container-full">
-                        <StarRating rating={ratingValue} />
-                    </div>
+                    <StarRating rating={ratingValue} />
                     <span className="rating-count">({reviewsCount})</span>
                 </>
             ) : (
-                <span className="no-reviews-text">Brak opinii</span>
+                <span className="no-reviews" style={{ color: '#888', fontStyle: 'italic', fontSize: '0.9em' }}>
+                    Brak opinii
+                </span>
             )}
         </div>
 
@@ -118,6 +116,10 @@ const getPlaceholderClass = (category) => {
         case 'design': return 'bg-pink';
         default: return 'bg-gray';
     }
+};
+
+const getCategoryIcon = (category) => {
+    return null; 
 };
 
 export default CourseCard;
