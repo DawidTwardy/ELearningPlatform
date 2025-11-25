@@ -188,13 +188,6 @@ const Header = ({
                                 <span>{streak}</span>
                             </div>
 
-                            <img 
-                                src="/src/icon/hearticon.png" 
-                                alt="Ulubione" 
-                                className="action-icon-image favorite-icon-image" 
-                                onClick={() => navigateToPage(PAGE_FAVORITES)} 
-                                style={{ cursor: 'pointer' }}
-                            /> 
                             <div className="notification-icon-wrapper">
                                 <img 
                                     src="/src/icon/notification.png" 
