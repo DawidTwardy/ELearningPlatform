@@ -24,16 +24,17 @@ const DiscussionThread = ({ courseId }) => {
         }
     }, [courseId]);
 
-    const loadComments = async () => {
+    // Zmiana: Dodano parametr silent, aby nie migać "Loadingiem" przy odświeżaniu po edycji
+    const loadComments = async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const data = await fetchComments(courseId);
             setComments(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Błąd pobierania komentarzy:", error);
-            setComments([]);
+            if (!silent) setComments([]);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
@@ -42,7 +43,7 @@ const DiscussionThread = ({ courseId }) => {
         try {
             await createComment(courseId, newCommentContent);
             setNewCommentContent("");
-            loadComments();
+            loadComments(true); // Ciche odświeżenie
         } catch (error) {
             console.error("Błąd dodawania komentarza:", error);
             alert("Nie udało się dodać komentarza.");
@@ -57,7 +58,7 @@ const DiscussionThread = ({ courseId }) => {
             await createComment(courseId, content, parentId);
             setReplyContent({ ...replyContent, [parentId]: '' });
             setActiveReplyId(null);
-            loadComments();
+            loadComments(true); // Ciche odświeżenie
         } catch (error) {
             console.error("Błąd dodawania odpowiedzi:", error);
             alert("Nie udało się dodać odpowiedzi.");
@@ -67,6 +68,8 @@ const DiscussionThread = ({ courseId }) => {
     const startEditing = (comment) => {
         setEditingCommentId(comment.id);
         setEditContent(comment.content);
+        // Zamykamy ewentualne okno odpowiedzi, żeby nie przeszkadzało
+        setActiveReplyId(null);
     };
 
     const submitEdit = async (commentId) => {
@@ -75,7 +78,7 @@ const DiscussionThread = ({ courseId }) => {
             await updateComment(commentId, editContent);
             setEditingCommentId(null);
             setEditContent("");
-            loadComments();
+            loadComments(true); // Ciche odświeżenie listy, żeby zaktualizować treść
         } catch (error) {
             console.error("Błąd edycji komentarza:", error);
             alert("Nie udało się edytować komentarza.");
@@ -86,7 +89,7 @@ const DiscussionThread = ({ courseId }) => {
         if (!window.confirm("Czy na pewno chcesz usunąć ten komentarz?")) return;
         try {
             await deleteComment(commentId);
-            loadComments();
+            loadComments(true); // Ciche odświeżenie
         } catch (error) {
             console.error("Błąd usuwania komentarza:", error);
             alert("Nie udało się usunąć komentarza.");
@@ -114,83 +117,97 @@ const DiscussionThread = ({ courseId }) => {
         }
     };
 
-    const renderComment = (comment, isReply = false) => (
-        <div key={comment.id} className={`comment-item ${isReply ? 'reply-item' : ''}`}>
-            <div className="comment-header">
-                <div className="comment-user-info">
-                    <img 
-                        src={resolveImageUrl(comment.avatarUrl) || '/src/icon/usericon.png'} 
-                        alt="Avatar" 
-                        className="comment-avatar"
-                        onError={(e) => {e.target.onerror = null; e.target.src = '/src/icon/usericon.png'}}
-                        style={{ width: '32px', height: '32px', borderRadius: '50%', marginRight: '10px', objectFit: 'cover' }}
-                    />
-                    <span className="comment-author">{comment.userName}</span>
-                </div>
-                <span className="comment-date">{new Date(comment.created).toLocaleDateString()}</span>
-            </div>
-            
-            {editingCommentId === comment.id ? (
-                <div className="comment-edit-form">
-                    <textarea 
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        className="comment-input"
-                    />
-                    <div className="comment-actions">
-                        <button onClick={() => submitEdit(comment.id)} className="save-btn">Zapisz</button>
-                        <button onClick={() => setEditingCommentId(null)} className="cancel-btn">Anuluj</button>
+    const renderComment = (comment, isReply = false) => {
+        const isEditing = editingCommentId === comment.id;
+
+        return (
+            <div key={comment.id} className={`comment-item ${isReply ? 'reply-item' : ''}`}>
+                <div className="comment-header">
+                    <div className="comment-user-info">
+                        <img 
+                            src={resolveImageUrl(comment.avatarUrl) || '/src/icon/usericon.png'} 
+                            alt="Avatar" 
+                            className="comment-avatar"
+                            onError={(e) => {e.target.onerror = null; e.target.src = '/src/icon/usericon.png'}}
+                            style={{ width: '32px', height: '32px', borderRadius: '50%', marginRight: '10px', objectFit: 'cover' }}
+                        />
+                        <span className="comment-author">{comment.userName}</span>
                     </div>
+                    <span className="comment-date">{new Date(comment.created).toLocaleDateString()}</span>
                 </div>
-            ) : (
-                <div className="comment-content">{comment.content}</div>
-            )}
-
-            <div className="comment-actions">
-                <button onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)} className="reply-btn">
-                    Odpowiedz
-                </button>
                 
-                {user && (user.username === comment.userName || user.role === 'Admin') && (
-                    <>
-                        <button onClick={() => startEditing(comment)} className="edit-action-btn">Edytuj</button>
-                        <button onClick={() => handleDelete(comment.id)} className="delete-btn">Usuń</button>
-                    </>
+                {isEditing ? (
+                    <div className="comment-edit-form">
+                        <textarea 
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="comment-input"
+                            autoFocus // Automatycznie ustawia kursor w polu edycji
+                        />
+                        <div className="comment-actions">
+                            <button onClick={() => submitEdit(comment.id)} className="save-btn">Zapisz</button>
+                            <button onClick={() => setEditingCommentId(null)} className="cancel-btn">Anuluj</button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="comment-content">{comment.content}</div>
                 )}
 
-                {user && user.username !== comment.userName && (
-                    <button 
-                        onClick={() => startReporting(comment.id)} 
-                        className="report-btn"
-                        style={{ color: '#ffb74d' }}
-                    >
-                        <AlertTriangle size={14} style={{ marginRight: '5px' }} />
-                        Zgłoś
-                    </button>
+                {/* Ukrywamy przyciski akcji, jeśli trwa edycja tego komentarza */}
+                {!isEditing && (
+                    <div className="comment-actions">
+                        <button onClick={() => setActiveReplyId(activeReplyId === comment.id ? null : comment.id)} className="reply-btn">
+                            Odpowiedz
+                        </button>
+                        
+                        {user && (user.username === comment.userName || user.role === 'Admin') && (
+                            <>
+                                <button onClick={() => startEditing(comment)} className="edit-action-btn">Edytuj</button>
+                                <button onClick={() => handleDelete(comment.id)} className="delete-btn">Usuń</button>
+                            </>
+                        )}
+
+                        {user && user.username !== comment.userName && (
+                            <button 
+                                onClick={() => startReporting(comment.id)} 
+                                className="report-btn"
+                                style={{ color: '#ffb74d' }}
+                            >
+                                <AlertTriangle size={14} style={{ marginRight: '5px' }} />
+                                Zgłoś
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {activeReplyId === comment.id && !isEditing && (
+                    <div className="reply-form">
+                        <textarea
+                            placeholder="Napisz odpowiedź..."
+                            value={replyContent[comment.id] || ''}
+                            onChange={(e) => setReplyContent({ ...replyContent, [comment.id]: e.target.value })}
+                            className="comment-input"
+                            autoFocus
+                        />
+                        <div className="comment-actions">
+                            <button onClick={() => handleReplySubmit(comment.id)} className="submit-btn">
+                                Wyślij
+                            </button>
+                            <button onClick={() => setActiveReplyId(null)} className="cancel-btn">
+                                Anuluj
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {comment.replies && comment.replies.length > 0 && (
+                    <div className="replies-list">
+                        {comment.replies.map(reply => renderComment(reply, true))}
+                    </div>
                 )}
             </div>
-
-            {activeReplyId === comment.id && (
-                <div className="reply-form">
-                    <textarea
-                        placeholder="Napisz odpowiedź..."
-                        value={replyContent[comment.id] || ''}
-                        onChange={(e) => setReplyContent({ ...replyContent, [comment.id]: e.target.value })}
-                        className="comment-input"
-                    />
-                    <button onClick={() => handleReplySubmit(comment.id)} className="submit-btn">
-                        Wyślij
-                    </button>
-                </div>
-            )}
-
-            {comment.replies && comment.replies.length > 0 && (
-                <div className="replies-list">
-                    {comment.replies.map(reply => renderComment(reply, true))}
-                </div>
-            )}
-        </div>
-    );
+        );
+    };
 
     if (loading) return <div className="loading-comments">Ładowanie komentarzy...</div>;
 
@@ -217,68 +234,28 @@ const DiscussionThread = ({ courseId }) => {
             </div>
 
             {isReportModalOpen && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0, left: 0,
-                    width: '100%', height: '100%',
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 2000
-                }}>
-                    <div style={{
-                        backgroundColor: '#1f1f1f',
-                        padding: '25px',
-                        borderRadius: '8px',
-                        width: '400px',
-                        maxWidth: '90%',
-                        border: '1px solid #333'
-                    }}>
-                        <h3 style={{ color: '#fff', marginBottom: '15px' }}>Zgłoś komentarz</h3>
-                        <p style={{ color: '#aaa', fontSize: '0.9em', marginBottom: '10px' }}>
+                <div className="report-modal-overlay">
+                    <div className="report-modal-container">
+                        <h3 className="report-modal-title">Zgłoś komentarz</h3>
+                        <p className="report-modal-description">
                             Opisz, dlaczego ten komentarz powinien zostać usunięty (np. obraźliwa treść).
                         </p>
                         <textarea
+                            className="report-modal-textarea"
                             value={reportReason}
                             onChange={(e) => setReportReason(e.target.value)}
-                            style={{
-                                width: '100%',
-                                minHeight: '100px',
-                                padding: '10px',
-                                backgroundColor: '#333',
-                                border: '1px solid #444',
-                                borderRadius: '4px',
-                                color: '#fff',
-                                marginBottom: '20px',
-                                resize: 'vertical'
-                            }}
                             placeholder="Treść zgłoszenia..."
                         />
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <div className="report-modal-actions">
                             <button
                                 onClick={() => setIsReportModalOpen(false)}
-                                style={{
-                                    padding: '8px 15px',
-                                    background: 'transparent',
-                                    border: '1px solid #666',
-                                    color: '#ccc',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
+                                className="report-modal-cancel-btn"
                             >
                                 Anuluj
                             </button>
                             <button
                                 onClick={handleReportSubmit}
-                                style={{
-                                    padding: '8px 15px',
-                                    background: '#d32f2f',
-                                    border: 'none',
-                                    color: '#fff',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
+                                className="report-modal-submit-btn"
                             >
                                 Wyślij
                             </button>

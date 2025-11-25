@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import '../../styles/pages/CourseEditPage.css';
 import '../../styles/pages/ProfilePage.css';
 import { fetchMyStats, uploadFile, updateUserProfile, fetchUserProfile, API_BASE_URL } from '../../services/api';
