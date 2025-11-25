@@ -10,13 +10,11 @@ const getRefreshToken = () => {
     return token && token !== 'undefined' && token !== 'null' ? token : null;
 };
 
-// --- NOWA FUNKCJA ---
 const resolveImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
     if (path.startsWith('blob:')) return path;
     
-    // Usuwamy /api z końca URL bazowego, aby wskazywał na root serwera (dla plików statycznych)
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
     const serverUrl = API_BASE_URL.replace(/\/api\/?$/, '');
     
@@ -139,8 +137,16 @@ const authenticatedFetch = async (url, options = {}) => {
 
 const handleResponse = async (response) => {
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        
+        const contentType = response.headers.get("content-type");
+        let errorData = { message: response.statusText };
+
+        if (contentType && contentType.includes("application/json")) {
+            errorData = await response.json().catch(() => ({ message: response.statusText }));
+        } else {
+             const text = await response.text();
+             errorData.message = text || response.statusText;
+        }
+
         let errorMessage = errorData.message || `API Error: ${response.status}`;
         
         if (errorData.errors && Array.isArray(errorData.errors)) {
@@ -173,6 +179,20 @@ const registerUser = async (userData) => {
         body: JSON.stringify(userData)
     });
     return handleResponse(response);
+};
+
+const createCourseReport = async (courseId, reason) => {
+    return authenticatedFetch(`${API_BASE_URL}/Reports/Course`, {
+        method: 'POST',
+        body: JSON.stringify({ courseId, reason })
+    });
+};
+
+const createCommentReport = async (commentId, reason) => {
+    return authenticatedFetch(`${API_BASE_URL}/Reports/Comment`, {
+        method: 'POST',
+        body: JSON.stringify({ commentId, reason })
+    });
 };
 
 const fetchCourseDetails = async (courseId) => {
@@ -229,7 +249,7 @@ const fetchCompletedQuizzes = async (courseId) => {
 };
 
 const markLessonCompleted = async (lessonId) => {
-    return authenticatedFetch(`${API_BASE_URL}/Progress/lesson/${lessonId}`, { 
+    return authenticatedFetch(`${API_BASE_URL}/Progress/lesson/${lessonId}/complete`, { 
         method: 'POST',
         body: JSON.stringify({})
     });
@@ -306,7 +326,7 @@ const fetchUserProfile = async () => {
 const downloadCertificate = async (courseId) => {
     const token = getAuthToken();
     
-    const response = await fetch(`${API_BASE_URL}/Certificates/${courseId}/download`, {
+    const response = await fetch(`${API_BASE_URL}/Certificates/${courseId}`, {
         method: 'GET',
         headers: { 'Authorization': `Bearer ${token}` },
     });
@@ -392,8 +412,6 @@ const fetchInstructorDetails = async (instructorId) => {
     return handleResponse(response);
 };
 
-// --- NOWE FUNKCJE DLA ADMINA ---
-
 const fetchReportedCourses = async () => {
     return authenticatedFetch(`${API_BASE_URL}/Admin/reported-courses`, { method: 'GET' });
 };
@@ -473,5 +491,7 @@ export {
     fetchReportedComments,
     keepComment,
     deleteReportedComment,
+    createCourseReport,
+    createCommentReport,
     API_BASE_URL
 };

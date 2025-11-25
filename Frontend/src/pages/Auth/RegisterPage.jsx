@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import '../../styles/pages/LoginReg.css';
+import { useAuth } from '../../context/AuthContext';
 
 const EyeIcon = ({ show, toggle }) => (
     <img 
@@ -11,7 +12,9 @@ const EyeIcon = ({ show, toggle }) => (
 );
 
 const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
-    const [login, setLogin] = useState('');
+    const { register } = useAuth();
+    
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [firstName, setFirstName] = useState('');
@@ -19,91 +22,26 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [error, setError] = useState('');
 
-    const handleRegister = (e) => {
+    const handleRegister = async (e) => {
         e.preventDefault();
         setError(''); 
         
-        if (password.length < 4) { 
-            setError('Hasło musi mieć co najmniej 4 znaki.');
-            return;
-        }
-        
         const registerData = {
-            username: login,
+            username: username,
             email: email,
             password: password,
             firstName: firstName,
             lastName: lastName
         };
 
-        // POPRAWKA: Używamy HTTP
-        fetch('http://localhost:7115/api/Auth/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(registerData)
-        })
-        .then(async response => {
-            // Zmieniona logika do bezpiecznej obsługi odpowiedzi nie będącej formatem JSON (np. błąd 500)
-            const text = await response.text();
-            let data = {};
-            
-            try {
-                // Spróbuj parsować jako JSON
-                data = JSON.parse(text);
-            } catch (e) {
-                // Jeśli parsowanie JSON się nie powiedzie (np. otrzymano HTML/czysty tekst)
-                if (response.ok) {
-                    // W teorii pomyślna odpowiedź powinna być JSON, więc to jest nieoczekiwane
-                    throw new Error("Pomyślny status, ale nieoczekiwany format odpowiedzi.");
-                } else {
-                    // W przypadku błędu serwera, który nie jest JSON-em, rzuć ogólny błąd
-                    console.error("Błąd serwera zwrócił nie-JSON:", text);
-                    throw new Error(`Wystąpił błąd serwera (Status: ${response.status}). Serwer zwrócił nieoczekiwany format danych.`);
-                }
-            }
-            
-            return { status: response.status, body: data };
-        })
-        .then(result => {
-            if (result.status === 200) {
-                alert("Rejestracja przebiegła pomyślnie! Zostałeś zalogowany.");
-                
-                // Nowy użytkownik w backendzie domyślnie otrzymuje rolę Instructor, ale tutaj mockujemy rolę Studenta, 
-                // dopóki nie pobierzemy faktycznych ról z tokena. (To powinno być obsłużone w funkcji onRegisterSuccess)
-                const userRole = 'Student'; 
+        const result = await register(registerData);
 
-                // Przechowujemy dane użytkownika
-                localStorage.setItem('token', result.body.token); // POPRAWKA: Używamy klucza 'token'
-                localStorage.setItem('lastUsername', login);
-                localStorage.setItem('lastFirstName', firstName);
-                localStorage.setItem('lastName', lastName);
-
-                // Przekazujemy token i dane użytkownika
-                onRegisterSuccess(result.body.token, { username: login, role: userRole, firstName: firstName, lastName: lastName }); 
-
-            } else {
-                // Błąd rejestracji (400 Bad Request)
-                const errorBody = result.body.Errors;
-                
-                let errorMessage = 'Nieznany błąd rejestracji.';
-                if (errorBody && Array.isArray(errorBody)) {
-                    errorMessage = errorBody.map(err => err.Description).join('; ');
-                } else if (result.body.message) {
-                    errorMessage = result.body.message;
-                } else if (result.status === 400 && result.body.title) {
-                    errorMessage = result.body.title; 
-                }
-                
-                setError(errorMessage);
-            }
-        })
-        .catch(err => {
-            console.error("Błąd sieci/serwera:", err);
-            // Używamy error.message z rzuconego błędu w bloku .then
-            setError(err.message || 'Błąd połączenia z serwerem. Spróbuj ponownie.'); 
-        });
+        if (result.success) {
+            alert("Rejestracja przebiegła pomyślnie! Zostałeś zalogowany.");
+            onRegisterSuccess();
+        } else {
+            setError(result.message);
+        }
     };
 
     const handleLoginClick = (e) => {
@@ -153,13 +91,13 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
                             />
                         </div>
                         <div className="form-group">
-                            <label htmlFor="login">Login</label>
+                            <label htmlFor="username">Login (Nazwa Użytkownika)</label>
                             <input 
-                                id="login"
+                                id="username"
                                 type="text" 
                                 placeholder="Login"
-                                value={login}
-                                onChange={(e) => setLogin(e.target.value)}
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
                                 required
                             />
                         </div>
@@ -177,7 +115,7 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="password">Hasło (min. 4 znaki)</label>
+                            <label htmlFor="password">Hasło (min. 6 znaków, duża/mała litera)</label>
                             <div className="input-container">
                                 <input 
                                     id="password"
@@ -186,6 +124,7 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
+                                    minLength={6}
                                 />
                                 <EyeIcon 
                                     show={passwordVisible} 

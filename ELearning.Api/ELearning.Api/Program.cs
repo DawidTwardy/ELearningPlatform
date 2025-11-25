@@ -135,7 +135,6 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-        // Wywo³anie metody seeduj¹cej
         await SeedRolesAndAdminUser(userManager, roleManager);
     }
     catch (Exception ex)
@@ -147,18 +146,15 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
-// NOWA METODA DLA SEEDINGU RÓL I U¯YTKOWNIKA ADMINA Z MECHANIZMEM RESETOWANIA HAS£A
 static async Task SeedRolesAndAdminUser(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
 {
     const string adminRole = "Admin";
     const string instructorRole = "Instructor";
 
-    // DANE LOGOWANIA
     const string adminEmail = "admin@admin.com";
-    const string adminUserName = "admin"; // U¯YWANE JAKO LOGIN
-    const string adminPassword = "admin";
+    const string adminUserName = "admin";
+    const string adminPassword = "Admin123!";
 
-    // 1. Upewnij siê, ¿e role istniej¹
     if (!await roleManager.RoleExistsAsync(adminRole))
     {
         await roleManager.CreateAsync(new IdentityRole(adminRole));
@@ -168,12 +164,10 @@ static async Task SeedRolesAndAdminUser(UserManager<ApplicationUser> userManager
         await roleManager.CreateAsync(new IdentityRole(instructorRole));
     }
 
-    // Wyszukaj u¿ytkownika po UserName (Login)
     var adminUser = await userManager.FindByNameAsync(adminUserName);
 
     if (adminUser == null)
     {
-        // U¿ytkownik nie istnieje - stwórz go
         adminUser = new ApplicationUser
         {
             UserName = adminUserName,
@@ -192,14 +186,11 @@ static async Task SeedRolesAndAdminUser(UserManager<ApplicationUser> userManager
     }
     else
     {
-        // U¿ytkownik istnieje - upewnij siê, ¿e ma rolê Admina i ZRESETUJ HAS£O
         if (!await userManager.IsInRoleAsync(adminUser, adminRole))
         {
             await userManager.AddToRoleAsync(adminUser, adminRole);
         }
 
-        // GWARANCJA POPRAWNEGO HAS£A:
-        // Usuñ stare has³o i dodaj nowe, aby zresetowaæ hash
         await userManager.RemovePasswordAsync(adminUser);
         await userManager.AddPasswordAsync(adminUser, adminPassword);
     }

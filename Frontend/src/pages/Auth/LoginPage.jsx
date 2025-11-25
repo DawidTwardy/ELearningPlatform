@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import '../../styles/pages/LoginReg.css';
 import { PAGE_HOME, PAGE_REGISTER } from '../../App';
 
-// Komponent ikonki oka (zdefiniowany lokalnie lub importowany)
 const EyeIcon = ({ show, toggle }) => (
     <img 
         src={show ? '/src/icon/eye.png' : '/src/icon/eye-slash.png'} 
@@ -15,12 +14,10 @@ const EyeIcon = ({ show, toggle }) => (
 );
 
 const LoginPage = ({ navigateToPage }) => { 
-    // Uwaga: navigateToPage przychodzi z propsów (zgodnie z App.jsx), 
-    // ale wewnątrz komponentu lepiej używać hooka useNavigate dla spójności v6.
     const navigate = useNavigate(); 
     const { login } = useAuth();
 
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [error, setError] = useState('');
@@ -31,12 +28,9 @@ const LoginPage = ({ navigateToPage }) => {
         setIsLoading(true);
         setError('');
 
-        // Używamy funkcji login z AuthContext, która obsługuje axios i token
-        const result = await login(email, password);
+        const result = await login(username, password);
 
         if (result.success) {
-            // Przekierowanie po udanym logowaniu
-            // Używamy navigate('/') lub navigateToPage(PAGE_HOME) jeśli wolisz
             navigate('/'); 
         } else {
             setError(result.message || 'Błędny login lub hasło.');
@@ -45,17 +39,14 @@ const LoginPage = ({ navigateToPage }) => {
         setIsLoading(false);
     };
 
-    // Helper do nawigacji do rejestracji
     const goToRegister = (e) => {
         e.preventDefault();
         navigate('/register');
     };
 
     return (
-        /* Używamy klasy 'login-container' zamiast 'main-content' aby pasowało do LoginReg.css */
         <main className="login-container">
             <div className="login-content">
-                {/* Sekcja z ilustracją - widoczna na desktopie */}
                 <div className="login-illustration">
                     <div className="login-illustration-wrapper">
                         <img 
@@ -66,20 +57,19 @@ const LoginPage = ({ navigateToPage }) => {
                     </div>
                 </div>
 
-                {/* Karta logowania */}
                 <div className="login-form-card">
                     <h2 className="login-title">Zaloguj się</h2>
                     
                     <form onSubmit={handleLogin}>
                         <div className="form-group">
-                            <label htmlFor="email">Email</label>
+                            <label htmlFor="username">Login (Nazwa Użytkownika)</label>
                             <input 
-                                id="email"
+                                id="username"
                                 type="text" 
-                                value={email} 
-                                onChange={(e) => setEmail(e.target.value)} 
+                                value={username} 
+                                onChange={(e) => setUsername(e.target.value)} 
                                 required 
-                                placeholder="Wpisz swój email"
+                                placeholder="Wpisz swój login"
                             />
                         </div>
 
@@ -102,7 +92,6 @@ const LoginPage = ({ navigateToPage }) => {
                             {error && <div className="form-feedback"><span className="error-message">{error}</span></div>}
                         </div>
                         
-                        {/* LINK ZAPOMNIAŁEM HASŁA */}
                         <div style={{ textAlign: 'right', marginBottom: '15px' }}>
                             <a 
                                 href="#" 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import '../../styles/pages/DiscussionThread.css';
 import { useAuth } from '../../context/AuthContext';
-import { resolveImageUrl, fetchComments, createComment, updateComment, deleteComment } from '../../services/api';
+import { resolveImageUrl, fetchComments, createComment, updateComment, deleteComment, createCommentReport } from '../../services/api';
+import { AlertTriangle } from 'lucide-react';
 
 const DiscussionThread = ({ courseId }) => {
     const { user } = useAuth();
@@ -12,6 +13,10 @@ const DiscussionThread = ({ courseId }) => {
     const [activeReplyId, setActiveReplyId] = useState(null);
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editContent, setEditContent] = useState("");
+    
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [commentToReportId, setCommentToReportId] = useState(null);
+    const [reportReason, setReportReason] = useState('');
 
     useEffect(() => {
         if (courseId) {
@@ -23,7 +28,6 @@ const DiscussionThread = ({ courseId }) => {
         try {
             setLoading(true);
             const data = await fetchComments(courseId);
-            // Upewniamy się, że data to tablica
             setComments(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Błąd pobierania komentarzy:", error);
@@ -38,7 +42,7 @@ const DiscussionThread = ({ courseId }) => {
         try {
             await createComment(courseId, newCommentContent);
             setNewCommentContent("");
-            loadComments(); // Odśwież komentarze po dodaniu
+            loadComments();
         } catch (error) {
             console.error("Błąd dodawania komentarza:", error);
             alert("Nie udało się dodać komentarza.");
@@ -89,6 +93,27 @@ const DiscussionThread = ({ courseId }) => {
         }
     };
 
+    const startReporting = (commentId) => {
+        setCommentToReportId(commentId);
+        setReportReason('');
+        setIsReportModalOpen(true);
+    };
+
+    const handleReportSubmit = async () => {
+        if (!reportReason.trim() || !commentToReportId) return;
+        
+        try {
+            await createCommentReport(commentToReportId, reportReason);
+            alert("Komentarz został zgłoszony do moderacji.");
+            setIsReportModalOpen(false);
+            setCommentToReportId(null);
+            setReportReason('');
+        } catch (error) {
+            console.error(error);
+            alert("Wystąpił błąd podczas wysyłania zgłoszenia: " + (error.message || "Błąd sieci"));
+        }
+    };
+
     const renderComment = (comment, isReply = false) => (
         <div key={comment.id} className={`comment-item ${isReply ? 'reply-item' : ''}`}>
             <div className="comment-header">
@@ -131,6 +156,17 @@ const DiscussionThread = ({ courseId }) => {
                         <button onClick={() => startEditing(comment)} className="edit-action-btn">Edytuj</button>
                         <button onClick={() => handleDelete(comment.id)} className="delete-btn">Usuń</button>
                     </>
+                )}
+
+                {user && user.username !== comment.userName && (
+                    <button 
+                        onClick={() => startReporting(comment.id)} 
+                        className="report-btn"
+                        style={{ color: '#ffb74d' }}
+                    >
+                        <AlertTriangle size={14} style={{ marginRight: '5px' }} />
+                        Zgłoś
+                    </button>
                 )}
             </div>
 
@@ -179,6 +215,77 @@ const DiscussionThread = ({ courseId }) => {
                     <p className="no-comments">Brak komentarzy. Bądź pierwszy!</p>
                 )}
             </div>
+
+            {isReportModalOpen && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0,
+                    width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 2000
+                }}>
+                    <div style={{
+                        backgroundColor: '#1f1f1f',
+                        padding: '25px',
+                        borderRadius: '8px',
+                        width: '400px',
+                        maxWidth: '90%',
+                        border: '1px solid #333'
+                    }}>
+                        <h3 style={{ color: '#fff', marginBottom: '15px' }}>Zgłoś komentarz</h3>
+                        <p style={{ color: '#aaa', fontSize: '0.9em', marginBottom: '10px' }}>
+                            Opisz, dlaczego ten komentarz powinien zostać usunięty (np. obraźliwa treść).
+                        </p>
+                        <textarea
+                            value={reportReason}
+                            onChange={(e) => setReportReason(e.target.value)}
+                            style={{
+                                width: '100%',
+                                minHeight: '100px',
+                                padding: '10px',
+                                backgroundColor: '#333',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                color: '#fff',
+                                marginBottom: '20px',
+                                resize: 'vertical'
+                            }}
+                            placeholder="Treść zgłoszenia..."
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                            <button
+                                onClick={() => setIsReportModalOpen(false)}
+                                style={{
+                                    padding: '8px 15px',
+                                    background: 'transparent',
+                                    border: '1px solid #666',
+                                    color: '#ccc',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Anuluj
+                            </button>
+                            <button
+                                onClick={handleReportSubmit}
+                                style={{
+                                    padding: '8px 15px',
+                                    background: '#d32f2f',
+                                    border: 'none',
+                                    color: '#fff',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Wyślij
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

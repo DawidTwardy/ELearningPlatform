@@ -20,7 +20,6 @@ const parseJwt = (token) => {
 };
 
 export const AuthProvider = ({ children }) => {
-    // Inicjalizacja stanu bezpośrednio z localStorage
     const [token, setToken] = useState(() => localStorage.getItem('token'));
     const [user, setUser] = useState(null);
     const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -34,7 +33,6 @@ export const AuthProvider = ({ children }) => {
         window.location.href = '/login';
     }, []);
 
-    // Konfiguracja axios interceptora
     useEffect(() => {
         const requestInterceptor = axios.interceptors.request.use(
             config => {
@@ -52,7 +50,6 @@ export const AuthProvider = ({ children }) => {
         };
     }, []);
 
-    // Dekodowanie tokena przy zmianie (lub starcie aplikacji)
     useEffect(() => {
         if (token) {
             const decoded = parseJwt(token);
@@ -69,7 +66,6 @@ export const AuthProvider = ({ children }) => {
                 });
                 setIsAuthenticated(true);
             } else {
-                // Jeśli token jest uszkodzony/nieprawidłowy, czyścimy
                 localStorage.removeItem('token');
                 localStorage.removeItem('refreshToken');
                 setToken(null);
@@ -87,13 +83,12 @@ export const AuthProvider = ({ children }) => {
             const response = await axios.post(`${API_BASE_URL}/Auth/login`, { username, password });
             const { token: newToken, refreshToken } = response.data;
             
-            // KLUCZOWA POPRAWKA: Zapis synchroniczny przed ustawieniem stanu
             if (refreshToken) {
                 localStorage.setItem('refreshToken', refreshToken);
             }
             if (newToken) {
                 localStorage.setItem('token', newToken);
-                setToken(newToken); // To wywoła useEffect dekodujący usera
+                setToken(newToken); 
             }
             
             return { success: true };
@@ -108,7 +103,6 @@ export const AuthProvider = ({ children }) => {
             const response = await axios.post(`${API_BASE_URL}/Auth/register`, userData);
             const { token: newToken, refreshToken } = response.data;
             
-            // KLUCZOWA POPRAWKA: Zapis synchroniczny
             if (refreshToken) {
                 localStorage.setItem('refreshToken', refreshToken);
             }
@@ -125,13 +119,18 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const updateUser = (newUserData) => {
+        setUser(prevUser => ({ ...prevUser, ...newUserData }));
+    };
+
     const value = {
         isAuthenticated,
         token,
         user, 
         login,
         register,
-        logout
+        logout,
+        updateUser
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

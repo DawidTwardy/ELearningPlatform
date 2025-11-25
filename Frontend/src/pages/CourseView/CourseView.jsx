@@ -9,7 +9,7 @@ import {
     downloadCertificate, 
     createReview,
     fetchUserEnrollment,
-    createNotification
+    createCourseReport
 } from '../../services/api';
 import { downloadCalendarEvent } from '../../utils/calendarGenerator';
 import QuizView from './QuizView';
@@ -32,7 +32,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
     const [expandedSections, setExpandedSections] = useState({});
     const [completedLessonIds, setCompletedLessonIds] = useState([]); 
     const [completedQuizIds, setCompletedQuizIds] = useState([]); 
-    const [enrollmentDate, setEnrollmentDate] = useState(null);
+    const [enrollmentDate, setEnrollmentDate] = useState(null); // Zmieniono z let na useState(null)
     const [error, setError] = useState(null);
     const [showRatingForm, setShowRatingForm] = useState(false);
     
@@ -79,6 +79,8 @@ const CourseView = ({ course: courseProp, onBack }) => {
                 if (enrollmentData && enrollmentData.enrollmentDate) {
                     setEnrollmentDate(enrollmentData.enrollmentDate);
                 } else {
+                    // Ustawiamy bieżącą datę jako domyślny EnrollmentDate, jeśli nie ma zapisu. 
+                    // Ważne, aby StudyPlanner miał datę.
                     setEnrollmentDate(new Date().toISOString()); 
                 }
                 
@@ -233,22 +235,10 @@ const CourseView = ({ course: courseProp, onBack }) => {
         if (!reportReason.trim()) return;
         
         try {
-            const instructorId = course.instructorId || course.InstructorId; 
-            
-            if (!instructorId) {
-                alert("Nie można zidentyfikować instruktora tego kursu.");
-                return;
-            }
+            await createCourseReport(parseInt(courseId), 
+                                     `Zgłoszenie błędu: ${currentContent?.title || "Nieokreślona treść"}. Opis: ${reportReason}`);
 
-            // POPRAWKA: Dodano relatedEntityId (ID kursu), aby powiązać zgłoszenie z kursem
-            await createNotification({
-                userId: instructorId,
-                message: `[Zgłoszenie błędu: ${currentContent?.title || "Lekcja"}] Użytkownik zgłosił błąd w kursie "${course.title}". Treść: ${reportReason}`,
-                type: 'alert',
-                relatedEntityId: parseInt(courseId)
-            });
-
-            alert("Zgłoszenie zostało wysłane do instruktora.");
+            alert("Zgłoszenie zostało wysłane do moderacji.");
             setReportReason('');
             setIsReportModalOpen(false);
         } catch (error) {
@@ -658,7 +648,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
                     }}>
                         <h3 style={{ color: '#fff', marginBottom: '15px' }}>Zgłoś błąd w treści</h3>
                         <p style={{ color: '#aaa', fontSize: '0.9em', marginBottom: '10px' }}>
-                            Opisz problem (np. niedziałające wideo, błąd w quizie). Zgłoszenie trafi do instruktora.
+                            Opisz problem (np. niedziałające wideo, błąd w quizie). Zgłoszenie trafi do moderacji.
                         </p>
                         <textarea
                             value={reportReason}
