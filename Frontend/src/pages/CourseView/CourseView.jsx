@@ -351,7 +351,8 @@ const CourseView = ({ course: courseProp, onBack }) => {
         } else if (typeof content === 'string' && content.startsWith('{')) {
              try {
                 const parsed = JSON.parse(content);
-                content = parsed.url || content;
+                // NAPRAWIONA LINIA: Pobiera 'text' (dla sformatowanej treści) lub 'url' (dla plików)
+                content = parsed.text || parsed.url || content; 
              } catch(e) {}
         }
 
