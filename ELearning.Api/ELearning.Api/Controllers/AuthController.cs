@@ -77,7 +77,7 @@ namespace ELearning.Api.Controllers
 
                 try
                 {
-                    await _emailService.SendEmailAsync(user.Email, "Witamy w ELearning Platform!", $"<h3>Czeœæ {user.FirstName}!</h3><p>Dziêkujemy za rejestracjê.</p>");
+                    await _emailService.SendEmailAsync(user.Email, "Witamy w ELearning Platform!", $"<h3>Czeï¿½ï¿½ {user.FirstName}!</h3><p>Dziï¿½kujemy za rejestracjï¿½.</p>");
                 }
                 catch { }
 
@@ -96,7 +96,7 @@ namespace ELearning.Api.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
             var user = await _userManager.FindByNameAsync(model.Username);
-            if (user == null) return Unauthorized(new { Message = "B³êdny login lub has³o." });
+            if (user == null) return Unauthorized(new { Message = "Bï¿½ï¿½dny login lub hasï¿½o." });
 
             var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
             if (result.Succeeded)
@@ -104,7 +104,7 @@ namespace ELearning.Api.Controllers
                 var jwtToken = await GenerateJwtToken(user);
                 var refreshToken = GenerateRefreshToken();
 
-                // Opcjonalne czyszczenie starych tokenów
+               
                 var oldTokens = _context.RefreshTokens.Where(t => t.UserId == user.Id && t.Expires < DateTime.UtcNow);
                 _context.RefreshTokens.RemoveRange(oldTokens);
 
@@ -120,14 +120,14 @@ namespace ELearning.Api.Controllers
                 });
             }
 
-            return Unauthorized(new { Message = "B³êdny login lub has³o." });
+            return Unauthorized(new { Message = "Bï¿½ï¿½dny login lub hasï¿½o." });
         }
 
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken([FromBody] TokenRequestDto tokenRequest)
         {
             if (string.IsNullOrEmpty(tokenRequest.RefreshToken))
-                return BadRequest(new { Message = "Brak tokena odœwie¿ania." });
+                return BadRequest(new { Message = "Brak tokena odï¿½wieï¿½ania." });
 
             var storedToken = await _context.RefreshTokens
                 .Include(r => r.User)
@@ -135,7 +135,7 @@ namespace ELearning.Api.Controllers
 
             if (storedToken == null || !storedToken.IsActive)
             {
-                return Unauthorized(new { Message = "Nieprawid³owy lub wygas³y token odœwie¿ania." });
+                return Unauthorized(new { Message = "Nieprawidï¿½owy lub wygasï¿½y token odï¿½wieï¿½ania." });
             }
 
             var user = storedToken.User;
@@ -169,22 +169,22 @@ namespace ELearning.Api.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null)
             {
-                return Ok(new { Message = "Jeœli konto istnieje, wys³aliœmy link resetuj¹cy." });
+                return Ok(new { Message = "Jeï¿½li konto istnieje, wysï¿½aliï¿½my link resetujï¿½cy." });
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var message = $"<h3>Reset has³a</h3><p>Twój token do resetu has³a to: <b>{token}</b></p>";
+            var message = $"<h3>Reset hasï¿½a</h3><p>Twï¿½j token do resetu hasï¿½a to: <b>{token}</b></p>";
 
             try
             {
-                await _emailService.SendEmailAsync(user.Email, "Reset has³a - ELearning Platform", message);
+                await _emailService.SendEmailAsync(user.Email, "Reset hasï¿½a - ELearning Platform", message);
             }
             catch
             {
-                return StatusCode(500, new { Message = "Nie uda³o siê wys³aæ emaila." });
+                return StatusCode(500, new { Message = "Nie udaï¿½o siï¿½ wysï¿½aï¿½ emaila." });
             }
 
-            return Ok(new { Message = "Jeœli konto istnieje, wys³aliœmy link resetuj¹cy." });
+            return Ok(new { Message = "Jeï¿½li konto istnieje, wysï¿½aliï¿½my link resetujï¿½cy." });
         }
 
         [HttpPost("reset-password")]
@@ -196,7 +196,7 @@ namespace ELearning.Api.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null)
             {
-                return Ok(new { Message = "Has³o zosta³o pomyœlnie zresetowane." });
+                return Ok(new { Message = "Hasï¿½o zostaï¿½o pomyï¿½lnie zresetowane." });
             }
 
             var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
@@ -205,11 +205,11 @@ namespace ELearning.Api.Controllers
             {
                 try
                 {
-                    await _emailService.SendEmailAsync(user.Email, "Has³o zmienione", "<p>Twoje has³o zosta³o pomyœlnie zmienione.</p>");
+                    await _emailService.SendEmailAsync(user.Email, "Hasï¿½o zmienione", "<p>Twoje hasï¿½o zostaï¿½o pomyï¿½lnie zmienione.</p>");
                 }
                 catch { }
 
-                return Ok(new { Message = "Has³o zosta³o pomyœlnie zresetowane." });
+                return Ok(new { Message = "Hasï¿½o zostaï¿½o pomyï¿½lnie zresetowane." });
             }
 
             return BadRequest(new

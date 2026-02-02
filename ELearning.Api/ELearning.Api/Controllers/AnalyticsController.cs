@@ -74,7 +74,7 @@ namespace ELearning.Api.Controllers
                 .OrderBy(x => x.Date)
                 .ToList();
 
-            // Pobieranie zg³oszeñ b³êdów dla tego kursu
+           
             var reports = await _context.Notifications
                 .Where(n => n.RelatedEntityId == courseId && n.Type == "alert")
                 .OrderByDescending(n => n.CreatedAt)

@@ -11,17 +11,12 @@ namespace ELearning.Api.Models.CourseContent
 
         [Required]
         public string Title { get; set; } = string.Empty;
-
         public string Content { get; set; } = string.Empty;
-
         public string VideoUrl { get; set; } = string.Empty;
-
         public int SectionId { get; set; }
 
         [ForeignKey("SectionId")]
         public CourseSection? Section { get; set; }
-
-        // Nowe pole: Lista zasobów do pobrania
         public ICollection<LessonResource> Resources { get; set; } = new List<LessonResource>();
     }
 }
