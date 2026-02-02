@@ -1,5 +1,6 @@
 using ELearning.Api.Interfaces;
 using Microsoft.Extensions.Configuration;
+using System;
 using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
@@ -19,24 +20,38 @@ namespace ELearning.Api.Services
         {
             var emailSettings = _configuration.GetSection("EmailSettings");
 
-            var smtpClient = new SmtpClient(emailSettings["SmtpServer"])
+            try
             {
-                Port = int.Parse(emailSettings["Port"]),
-                Credentials = new NetworkCredential(emailSettings["Username"], emailSettings["Password"]),
-                EnableSsl = true,
-            };
+                using (var smtpClient = new SmtpClient(emailSettings["SmtpServer"]))
+                {
+                    smtpClient.Port = int.Parse(emailSettings["Port"]);
+                    smtpClient.EnableSsl = true;
+                    smtpClient.DeliveryMethod = SmtpDeliveryMethod.Network;
+                    smtpClient.UseDefaultCredentials = false;
+                    smtpClient.Credentials = new NetworkCredential(emailSettings["Username"], emailSettings["Password"]);
 
-            var mailMessage = new MailMessage
+                    using (var mailMessage = new MailMessage
+                    {
+                        From = new MailAddress(emailSettings["SenderEmail"], emailSettings["SenderName"]),
+                        Subject = subject,
+                        Body = message,
+                        IsBodyHtml = true,
+                    })
+                    {
+                        mailMessage.To.Add(to);
+                        await smtpClient.SendMailAsync(mailMessage);
+                    }
+                }
+            }
+            catch (Exception ex)
             {
-                From = new MailAddress(emailSettings["SenderEmail"], emailSettings["SenderName"]),
-                Subject = subject,
-                Body = message,
-                IsBodyHtml = true,
-            };
-
-            mailMessage.To.Add(to);
-
-            await smtpClient.SendMailAsync(mailMessage);
+                Console.WriteLine(ex.Message);
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine(ex.InnerException.Message);
+                }
+                throw;
+            }
         }
     }
 }

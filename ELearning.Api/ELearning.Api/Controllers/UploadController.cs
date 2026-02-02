@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace ELearning.Api.Controllers
 {
@@ -20,13 +21,19 @@ namespace ELearning.Api.Controllers
         }
 
         [HttpPost]
-        [RequestSizeLimit(209715200)] // Zwiêkszamy limit dla tej metody do 200 MB
+        [RequestSizeLimit(524288000)]
         public async Task<IActionResult> UploadFile(IFormFile file)
         {
             try
             {
-                var allowedExtensions = new[] { ".pdf", ".mp4", ".avi", ".mov", ".png", ".jpg", ".jpeg" };
-                // Sprawdzenie nulla przed dostêpem do FileName
+                var allowedExtensions = new[]
+                {
+                    ".png", ".jpg", ".jpeg", ".gif", ".webp",
+                    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt",
+                    ".mp4", ".avi", ".mov", ".wmv", ".mkv",
+                    ".zip", ".rar", ".7z"
+                };
+
                 if (file == null || file.Length == 0)
                 {
                     return BadRequest("Nie przes³ano pliku.");
@@ -34,9 +41,9 @@ namespace ELearning.Api.Controllers
 
                 var extension = System.IO.Path.GetExtension(file.FileName).ToLower();
 
-                if (Array.IndexOf(allowedExtensions, extension) < 0)
+                if (!allowedExtensions.Contains(extension))
                 {
-                    return BadRequest("Niedozwolony format pliku.");
+                    return BadRequest($"Niedozwolony format pliku ({extension}).");
                 }
 
                 string fileUrl = await _fileStorageService.SaveFileAsync(file);
@@ -45,7 +52,6 @@ namespace ELearning.Api.Controllers
             }
             catch (Exception ex)
             {
-                // Poprawiono literówkê w s³owie "B³¹d"
                 return StatusCode(500, $"B³¹d serwera: {ex.Message}");
             }
         }

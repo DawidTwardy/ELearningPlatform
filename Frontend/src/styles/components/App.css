@@ -23,12 +23,11 @@ body {
     width: 100%;
 }
 
-/* --- POPRAWIONY HEADER --- */
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 30px; /* Zmniejszono padding boczny */
+    padding: 15px 30px; 
     background-color: #1B1B1B;
     width: 100%;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
@@ -36,15 +35,15 @@ body {
     top: 0;
     z-index: 1001;
     flex-shrink: 0;
-    flex-wrap: wrap; /* Pozwala na zawijanie na bardzo małych ekranach */
+    flex-wrap: wrap; 
 }
 
 .header-left { 
     display: flex; 
     align-items: center; 
     gap: 20px; 
-    flex: 1; /* Zajmuje dostępną przestrzeń */
-    min-width: 0; /* Zapobiega wypychaniu */
+    flex: 1; 
+    min-width: 0; 
 }
 
 .header-right { 
@@ -55,9 +54,8 @@ body {
     flex-shrink: 0;
 }
 
-.logo-image { height: 40px; width: auto; cursor: pointer; } /* Nieco mniejsze logo */
+.logo-image { height: 40px; width: auto; cursor: pointer; } 
 
-/* Responsywny pasek wyszukiwania */
 .search-bar { 
     display: flex; 
     align-items: center; 
@@ -66,7 +64,7 @@ body {
     border-radius: 30px; 
     padding: 8px 15px; 
     width: 100%; 
-    max-width: 600px; /* Maksymalna szerokość zamiast sztywnej */
+    max-width: 600px; 
     min-width: 200px;
 }
 
@@ -86,10 +84,9 @@ body {
 .menu-divider { height: 1px; background-color: #444; margin: 5px 0; }
 
 .main-content {
-    max-width: 1400px;
+    max-width: none;
     width: 100%;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 0;
     padding: 30px 40px;
     flex: 1;
     display: flex;
@@ -116,15 +113,12 @@ body {
 }
 .footer .logo-image { height: 40px; width: auto; }
 
-/* Powiadomienia */
 .notification-icon-wrapper { position: relative; cursor: pointer; }
 .notification-dot { position: absolute; top: 0; right: 0; width: 8px; height: 8px; background-color: #FF6B6B; border-radius: 50%; }
 
-/* Style gwiazdek (potrzebne globalnie, jeśli nie są w StarRating.css) */
 .star-rating { display: flex; gap: 2px; }
 .star-icon-image { width: 16px; height: 16px; }
 
-/* Styl paginacji (używany w HomePage) */
 .pagination-container {
     display: flex;
     justify-content: center;
@@ -158,11 +152,10 @@ body {
     font-size: 0.9rem;
 }
 
-/* Responsywność */
 @media (max-width: 768px) {
     .header { padding: 10px 15px; gap: 15px; }
     .search-bar { max-width: 100%; margin: 10px 0; order: 3; width: 100%; }
     .header-left, .header-right { width: auto; }
-    .nav-links { display: none; } /* Uproszczenie na mobile */
+    .nav-links { display: none; } 
     .course-card { width: 100%; }
 }

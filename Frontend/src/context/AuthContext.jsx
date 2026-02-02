@@ -94,7 +94,15 @@ export const AuthProvider = ({ children }) => {
             return { success: true };
         } catch (error) {
             console.error('Błąd logowania:', error.response ? error.response.data : error.message);
-            return { success: false, message: error.response?.data?.message || 'Wystąpił nieznany błąd podczas logowania.' };
+            
+            const data = error.response?.data;
+            let errorMessage = 'Wystąpił nieznany błąd podczas logowania.';
+            
+            if (data?.message || data?.Message) {
+                errorMessage = data.message || data.Message;
+            }
+
+            return { success: false, message: errorMessage };
         }
     };
 
@@ -114,7 +122,19 @@ export const AuthProvider = ({ children }) => {
             return { success: true };
         } catch (error) {
             console.error('Błąd rejestracji:', error.response ? error.response.data : error.message);
-            const errorMessages = error.response?.data?.Errors?.map(e => e.Description).join(', ') || 'Wystąpił nieznany błąd podczas rejestracji.';
+            
+            const data = error.response?.data;
+            let errorMessages = 'Wystąpił nieznany błąd podczas rejestracji.';
+            
+            if (data) {
+                const errorsList = data.errors || data.Errors;
+                if (Array.isArray(errorsList)) {
+                     errorMessages = errorsList.map(e => e.description || e.Description).join('\n');
+                } else if (data.message || data.Message) {
+                     errorMessages = data.message || data.Message;
+                }
+            }
+            
             return { success: false, message: errorMessages };
         }
     };

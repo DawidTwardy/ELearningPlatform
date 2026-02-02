@@ -12,15 +12,12 @@ using WebPush;
 using ELearning.Api.Persistence;
 using ELearning.Api.Models.Gamification;
 using QuestPDF.Infrastructure;
+using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// KONFIGURACJA LICENCJI QUESTPDF 
 QuestPDF.Settings.License = LicenseType.Community;
 
-// ******************************************************************
-// POPRAWIONY BLOK CORS: AllowAll (Rozwi¹zuje b³¹d 'Same Origin')
-// ******************************************************************
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -29,6 +26,20 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
+});
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 524288000;
+    options.ValueLengthLimit = 524288000;
+    options.MemoryBufferThreshold = 524288000;
+});
+
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.MaxRequestBodySize = 524288000;
+    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(10);
+    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(10);
 });
 
 builder.Services.AddControllers()
@@ -72,9 +83,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 5;
+    options.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -117,7 +136,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// ZASTOSOWANIE POLITYKI CORS
 app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();

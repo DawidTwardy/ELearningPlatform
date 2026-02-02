@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../../styles/pages/LoginReg.css';
 import { useAuth } from '../../context/AuthContext';
 
@@ -12,6 +13,7 @@ const EyeIcon = ({ show, toggle }) => (
 );
 
 const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
+    const navigate = useNavigate();
     const { register } = useAuth();
     
     const [username, setUsername] = useState('');
@@ -21,10 +23,12 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
     const [lastName, setLastName] = useState('');
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleRegister = async (e) => {
         e.preventDefault();
         setError(''); 
+        setIsLoading(true);
         
         const registerData = {
             username: username,
@@ -38,15 +42,20 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
 
         if (result.success) {
             alert("Rejestracja przebiegła pomyślnie! Zostałeś zalogowany.");
-            onRegisterSuccess();
+            if(onRegisterSuccess) onRegisterSuccess();
         } else {
-            setError(result.message);
+            setError(result.message || 'Wystąpił błąd podczas rejestracji.');
         }
+        setIsLoading(false);
     };
 
     const handleLoginClick = (e) => {
         e.preventDefault();
-        setCurrentPage('login');
+        if (setCurrentPage) {
+            setCurrentPage('login');
+        } else {
+            navigate('/login');
+        }
     };
     
     return (
@@ -65,6 +74,12 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
 
                 <div className="login-form-card">
                     <h2 className="login-title">Zarejestruj się</h2>
+                    
+                    {error && (
+                        <div className="form-error-alert">
+                            {error}
+                        </div>
+                    )}
                     
                     <form onSubmit={handleRegister}>
                         
@@ -115,7 +130,7 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="password">Hasło (min. 6 znaków, duża/mała litera)</label>
+                            <label htmlFor="password">Hasło (min. 6 znaków)</label>
                             <div className="input-container">
                                 <input 
                                     id="password"
@@ -131,17 +146,15 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
                                     toggle={() => setPasswordVisible(!passwordVisible)} 
                                 />
                             </div>
-                            
-                            <div className="form-feedback">
-                                {error && <span className="error-message">{error}</span>}
-                            </div>
                         </div>
 
-                        <button type="submit" className="login-button">Zarejestruj się</button>
+                        <button type="submit" className="login-button" disabled={isLoading}>
+                            {isLoading ? 'Rejestrowanie...' : 'Zarejestruj się'}
+                        </button>
                     </form>
                     
                     <div className="register-option">
-                        Masz już Konto? <a href="#login" className="register-link" onClick={handleLoginClick}>Zaloguj się</a>
+                        Masz już Konto? <a href="/login" className="register-link" onClick={handleLoginClick}>Zaloguj się</a>
                     </div>
                 </div>
             </div>

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/pages/LoginReg.css';
-import { PAGE_HOME, PAGE_REGISTER } from '../../App';
 
 const EyeIcon = ({ show, toggle }) => (
     <img 
@@ -13,7 +12,7 @@ const EyeIcon = ({ show, toggle }) => (
     />
 );
 
-const LoginPage = ({ navigateToPage }) => { 
+const LoginPage = () => { 
     const navigate = useNavigate(); 
     const { login } = useAuth();
 
@@ -51,7 +50,7 @@ const LoginPage = ({ navigateToPage }) => {
                     <div className="login-illustration-wrapper">
                         <img 
                             src="/src/login/illustration.png" 
-                            alt="Login Illustration" 
+                            alt="Ilustracja logowania" 
                             className="login-illustration-image"
                         />
                     </div>
@@ -60,6 +59,12 @@ const LoginPage = ({ navigateToPage }) => {
                 <div className="login-form-card">
                     <h2 className="login-title">Zaloguj się</h2>
                     
+                    {error && (
+                        <div className="form-error-alert">
+                            {error}
+                        </div>
+                    )}
+
                     <form onSubmit={handleLogin}>
                         <div className="form-group">
                             <label htmlFor="username">Login (Nazwa Użytkownika)</label>
@@ -89,16 +94,13 @@ const LoginPage = ({ navigateToPage }) => {
                                     toggle={() => setPasswordVisible(!passwordVisible)} 
                                 />
                             </div>
-                            {error && <div className="form-feedback"><span className="error-message">{error}</span></div>}
                         </div>
                         
-                        <div style={{ textAlign: 'right', marginBottom: '15px' }}>
+                        <div style={{ textAlign: 'right', marginBottom: '20px' }}>
                             <a 
                                 href="#" 
                                 onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }}
-                                style={{ color: '#ccc', fontSize: '0.9rem', textDecoration: 'none' }}
-                                onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
-                                onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                                className="forgot-password-link"
                             >
                                 Zapomniałeś hasła?
                             </a>

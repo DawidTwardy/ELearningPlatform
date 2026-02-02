@@ -49,6 +49,18 @@ namespace ELearning.Api.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
+            var existingUser = await _userManager.FindByEmailAsync(model.Email);
+            if (existingUser != null)
+            {
+                return BadRequest(new { Message = "Ten adres email jest już zajęty." });
+            }
+
+            var existingName = await _userManager.FindByNameAsync(model.Username);
+            if (existingName != null)
+            {
+                return BadRequest(new { Message = "Ta nazwa użytkownika jest już zajęta." });
+            }
+
             var user = new ApplicationUser
             {
                 UserName = model.Username,
@@ -77,7 +89,7 @@ namespace ELearning.Api.Controllers
 
                 try
                 {
-                    await _emailService.SendEmailAsync(user.Email, "Witamy w ELearning Platform!", $"<h3>Cze�� {user.FirstName}!</h3><p>Dzi�kujemy za rejestracj�.</p>");
+                    await _emailService.SendEmailAsync(user.Email, "Witamy w ELearning Platform!", $"<h3>Cześć {user.FirstName}!</h3><p>Dziękujemy za rejestrację.</p>");
                 }
                 catch { }
 
@@ -96,7 +108,7 @@ namespace ELearning.Api.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
             var user = await _userManager.FindByNameAsync(model.Username);
-            if (user == null) return Unauthorized(new { Message = "B��dny login lub has�o." });
+            if (user == null) return Unauthorized(new { Message = "Błędny login lub hasło." });
 
             var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
             if (result.Succeeded)
@@ -104,7 +116,7 @@ namespace ELearning.Api.Controllers
                 var jwtToken = await GenerateJwtToken(user);
                 var refreshToken = GenerateRefreshToken();
 
-               
+
                 var oldTokens = _context.RefreshTokens.Where(t => t.UserId == user.Id && t.Expires < DateTime.UtcNow);
                 _context.RefreshTokens.RemoveRange(oldTokens);
 
@@ -120,14 +132,14 @@ namespace ELearning.Api.Controllers
                 });
             }
 
-            return Unauthorized(new { Message = "B��dny login lub has�o." });
+            return Unauthorized(new { Message = "Błędny login lub hasło." });
         }
 
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken([FromBody] TokenRequestDto tokenRequest)
         {
             if (string.IsNullOrEmpty(tokenRequest.RefreshToken))
-                return BadRequest(new { Message = "Brak tokena od�wie�ania." });
+                return BadRequest(new { Message = "Brak tokena odświeżania." });
 
             var storedToken = await _context.RefreshTokens
                 .Include(r => r.User)
@@ -135,7 +147,7 @@ namespace ELearning.Api.Controllers
 
             if (storedToken == null || !storedToken.IsActive)
             {
-                return Unauthorized(new { Message = "Nieprawid�owy lub wygas�y token od�wie�ania." });
+                return Unauthorized(new { Message = "Nieprawidłowy lub wygasły token odświeżania." });
             }
 
             var user = storedToken.User;
@@ -164,27 +176,34 @@ namespace ELearning.Api.Controllers
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
         {
             if (string.IsNullOrEmpty(model.Email))
-                return BadRequest("Email jest wymagany.");
+                return BadRequest(new { Message = "Email jest wymagany." });
 
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null)
             {
-                return Ok(new { Message = "Je�li konto istnieje, wys�ali�my link resetuj�cy." });
+                return BadRequest(new { Message = "Nie znaleziono użytkownika o podanym adresie email." });
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var message = $"<h3>Reset has�a</h3><p>Tw�j token do resetu has�a to: <b>{token}</b></p>";
+
+            var resetLink = $"{_configuration["FrontendUrl"]}/reset-password?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(user.Email)}";
+
+            var message = $@"
+                <h3>Reset hasła</h3>
+                <p>Kliknij w poniższy link, aby zresetować hasło:</p>
+                <p><a href='{resetLink}'>Zresetuj hasło</a></p>
+                <p>Twój token (w razie potrzeby): <b>{token}</b></p>";
 
             try
             {
-                await _emailService.SendEmailAsync(user.Email, "Reset has�a - ELearning Platform", message);
+                await _emailService.SendEmailAsync(user.Email, "Reset hasła - ELearning Platform", message);
             }
             catch
             {
-                return StatusCode(500, new { Message = "Nie uda�o si� wys�a� emaila." });
+                return StatusCode(500, new { Message = "Nie udało się wysłać emaila." });
             }
 
-            return Ok(new { Message = "Je�li konto istnieje, wys�ali�my link resetuj�cy." });
+            return Ok(new { Message = "Link resetujący został wysłany na podany email." });
         }
 
         [HttpPost("reset-password")]
@@ -196,7 +215,7 @@ namespace ELearning.Api.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null)
             {
-                return Ok(new { Message = "Has�o zosta�o pomy�lnie zresetowane." });
+                return BadRequest(new { Message = "Nie znaleziono użytkownika." });
             }
 
             var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
@@ -205,11 +224,11 @@ namespace ELearning.Api.Controllers
             {
                 try
                 {
-                    await _emailService.SendEmailAsync(user.Email, "Has�o zmienione", "<p>Twoje has�o zosta�o pomy�lnie zmienione.</p>");
+                    await _emailService.SendEmailAsync(user.Email, "Hasło zmienione", "<p>Twoje hasło zostało pomyślnie zmienione.</p>");
                 }
                 catch { }
 
-                return Ok(new { Message = "Has�o zosta�o pomy�lnie zresetowane." });
+                return Ok(new { Message = "Hasło zostało pomyślnie zresetowane." });
             }
 
             return BadRequest(new

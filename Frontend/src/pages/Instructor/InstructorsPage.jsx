@@ -21,7 +21,6 @@ const InstructorsPage = () => {
     loadInstructors();
   }, []);
 
-  // Funkcja pomocnicza do usuwania znaczników HTML z bio (dla widoku kafelka)
   const stripHtml = (html) => {
     if (!html) return "";
     const tmp = document.createElement("DIV");
@@ -34,42 +33,45 @@ const InstructorsPage = () => {
   return (
     <div className="instructors-page">
       <h2 className="page-title">Nasi Instruktorzy</h2>
-      <div className="instructors-grid">
-        {instructors.map((instructor) => {
-            // Czyścimy bio z HTML i skracamy
-            const cleanBio = stripHtml(instructor.bio);
-            const shortBio = cleanBio.length > 100 
-                ? cleanBio.substring(0, 100) + '...' 
-                : (cleanBio || 'Instruktor');
+      
+      {instructors.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', fontSize: '1.2rem', color: '#ccc' }}>
+          Aktualnie nie ma żadnych instruktorów do wyświetlenia.
+        </div>
+      ) : (
+        <div className="instructors-grid">
+          {instructors.map((instructor) => {
+              const cleanBio = stripHtml(instructor.bio);
+              const shortBio = cleanBio.length > 100 
+                  ? cleanBio.substring(0, 100) + '...' 
+                  : (cleanBio || 'Instruktor');
 
-            return (
-              <div key={instructor.id} className="instructor-card">
-                <div className="instructor-avatar-container">
-                  <img 
-                    // POPRAWKA: Backend zwraca 'avatarSrc', a nie 'avatarUrl'
-                    src={resolveImageUrl(instructor.avatarSrc) || '/src/AvatarInstructor/usericon_large.png'} 
-                    // POPRAWKA: Backend zwraca pole 'name' (połączone imię i nazwisko)
-                    alt={instructor.name} 
-                    className="instructor-avatar"
-                    onError={(e) => {e.target.onerror = null; e.target.src = '/src/AvatarInstructor/usericon_large.png'}}
-                  />
+              return (
+                <div key={instructor.id} className="instructor-card">
+                  <div className="instructor-avatar-container">
+                    <img 
+                      src={resolveImageUrl(instructor.avatarSrc) || '/src/AvatarInstructor/usericon_large.png'} 
+                      alt={instructor.name} 
+                      className="instructor-avatar"
+                      onError={(e) => {e.target.onerror = null; e.target.src = '/src/AvatarInstructor/usericon_large.png'}}
+                    />
+                  </div>
+                  <div className="instructor-info">
+                    <h3>{instructor.name}</h3>
+                    
+                    <p className="instructor-bio-short">
+                        {shortBio}
+                    </p>
+                    
+                    <Link to={`/instructor/${instructor.id}`} className="view-profile-btn">
+                      Zobacz Profil
+                    </Link>
+                  </div>
                 </div>
-                <div className="instructor-info">
-                  {/* POPRAWKA: Wyświetlanie pola 'name' */}
-                  <h3>{instructor.name}</h3>
-                  
-                  <p className="instructor-bio-short">
-                      {shortBio}
-                  </p>
-                  
-                  <Link to={`/instructor/${instructor.id}`} className="view-profile-btn">
-                    Zobacz Profil
-                  </Link>
-                </div>
-              </div>
-            );
-        })}
-      </div>
+              );
+          })}
+        </div>
+      )}
     </div>
   );
 };
