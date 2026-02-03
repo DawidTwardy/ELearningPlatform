@@ -56,6 +56,10 @@
     overflow-y: auto;
 }
 
+.pdf-container {
+    height: 600px;
+}
+
 .pdf-container iframe {
     width: 100%;
     height: 100%;
@@ -84,6 +88,9 @@
     margin-bottom: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .section-title2:hover {
@@ -110,6 +117,9 @@
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .section-lessons2 p:hover {
@@ -129,6 +139,15 @@
     color: #fff;
     font-weight: bold;
     box-shadow: 0 0 8px rgba(244, 67, 54, 0.6);
+}
+
+.quiz-item-row {
+    color: #ffeb3b !important;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .rate-course-button {
@@ -151,6 +170,11 @@
     transform: scale(1.02);
 }
 
+.certificate-button {
+    background-color: #4CAF50;
+    margin-top: 10px;
+}
+
 .back-button {
     margin-top: 0;
     align-self: flex-start;
@@ -167,6 +191,237 @@
 
 .back-button:hover {
     background-color: #666;
+}
+
+.resources-container {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #252525;
+    border-radius: 8px;
+}
+
+.resources-header {
+    color: #fff;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.resources-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.resource-link {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #333;
+    color: #E0E0E0;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.resource-link:hover {
+    background-color: #444;
+}
+
+.resource-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.resource-download-label {
+    font-size: 0.8em;
+    color: #28A745;
+}
+
+.lesson-header-container {
+    margin-top: 20px;
+    padding: 0 20px;
+}
+
+.lesson-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.lesson-title {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+.course-subtitle {
+    color: #aaa;
+}
+
+.report-button {
+    background: transparent;
+    border: 1px solid #d32f2f;
+    color: #d32f2f;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.report-button:hover {
+    background: #d32f2f;
+    color: #fff;
+}
+
+.tabs-section {
+    margin-top: 30px;
+    padding: 0 20px;
+}
+
+.tabs-wrapper {
+    display: flex;
+    border-bottom: 1px solid #444;
+    margin-bottom: 0;
+}
+
+.tab-button {
+    background: transparent;
+    color: #aaa;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-button.active {
+    background: #1e1e1e;
+    color: #fff;
+    border-bottom: 2px solid #4CAF50;
+}
+
+.btn-calendar {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #374151;
+    color: #e5e7eb;
+    border: 1px solid #4b5563;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-calendar:hover {
+    background-color: #4b5563;
+    color: #fff;
+}
+
+.report-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.report-modal-content {
+    background-color: #1f1f1f;
+    padding: 25px;
+    border-radius: 8px;
+    width: 400px;
+    max-width: 90%;
+    border: 1px solid #333;
+}
+
+.report-modal-title {
+    color: #fff;
+    margin-bottom: 15px;
+}
+
+.report-modal-desc {
+    color: #aaa;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+}
+
+.report-modal-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #fff;
+    margin-bottom: 20px;
+    resize: vertical;
+}
+
+.report-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.report-btn-cancel {
+    padding: 8px 15px;
+    background: transparent;
+    border: 1px solid #666;
+    color: #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.report-btn-send {
+    padding: 8px 15px;
+    background: #d32f2f;
+    border: none;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.rating-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-spinner {
+    color: white;
+    padding: 50px;
+    text-align: center;
+}
+
+.error-message {
+    color: #ff6b6b;
+    text-align: center;
+    padding: 20px;
 }
 
 @media (max-width: 1100px) {

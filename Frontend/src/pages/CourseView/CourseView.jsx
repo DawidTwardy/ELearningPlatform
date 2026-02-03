@@ -165,6 +165,29 @@ const CourseView = ({ course: courseProp, onBack }) => {
         }
     };
 
+    const handleResourceDownload = async (e, fileUrl, fileName) => {
+        e.preventDefault();
+        try {
+            const response = await fetch(fileUrl);
+            if (!response.ok) throw new Error("Błąd sieci");
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = fileName; 
+            document.body.appendChild(a);
+            a.click();
+            
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err) {
+            console.error("Błąd pobierania:", err);
+            window.open(fileUrl, '_blank');
+        }
+    };
+
     const isCourseFullyCompleted = () => {
         if (!course) return false;
         const sections = course.sections || course.Sections || [];
@@ -174,7 +197,12 @@ const CourseView = ({ course: courseProp, onBack }) => {
                 if (!completedLessonIds.includes(lesson.id || lesson.Id)) return false;
             }
             const quiz = section.quiz || section.Quiz;
-            if (quiz && !completedQuizIds.includes(quiz.id || quiz.Id)) return false;
+            if (quiz) {
+                const quizQuestions = quiz.questions || quiz.Questions || [];
+                if (quizQuestions.length > 0 && !completedQuizIds.includes(quiz.id || quiz.Id)) {
+                    return false;
+                }
+            }
         }
         return true;
     };
@@ -189,7 +217,10 @@ const CourseView = ({ course: courseProp, onBack }) => {
             lessons.forEach(l => flatList.push({ ...l, type: 'lesson' }));
             const quiz = section.quiz || section.Quiz;
             if (quiz) {
-                flatList.push({ ...quiz, type: 'quiz' });
+                const quizQuestions = quiz.questions || quiz.Questions || [];
+                if (quizQuestions.length > 0) {
+                    flatList.push({ ...quiz, type: 'quiz' });
+                }
             }
         });
         return flatList;
@@ -295,34 +326,27 @@ const CourseView = ({ course: courseProp, onBack }) => {
         if (!resources || resources.length === 0) return null;
 
         return (
-            <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#252525', borderRadius: '8px' }}>
-                <h4 style={{ color: '#fff', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="resources-container">
+                <h4 className="resources-header">
                     📥 Materiały do pobrania
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {resources.map((res, idx) => (
-                        <a 
-                            key={idx} 
-                            href={`${BASE_URL}${res.fileUrl || res.FileUrl}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                padding: '10px 15px', 
-                                backgroundColor: '#333', 
-                                color: '#E0E0E0', 
-                                textDecoration: 'none', 
-                                borderRadius: '6px',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseOver={e => e.currentTarget.style.background = '#444'}
-                            onMouseOut={e => e.currentTarget.style.background = '#333'}
-                        >
-                            <span style={{ flex: 1, fontWeight: '500' }}>{res.name || res.Name}</span>
-                            <span style={{ fontSize: '0.8em', color: '#28A745' }}>Pobierz</span>
-                        </a>
-                    ))}
+                <div className="resources-list">
+                    {resources.map((res, idx) => {
+                        const fileUrl = `${BASE_URL}${res.fileUrl || res.FileUrl}`;
+                        const fileName = res.name || res.Name || 'Plik';
+                        
+                        return (
+                            <a 
+                                key={idx} 
+                                href={fileUrl}
+                                onClick={(e) => handleResourceDownload(e, fileUrl, fileName)}
+                                className="resource-link"
+                            >
+                                <span className="resource-name">{fileName}</span>
+                                <span className="resource-download-label">Pobierz</span>
+                            </a>
+                        );
+                    })}
                 </div>
             </div>
         );
@@ -351,7 +375,6 @@ const CourseView = ({ course: courseProp, onBack }) => {
         } else if (typeof content === 'string' && content.startsWith('{')) {
              try {
                 const parsed = JSON.parse(content);
-                // NAPRAWIONA LINIA: Pobiera 'text' (dla sformatowanej treści) lub 'url' (dla plików)
                 content = parsed.text || parsed.url || content; 
              } catch(e) {}
         }
@@ -379,8 +402,8 @@ const CourseView = ({ course: courseProp, onBack }) => {
             );
         } else if (isPdf) {
              return (
-                <div className="pdf-container" style={{height: '600px'}}>
-                    <iframe src={mediaUrl} title="PDF" width="100%" height="100%"></iframe>
+                <div className="pdf-container">
+                    <iframe src={mediaUrl} title="PDF"></iframe>
                 </div>
             );
         } else {
@@ -390,7 +413,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
         }
     };
 
-    if (loading) return <div className="loading-spinner" style={{color:'white', padding:'50px', textAlign:'center'}}>Ładowanie...</div>;
+    if (loading) return <div className="loading-spinner">Ładowanie...</div>;
     if (error) return <div className="error-message">{error}</div>;
     if (!course) return <div className="error-message">Nie znaleziono kursu.</div>;
 
@@ -412,37 +435,17 @@ const CourseView = ({ course: courseProp, onBack }) => {
                     {currentContent?.contentType === 'lesson' && renderResources()}
 
                     {currentContent?.contentType !== 'quiz' && (
-                        <div style={{ marginTop: '20px', padding: '0 20px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                        <div className="lesson-header-container">
+                            <div className="lesson-header-flex">
                                 <div>
-                                    <h2 style={{ fontSize: '24px', marginBottom: '10px', color: '#fff' }}>
+                                    <h2 className="lesson-title">
                                         {currentContent?.title || currentContent?.Title}
                                     </h2>
-                                    <p style={{ color: '#aaa' }}>{course.title || course.Title}</p>
+                                    <p className="course-subtitle">{course.title || course.Title}</p>
                                 </div>
                                 <button 
                                     onClick={() => setIsReportModalOpen(true)}
-                                    style={{
-                                        background: 'transparent',
-                                        border: '1px solid #d32f2f',
-                                        color: '#d32f2f',
-                                        padding: '5px 10px',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '5px',
-                                        fontSize: '0.8rem',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => {
-                                        e.currentTarget.style.background = '#d32f2f';
-                                        e.currentTarget.style.color = '#fff';
-                                    }}
-                                    onMouseOut={(e) => {
-                                        e.currentTarget.style.background = 'transparent';
-                                        e.currentTarget.style.color = '#d32f2f';
-                                    }}
+                                    className="report-button"
                                 >
                                     <AlertTriangle size={14} />
                                     Zgłoś błąd
@@ -452,34 +455,16 @@ const CourseView = ({ course: courseProp, onBack }) => {
                     )}
                     
                     {currentContent?.contentType === 'lesson' && (
-                        <div style={{ marginTop: '30px', padding: '0 20px' }}>
-                            <div style={{ display: 'flex', borderBottom: '1px solid #444', marginBottom: '0' }}>
+                        <div className="tabs-section">
+                            <div className="tabs-wrapper">
                                 <button 
-                                    style={{
-                                        background: activeTab === 'discussion' ? '#1e1e1e' : 'transparent',
-                                        color: activeTab === 'discussion' ? '#fff' : '#aaa',
-                                        border: 'none',
-                                        padding: '10px 20px',
-                                        cursor: 'pointer',
-                                        borderBottom: activeTab === 'discussion' ? '2px solid #4CAF50' : 'none',
-                                        fontWeight: 'bold',
-                                        fontSize: '1rem'
-                                    }}
+                                    className={`tab-button ${activeTab === 'discussion' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('discussion')}
                                 >
                                     Dyskusja
                                 </button>
                                 <button 
-                                    style={{
-                                        background: activeTab === 'notes' ? '#1e1e1e' : 'transparent',
-                                        color: activeTab === 'notes' ? '#fff' : '#aaa',
-                                        border: 'none',
-                                        padding: '10px 20px',
-                                        cursor: 'pointer',
-                                        borderBottom: activeTab === 'notes' ? '2px solid #4CAF50' : 'none',
-                                        fontWeight: 'bold',
-                                        fontSize: '1rem'
-                                    }}
+                                    className={`tab-button ${activeTab === 'notes' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('notes')}
                                 >
                                     Moje Notatki
@@ -503,17 +488,18 @@ const CourseView = ({ course: courseProp, onBack }) => {
                         const secId = section.id || section.Id;
                         const lessons = section.lessons || section.Lessons || [];
                         const quiz = section.quiz || section.Quiz;
+                        
+                        const quizHasQuestions = quiz && (quiz.questions || quiz.Questions || []).length > 0;
 
                         const isSectionCompleted = 
                             (lessons.length === 0 || lessons.every(l => completedLessonIds.includes(l.id || l.Id))) &&
-                            (!quiz || completedQuizIds.includes(quiz.id || quiz.Id));
+                            (!quizHasQuestions || completedQuizIds.includes(quiz.id || quiz.Id));
 
                         return (
                             <div key={secId}>
                                 <div 
                                     className={`section-title2 ${expandedSections[secId] ? 'active' : ''}`}
                                     onClick={() => toggleSection(secId)}
-                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                                 >
                                     <span>{section.title || section.Title}</span>
                                     {isSectionCompleted && (
@@ -535,7 +521,6 @@ const CourseView = ({ course: courseProp, onBack }) => {
                                                     key={lId}
                                                     className={isActive ? 'active' : ''}
                                                     onClick={() => handleLessonSelect(lesson)}
-                                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                                                 >
                                                     <span>{lesson.title || lesson.Title}</span>
                                                     {isCompleted && <span style={{ color: '#4CAF50', fontSize: '0.8em' }}>✔</span>}
@@ -543,10 +528,9 @@ const CourseView = ({ course: courseProp, onBack }) => {
                                             );
                                         })}
 
-                                        {quiz && (
+                                        {quizHasQuestions && (
                                             <p
-                                                className={`quiz-item ${currentContent?.id === (quiz.id || quiz.Id) && currentContent?.contentType === 'quiz' ? 'active-quiz' : ''}`}
-                                                style={{ color: '#ffeb3b', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} 
+                                                className={`quiz-item-row ${currentContent?.id === (quiz.id || quiz.Id) && currentContent?.contentType === 'quiz' ? 'active-quiz' : ''}`}
                                                 onClick={() => handleQuizSelect(quiz)}
                                             >
                                                 <span>📝 Test: {quiz.title || quiz.Title}</span>
@@ -570,30 +554,6 @@ const CourseView = ({ course: courseProp, onBack }) => {
                     <button 
                         className="btn-calendar" 
                         onClick={() => setIsCalendarModalOpen(true)}
-                        style={{
-                            width: '100%',
-                            marginTop: '10px',
-                            padding: '10px',
-                            backgroundColor: '#374151',
-                            color: '#e5e7eb',
-                            border: '1px solid #4b5563',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseOver={(e) => {
-                            e.currentTarget.style.backgroundColor = '#4b5563';
-                            e.currentTarget.style.color = '#fff';
-                        }}
-                        onMouseOut={(e) => {
-                            e.currentTarget.style.backgroundColor = '#374151';
-                            e.currentTarget.style.color = '#e5e7eb';
-                        }}
                     >
                         <Calendar size={18} />
                         Zaplanuj w kalendarzu
@@ -601,8 +561,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
 
                     {isCompleted && (
                         <button 
-                            className="rate-course-button" 
-                            style={{ backgroundColor: '#4CAF50', marginTop: '10px' }}
+                            className="rate-course-button certificate-button" 
                             onClick={handleDownloadCertificate}
                         >
                             🏆 Pobierz Certyfikat
@@ -627,68 +586,28 @@ const CourseView = ({ course: courseProp, onBack }) => {
             />
 
             {isReportModalOpen && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0, left: 0,
-                    width: '100%', height: '100%',
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 2000
-                }}>
-                    <div style={{
-                        backgroundColor: '#1f1f1f',
-                        padding: '25px',
-                        borderRadius: '8px',
-                        width: '400px',
-                        maxWidth: '90%',
-                        border: '1px solid #333'
-                    }}>
-                        <h3 style={{ color: '#fff', marginBottom: '15px' }}>Zgłoś błąd w treści</h3>
-                        <p style={{ color: '#aaa', fontSize: '0.9em', marginBottom: '10px' }}>
+                <div className="report-modal-overlay">
+                    <div className="report-modal-content">
+                        <h3 className="report-modal-title">Zgłoś błąd w treści</h3>
+                        <p className="report-modal-desc">
                             Opisz problem (np. niedziałające wideo, błąd w quizie). Zgłoszenie trafi do moderacji.
                         </p>
                         <textarea
+                            className="report-modal-textarea"
                             value={reportReason}
                             onChange={(e) => setReportReason(e.target.value)}
-                            style={{
-                                width: '100%',
-                                minHeight: '100px',
-                                padding: '10px',
-                                backgroundColor: '#333',
-                                border: '1px solid #444',
-                                borderRadius: '4px',
-                                color: '#fff',
-                                marginBottom: '20px',
-                                resize: 'vertical'
-                            }}
                             placeholder="Treść zgłoszenia..."
                         />
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <div className="report-modal-actions">
                             <button
+                                className="report-btn-cancel"
                                 onClick={() => setIsReportModalOpen(false)}
-                                style={{
-                                    padding: '8px 15px',
-                                    background: 'transparent',
-                                    border: '1px solid #666',
-                                    color: '#ccc',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
                             >
                                 Anuluj
                             </button>
                             <button
+                                className="report-btn-send"
                                 onClick={handleReportSubmit}
-                                style={{
-                                    padding: '8px 15px',
-                                    background: '#d32f2f',
-                                    border: 'none',
-                                    color: '#fff',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
                             >
                                 Wyślij
                             </button>
@@ -698,7 +617,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
             )}
 
             {showRatingForm && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div className="rating-overlay">
                     <CourseRatingForm 
                         course={{ id: courseId, title: course.title || course.Title }} 
                         onBack={() => setShowRatingForm(false)} 

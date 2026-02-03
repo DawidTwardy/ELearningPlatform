@@ -10,6 +10,10 @@ const QuizView = ({ quiz, courseId, onQuizPassed }) => {
     const title = quiz.title || quiz.Title;
     const questions = quiz.questions || quiz.Questions || [];
 
+    if (questions.length === 0) {
+        return <div className="quiz-view-container" style={{ padding: '20px', textAlign: 'center' }}>Ten quiz nie zawiera jeszcze pytań.</div>;
+    }
+
     const [userAnswers, setUserAnswers] = useState({});
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [result, setResult] = useState(null);
@@ -118,6 +122,11 @@ const QuizView = ({ quiz, courseId, onQuizPassed }) => {
     }
 
     const currentQuestion = questions[currentQuestionIndex];
+
+    if (!currentQuestion) {
+        return <div className="quiz-view-container">Błąd wyświetlania pytania.</div>;
+    }
+
     const qText = currentQuestion.text || currentQuestion.Text;
     const options = currentQuestion.options || currentQuestion.Options || [];
     const isLastQuestion = currentQuestionIndex === questions.length - 1;

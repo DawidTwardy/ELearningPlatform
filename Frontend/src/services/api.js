@@ -1,5 +1,4 @@
-const API_BASE_URL = 'http://localhost:7115/api'; // Stary adres lokalny
-//const API_BASE_URL = 'https://elearning-api-s80m.onrender.com/api'; // Nowy adres produkcyjny
+const API_BASE_URL = 'http://localhost:7115/api';
 
 const getAuthToken = () => {
     const token = localStorage.getItem('token');
@@ -311,6 +310,50 @@ const uploadFile = async (file) => {
     });
 };
 
+const uploadFileWithProgress = (file, onProgress) => {
+    return new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const xhr = new XMLHttpRequest();
+        
+        xhr.open('POST', `${API_BASE_URL}/Upload`, true);
+        
+        const token = getAuthToken();
+        if (token) {
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        }
+
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+                const percentComplete = (event.loaded / event.total) * 100;
+                if (onProgress) {
+                    onProgress(percentComplete, event.loaded, event.total);
+                }
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    resolve(response);
+                } catch (e) {
+                    resolve(null);
+                }
+            } else {
+                reject(new Error(`Upload failed: ${xhr.statusText}`));
+            }
+        };
+
+        xhr.onerror = () => {
+            reject(new Error("Network error during upload"));
+        };
+
+        xhr.send(formData);
+    });
+};
+
 const updateUserProfile = async (profileData) => {
     return authenticatedFetch(`${API_BASE_URL}/Profile`, {
         method: 'PUT',
@@ -466,6 +509,7 @@ export {
     deleteComment,
     fetchMyEnrollments,
     uploadFile,
+    uploadFileWithProgress,
     updateUserProfile,
     fetchUserProfile,
     downloadCertificate,

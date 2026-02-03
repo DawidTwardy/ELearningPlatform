@@ -8,7 +8,7 @@ import {
   LessonContentInput,
   QuizEditor,
   LessonResourcesEditor 
-} from './CourseEditPage.jsx';
+} from './CourseEditorComponents';
 import { uploadFile, resolveImageUrl } from '../../services/api';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical } from 'lucide-react';
@@ -116,7 +116,7 @@ const CourseAddPage = ({ onBack }) => {
         return {
             Id: 0,
             Title: section.title, 
-            Order: index + 1, // WAŻNE: Kolejność
+            Order: index + 1,
             Lessons: lessonsToSave,
             Quiz: quizToSave
         };
@@ -133,8 +133,6 @@ const CourseAddPage = ({ onBack }) => {
         Rating: 0, 
         Sections: sectionsToSave
     };
-
-    console.log("Wysyłany payload (Create):", JSON.stringify(newCourseData, null, 2));
 
     const apiUrl = 'http://localhost:7115/api/Courses';
 
@@ -162,7 +160,6 @@ const CourseAddPage = ({ onBack }) => {
         
         if (response.status === 400) {
             const validationErrors = data.errors || data;
-            console.error("Błędy walidacji:", validationErrors);
             
             let message = "Wystąpił błąd walidacji danych.";
             if (validationErrors.errors) {
@@ -388,7 +385,6 @@ const CourseAddPage = ({ onBack }) => {
       }
   };
 
-  // --- DRAG & DROP HANDLER ---
   const onDragEnd = (result) => {
     const { source, destination, type } = result;
     if (!destination) return;
