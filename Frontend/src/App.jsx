@@ -208,9 +208,9 @@ function App() {
                   </ProtectedRoute>
               } 
           />
-          {/* POPRAWIONO: Zmieniono :courseId na :id, aby pasowało do useParams w CourseAnalyticsPage */}
+          
           <Route 
-              path="/instructor/analytics/:id" 
+              path="/instructor/analytics/:courseId" 
               element={
                   <ProtectedRoute>
                       <CourseAnalyticsPage />

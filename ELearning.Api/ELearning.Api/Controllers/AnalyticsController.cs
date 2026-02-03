@@ -29,17 +29,28 @@ namespace ELearning.Api.Controllers
                 .Select(c => new { c.Id, c.Title, c.InstructorId })
                 .FirstOrDefaultAsync();
 
-            if (courseInfo == null) return NotFound();
+            if (courseInfo == null) return NotFound("Kurs nie został znaleziony.");
 
             if (courseInfo.InstructorId != userId && !User.IsInRole("Admin")) return Forbid();
 
             var totalStudents = await _context.Enrollments
                 .CountAsync(e => e.CourseId == courseId);
 
-            var avgQuizScore = await _context.UserQuizAttempts
+            var quizAttempts = await _context.UserQuizAttempts
                 .Where(a => a.Quiz.Section.CourseId == courseId)
-                .Select(a => (double?)a.Score)
-                .AverageAsync() ?? 0;
+                .Select(a => new {
+                    AchievedScore = (double)a.Score,
+                    MaxScore = (double)a.Quiz.Questions.Count
+                })
+                .ToListAsync();
+
+            double avgQuizScore = 0;
+            if (quizAttempts.Any())
+            {
+                avgQuizScore = quizAttempts
+                    .Select(a => a.MaxScore > 0 ? (a.AchievedScore / a.MaxScore) * 100 : 0)
+                    .Average();
+            }
 
             var totalLessons = await _context.Lessons
                 .CountAsync(l => l.Section.CourseId == courseId);

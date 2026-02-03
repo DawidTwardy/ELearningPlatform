@@ -13,11 +13,17 @@ const CourseAnalyticsPage = () => {
 
     useEffect(() => {
         const getAnalytics = async () => {
+            if (!courseId) {
+                setError("Brak identyfikatora kursu w adresie URL.");
+                setLoading(false);
+                return;
+            }
+
             try {
                 const data = await fetchCourseAnalytics(courseId);
                 setAnalytics(data);
             } catch (err) {
-                setError("Nie udało się załadować analityki kursu. Spróbuj ponownie później.");
+                setError(err.message || "Nie udało się załadować analityki kursu. Spróbuj ponownie później.");
                 console.error("Error fetching course analytics:", err);
             } finally {
                 setLoading(false);
@@ -32,7 +38,14 @@ const CourseAnalyticsPage = () => {
     }
 
     if (error) {
-        return <div className="analytics-container error-message">{error}</div>;
+        return (
+            <div className="analytics-container">
+                <button className="back-button" onClick={() => navigate(-1)}>
+                    Powrót
+                </button>
+                <div className="error-message" style={{ marginTop: '20px', color: '#ff4d4d' }}>{error}</div>
+            </div>
+        );
     }
 
     if (!analytics) {
@@ -85,7 +98,6 @@ const CourseAnalyticsPage = () => {
                 </ResponsiveContainer>
             </div>
 
-            {/* Nowa sekcja: Zgłoszenia Błędów */}
             <div className="analytics-chart-card" style={{ marginTop: '20px' }}>
                 <h3 style={{ color: '#fff', marginBottom: '15px' }}>Zgłoszenia od Użytkowników</h3>
                 {analytics.reports && analytics.reports.length > 0 ? (
@@ -102,7 +114,7 @@ const CourseAnalyticsPage = () => {
                                 {analytics.reports.map((report) => (
                                     <tr key={report.id} style={{ borderBottom: '1px solid #444', backgroundColor: report.isRead ? 'transparent' : 'rgba(211, 47, 47, 0.1)' }}>
                                         <td style={{ padding: '10px' }}>
-                                            {new Date(report.createdAt).toLocaleDateString()} {new Date(report.createdAt).toLocaleTimeString()}
+                                            {new Date(report.createdAt).toLocaleDateString()}
                                         </td>
                                         <td style={{ padding: '10px' }}>{report.message}</td>
                                         <td style={{ padding: '10px' }}>

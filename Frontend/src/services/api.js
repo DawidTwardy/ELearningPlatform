@@ -423,7 +423,7 @@ const createNotification = async (notificationData) => {
 };
 
 const fetchCourseAnalytics = async (courseId) => {
-    return authenticatedFetch(`${API_BASE_URL}/Analytics/course/${courseId}`, { method: 'GET' });
+    return authenticatedFetch(`${API_BASE_URL}/Analytics/course/${encodeURIComponent(courseId)}`, { method: 'GET' });
 };
 
 const createReview = async (courseId, rating, content) => {
