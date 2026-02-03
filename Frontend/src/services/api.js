@@ -128,7 +128,6 @@ const authenticatedFetch = async (url, options = {}) => {
         return handleResponse(response);
     } catch (error) {
         if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-             console.error("Błąd połączenia z serwerem API:", error);
              throw new Error("Błąd połączenia z serwerem. Sprawdź swoje połączenie internetowe.");
         }
         throw error;
@@ -193,6 +192,18 @@ const createCommentReport = async (commentId, reason) => {
         method: 'POST',
         body: JSON.stringify({ commentId, reason })
     });
+};
+
+const fetchCourseReports = async (courseId) => {
+    return authenticatedFetch(`${API_BASE_URL}/Reports/course/${courseId}`, { method: 'GET' });
+};
+
+const deleteCourseReport = async (reportId) => {
+    return authenticatedFetch(`${API_BASE_URL}/Reports/${reportId}`, { method: 'DELETE' });
+};
+
+const resolveCourseReport = async (reportId) => {
+    return authenticatedFetch(`${API_BASE_URL}/Reports/${reportId}/resolve`, { method: 'PUT' });
 };
 
 const fetchCourseDetails = async (courseId) => {
@@ -471,7 +482,6 @@ const deleteReportedCourse = async (courseId) => {
     return authenticatedFetch(`${API_BASE_URL}/Admin/courses/${courseId}`, { method: 'DELETE' });
 };
 
-
 const fetchReportedComments = async () => {
     return authenticatedFetch(`${API_BASE_URL}/Admin/reported-comments`, { method: 'GET' });
 };
@@ -486,7 +496,6 @@ const keepComment = async (commentId) => {
 const deleteReportedComment = async (commentId) => {
     return authenticatedFetch(`${API_BASE_URL}/Admin/comments/${commentId}`, { method: 'DELETE' });
 };
-
 
 export {
     loginUser,
@@ -538,5 +547,8 @@ export {
     deleteReportedComment,
     createCourseReport,
     createCommentReport,
+    fetchCourseReports,
+    deleteCourseReport,
+    resolveCourseReport,
     API_BASE_URL
 };

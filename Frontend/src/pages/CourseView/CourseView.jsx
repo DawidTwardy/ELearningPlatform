@@ -264,10 +264,10 @@ const CourseView = ({ course: courseProp, onBack }) => {
         if (!reportReason.trim()) return;
         
         try {
-            await createCourseReport(parseInt(courseId), 
-                                     `Zgłoszenie błędu: ${currentContent?.title || "Nieokreślona treść"}. Opis: ${reportReason}`);
+            const fullReason = `[Lekcja: ${currentContent?.title || "Nieznana"}] ${reportReason}`;
+            await createCourseReport(parseInt(courseId), fullReason);
 
-            alert("Zgłoszenie zostało wysłane do moderacji.");
+            alert("Zgłoszenie zostało wysłane do instruktora.");
             setReportReason('');
             setIsReportModalOpen(false);
         } catch (error) {
@@ -448,7 +448,7 @@ const CourseView = ({ course: courseProp, onBack }) => {
                                     className="report-button"
                                 >
                                     <AlertTriangle size={14} />
-                                    Zgłoś błąd
+                                    Zgłoś błąd / Wyślij uwagę
                                 </button>
                             </div>
                         </div>
@@ -588,15 +588,15 @@ const CourseView = ({ course: courseProp, onBack }) => {
             {isReportModalOpen && (
                 <div className="report-modal-overlay">
                     <div className="report-modal-content">
-                        <h3 className="report-modal-title">Zgłoś błąd w treści</h3>
+                        <h3 className="report-modal-title">Zgłoś błąd / Wyślij uwagę</h3>
                         <p className="report-modal-desc">
-                            Opisz problem (np. niedziałające wideo, błąd w quizie). Zgłoszenie trafi do moderacji.
+                            Twoja wiadomość trafi bezpośrednio do instruktora prowadzącego ten kurs.
                         </p>
                         <textarea
                             className="report-modal-textarea"
                             value={reportReason}
                             onChange={(e) => setReportReason(e.target.value)}
-                            placeholder="Treść zgłoszenia..."
+                            placeholder="Opisz problem lub wpisz swoją uwagę..."
                         />
                         <div className="report-modal-actions">
                             <button

@@ -1,18 +1,30 @@
 using System;
-using ELearning.Api.Models;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ELearning.Api.Models
 {
     public class CourseReport
     {
         public int Id { get; set; }
+
+        [Required]
         public int CourseId { get; set; }
+
+        [ForeignKey("CourseId")]
+        public Course Course { get; set; }
+
+        [Required]
         public string ReporterId { get; set; }
-        public string Reason { get; set; } = string.Empty;
+
+        [ForeignKey("ReporterId")]
+        public ApplicationUser Reporter { get; set; }
+
+        [Required]
+        public string Reason { get; set; }
+
         public DateTime ReportedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation Properties
-        public Course Course { get; set; }
-        public ApplicationUser Reporter { get; set; }
+        public string Status { get; set; } = "Pending";
     }
 }

@@ -24,59 +24,57 @@ namespace ELearning.Api.Controllers
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var course = await _context.Courses
-                .FirstOrDefaultAsync(c => c.Id == courseId);
+            var courseInfo = await _context.Courses
+                .Where(c => c.Id == courseId)
+                .Select(c => new { c.Id, c.Title, c.InstructorId })
+                .FirstOrDefaultAsync();
 
-            if (course == null) return NotFound();
+            if (courseInfo == null) return NotFound();
 
-            if (course.InstructorId != userId && !User.IsInRole("Admin")) return Forbid();
+            if (courseInfo.InstructorId != userId && !User.IsInRole("Admin")) return Forbid();
 
-            var enrollments = await _context.Enrollments
-                .Where(e => e.CourseId == courseId)
-                .ToListAsync();
+            var totalStudents = await _context.Enrollments
+                .CountAsync(e => e.CourseId == courseId);
 
-            var totalStudents = enrollments.Count;
-
-            var quizAttempts = await _context.UserQuizAttempts
-                .Include(a => a.Quiz)
-                .ThenInclude(q => q.Section)
+            var avgQuizScore = await _context.UserQuizAttempts
                 .Where(a => a.Quiz.Section.CourseId == courseId)
-                .ToListAsync();
-
-            double avgQuizScore = 0;
-            if (quizAttempts.Any())
-            {
-                avgQuizScore = quizAttempts.Average(a => a.Score);
-            }
+                .Select(a => (double?)a.Score)
+                .AverageAsync() ?? 0;
 
             var totalLessons = await _context.Lessons
                 .CountAsync(l => l.Section.CourseId == courseId);
 
+            var totalCompletions = await _context.LessonCompletions
+                .CountAsync(lc => lc.Lesson.Section.CourseId == courseId);
+
             double completionRate = 0;
             if (totalStudents > 0 && totalLessons > 0)
             {
-                var totalCompletions = await _context.LessonCompletions
-                    .Include(lc => lc.Lesson)
-                    .ThenInclude(l => l.Section)
-                    .CountAsync(lc => lc.Lesson.Section.CourseId == courseId);
-
-                double totalPossibleCompletions = totalStudents * totalLessons;
+                double totalPossibleCompletions = (double)totalStudents * totalLessons;
                 completionRate = (totalCompletions / totalPossibleCompletions) * 100;
             }
 
-            var enrollmentGrowth = enrollments
+            var rawEnrollmentData = await _context.Enrollments
+                .Where(e => e.CourseId == courseId)
                 .GroupBy(e => e.EnrollmentDate.Date)
-                .Select(g => new EnrollmentDataPoint
+                .Select(g => new
                 {
-                    Date = g.Key.ToString("yyyy-MM-dd"),
+                    Date = g.Key,
                     Count = g.Count()
                 })
                 .OrderBy(x => x.Date)
+                .ToListAsync();
+
+            var enrollmentGrowth = rawEnrollmentData
+                .Select(x => new EnrollmentDataPoint
+                {
+                    Date = x.Date.ToString("yyyy-MM-dd"),
+                    Count = x.Count
+                })
                 .ToList();
 
-           
             var reports = await _context.Notifications
-                .Where(n => n.RelatedEntityId == courseId && n.Type == "alert")
+                .Where(n => n.RelatedEntityId == courseId && n.Type == "Report")
                 .OrderByDescending(n => n.CreatedAt)
                 .Select(n => new CourseReportDto
                 {
@@ -89,8 +87,8 @@ namespace ELearning.Api.Controllers
 
             var result = new CourseAnalyticsDto
             {
-                CourseId = course.Id,
-                CourseTitle = course.Title,
+                CourseId = courseInfo.Id,
+                CourseTitle = courseInfo.Title,
                 TotalStudents = totalStudents,
                 AverageQuizScore = Math.Round(avgQuizScore, 2),
                 CompletionRate = Math.Round(completionRate, 2),
