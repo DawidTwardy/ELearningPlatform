@@ -220,15 +220,15 @@ static async Task SeedBadges(ApplicationDbContext context)
 {
     if (!await context.Badges.AnyAsync())
     {
-        var badges = new List<Badge>
-        {
-            new Badge { Name = "Pilny Student", Description = "Ukoñczono pierwsz¹ lekcjê", IconUrl = "student.png", CriteriaType = "LessonCount", CriteriaThreshold = 1 },
-            new Badge { Name = "Weteran Nauki", Description = "Ukoñczono 5 lekcji", IconUrl = "veteran.png", CriteriaType = "LessonCount", CriteriaThreshold = 5 },
-            new Badge { Name = "Quiz Master", Description = "Zaliczono 3 quizy", IconUrl = "quiz.png", CriteriaType = "QuizCount", CriteriaThreshold = 3 },
-            new Badge { Name = "Systematycznoœæ", Description = "3 dni nauki z rzêdu", IconUrl = "streak.png", CriteriaType = "Streak", CriteriaThreshold = 3 },
-            new Badge { Name = "Zbieracz Punktów", Description = "Zdob¹dŸ 100 punktów", IconUrl = "points100.png", CriteriaType = "Points", CriteriaThreshold = 100 },
-            new Badge { Name = "Mistrz Wiedzy", Description = "Zdob¹dŸ 500 punktów", IconUrl = "points500.png", CriteriaType = "Points", CriteriaThreshold = 500 }
-        };
+       var badges = new List<Badge>
+{
+    new Badge { Name = "Pilny Student", Description = "UkoÅ„czono pierwszÄ… lekcjÄ™", IconUrl = "student.png", CriteriaType = "LessonCount", CriteriaThreshold = 1 },
+    new Badge { Name = "Weteran Nauki", Description = "UkoÅ„czono 5 lekcji", IconUrl = "veteran.png", CriteriaType = "LessonCount", CriteriaThreshold = 5 },
+    new Badge { Name = "Quiz Master", Description = "Zaliczono 3 quizy", IconUrl = "quiz.png", CriteriaType = "QuizCount", CriteriaThreshold = 3 },
+    new Badge { Name = "SystematycznoÅ›Ä‡", Description = "3 dni nauki z rzÄ™du", IconUrl = "streak.png", CriteriaType = "Streak", CriteriaThreshold = 3 },
+    new Badge { Name = "Zbieracz PunktÃ³w", Description = "ZdobÄ…dÅº 100 punktÃ³w", IconUrl = "points100.png", CriteriaType = "Points", CriteriaThreshold = 100 },
+    new Badge { Name = "Mistrz Wiedzy", Description = "ZdobÄ…dÅº 500 punktÃ³w", IconUrl = "points500.png", CriteriaType = "Points", CriteriaThreshold = 500 }
+};
 
         context.Badges.AddRange(badges);
         await context.SaveChangesAsync();

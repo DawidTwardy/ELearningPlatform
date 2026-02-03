@@ -139,7 +139,7 @@ function App() {
             element={
               <RegisterPage 
                 navigateToPage={navigateToPage}
-                onRegisterSuccess={() => navigateToPage(PAGE_LOGIN)} 
+                onRegisterSuccess={() => navigateToPage(PAGE_HOME)} 
               />
             } 
           />

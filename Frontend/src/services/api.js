@@ -1,4 +1,24 @@
+import axios from 'axios';
+
 const API_BASE_URL = 'http://localhost:7115/api';
+
+const api = axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
+
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token && token !== 'undefined' && token !== 'null') {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
 
 const getAuthToken = () => {
     const token = localStorage.getItem('token');
@@ -108,9 +128,7 @@ const authenticatedFetch = async (url, options = {}) => {
 
             try {
                 const newToken = await refreshAccessToken();
-                
                 processQueue(null, newToken);
-                
                 headers['Authorization'] = `Bearer ${newToken}`;
                 response = await fetch(url, { ...options, headers });
                 
@@ -327,7 +345,6 @@ const uploadFileWithProgress = (file, onProgress) => {
         formData.append('file', file);
         
         const xhr = new XMLHttpRequest();
-        
         xhr.open('POST', `${API_BASE_URL}/Upload`, true);
         
         const token = getAuthToken();
@@ -336,11 +353,9 @@ const uploadFileWithProgress = (file, onProgress) => {
         }
 
         xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
+            if (event.lengthComputable && onProgress) {
                 const percentComplete = (event.loaded / event.total) * 100;
-                if (onProgress) {
-                    onProgress(percentComplete, event.loaded, event.total);
-                }
+                onProgress(percentComplete, event.loaded, event.total);
             }
         };
 
@@ -357,10 +372,7 @@ const uploadFileWithProgress = (file, onProgress) => {
             }
         };
 
-        xhr.onerror = () => {
-            reject(new Error("Network error during upload"));
-        };
-
+        xhr.onerror = () => reject(new Error("Network error during upload"));
         xhr.send(formData);
     });
 };
@@ -550,5 +562,8 @@ export {
     fetchCourseReports,
     deleteCourseReport,
     resolveCourseReport,
-    API_BASE_URL
+    API_BASE_URL,
+    api
 };
+
+export default api;

@@ -61,8 +61,7 @@ const HomePage = ({ navigateToPage }) => {
     if (error) return <div className="error-container">{error}</div>;
 
     return (
-        <main className="main-content home-page-wrapper">
-            
+        <div className="home-page-container">
             {!user && (
                 <>
                     <section className="hero-section">
@@ -215,7 +214,7 @@ const HomePage = ({ navigateToPage }) => {
                 <h2 className="page-title" style={{textAlign: 'center', marginTop: '0'}}>Ranking Użytkowników</h2>
                 <Leaderboard />
             </section>
-        </main>
+        </div>
     );
 };
 

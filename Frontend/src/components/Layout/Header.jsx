@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import NotificationsDropdown from '../Notifications/NotificationsDropdown';
-import { fetchNotifications, fetchMyStats, resolveImageUrl } from '../../services/api';
+import { fetchNotifications, fetchMyStats, resolveImageUrl, api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/components/Gamification.css'; 
 
-// Definiujemy stałe lokalnie, aby uniknąć cyklicznej zależności z App.jsx
 const PAGE_HOME = 'home';
 const PAGE_INSTRUCTORS = 'instructors';
 const PAGE_ADMIN = 'admin';
@@ -35,37 +34,44 @@ const Header = ({
     setSearchQuery, 
     handleSearchSubmit 
 }) => {
-    const { user } = useAuth(); // Pobieramy usera z kontekstu
+    const { user } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
     const [streak, setStreak] = useState(0);
+    const [avatarUrl, setAvatarUrl] = useState(null);
 
     useEffect(() => {
-        if (isLoggedIn) {
-            checkNotifications();
-            checkStats();
+        if (isLoggedIn && user) {
+            setAvatarUrl(user.avatarUrl);
+            fetchFreshData();
+        } else {
+            setAvatarUrl(null);
         }
-    }, [isLoggedIn, isNotificationsOpen]);
+    }, [isLoggedIn, user?.id]);
 
-    const checkNotifications = async () => {
+    const fetchFreshData = async () => {
         try {
-            const data = await fetchNotifications();
-            if (data) {
-                const unread = data.filter(n => !n.isRead).length > 0;
+            const [profileRes, statsRes, notificationsRes] = await Promise.all([
+                api.get('/profile'),
+                fetchMyStats(),
+                fetchNotifications()
+            ]);
+
+            if (profileRes.data && profileRes.data.avatarUrl) {
+                setAvatarUrl(profileRes.data.avatarUrl);
+            }
+
+            if (statsRes) {
+                setStreak(statsRes.currentStreak || 0);
+            }
+
+            if (notificationsRes) {
+                const unread = notificationsRes.filter(n => !n.isRead).length > 0;
                 setHasUnread(unread);
             }
         } catch (error) {
-            console.error("Błąd sprawdzania powiadomień", error);
-        }
-    };
-
-    const checkStats = async () => {
-        try {
-            const data = await fetchMyStats();
-            setStreak(data.currentStreak);
-        } catch(error) {
-            console.error("Błąd statystyk", error);
+            console.error("Błąd odświeżania danych w nagłówku", error);
         }
     };
 
@@ -78,7 +84,7 @@ const Header = ({
         setIsNotificationsOpen(prev => !prev);
         setIsMenuOpen(false);
         if (!isNotificationsOpen) {
-            checkNotifications();
+            fetchFreshData();
         }
     };
 
@@ -181,7 +187,7 @@ const Header = ({
                 </nav>
 
                 <div className="user-actions">
-                    {isLoggedIn && (
+                    {isLoggedIn && user && (
                         <>
                             <div className="streak-display" title="Dni nauki z rzędu">
                                 <span className="fire-icon">🔥</span>
@@ -198,9 +204,8 @@ const Header = ({
                                 {hasUnread && <div className="notification-dot"></div>}
                             </div>
                             
-                            {/* Ikona użytkownika z dynamicznym awatarem */}
                             <img 
-                                src={resolveImageUrl(user?.avatarUrl) || "/src/icon/usericon.png"} 
+                                src={resolveImageUrl(avatarUrl) || "/src/icon/usericon.png"} 
                                 alt="Profil" 
                                 className="action-icon-image profile-icon-image" 
                                 onClick={toggleMenu} 
@@ -214,7 +219,7 @@ const Header = ({
                         <NotificationsDropdown 
                             onClose={() => {
                                 setIsNotificationsOpen(false);
-                                checkNotifications(); 
+                                fetchFreshData(); 
                             }} 
                         />
                     )}

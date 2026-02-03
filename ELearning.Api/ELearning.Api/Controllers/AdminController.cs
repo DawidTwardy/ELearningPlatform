@@ -27,7 +27,6 @@ namespace ELearning.Api.Controllers
         [HttpGet("reported-courses")]
         public async Task<ActionResult<IEnumerable<ReportedCourseDto>>> GetReportedCourses()
         {
-            // Pobiera tylko kursy z aktywnymi zg³oszeniami
             var reportedCourses = await _context.Courses
                 .Include(c => c.Instructor)
                 .Include(c => c.Reports)
@@ -58,14 +57,13 @@ namespace ELearning.Api.Controllers
 
             if (course == null)
             {
-                return NotFound("Kurs nie zosta³ znaleziony.");
+                return NotFound("Kurs nie zostaÅ‚ znaleziony.");
             }
 
-            // Usuñ wszystkie zg³oszenia, ale zachowaj kurs
             _context.CourseReports.RemoveRange(course.Reports);
             await _context.SaveChangesAsync();
 
-            return NoContent(); // 204 No Content
+            return NoContent();
         }
 
         [HttpDelete("courses/{courseId}")]
@@ -75,23 +73,21 @@ namespace ELearning.Api.Controllers
 
             if (course == null)
             {
-                return NotFound("Kurs nie zosta³ znaleziony.");
+                return NotFound("Kurs nie zostaÅ‚ znaleziony.");
             }
 
-            // W prawdziwej aplikacji usuniêcie kursu wymaga³oby kaskadowego usuniêcia wielu powi¹zanych danych
             _context.Courses.Remove(course);
             await _context.SaveChangesAsync();
 
-            return NoContent(); // 204 No Content
+            return NoContent();
         }
 
 
         [HttpGet("reported-comments")]
         public async Task<ActionResult<IEnumerable<ReportedCommentDto>>> GetReportedComments()
         {
-            // Pobiera tylko komentarze z aktywnymi zg³oszeniami
             var reportedComments = await _context.Comments
-                .Include(c => c.User) // U¿ywa poprawn¹ relacjê do ApplicationUser (User)
+                .Include(c => c.User)
                 .Include(c => c.Course)
                 .Include(c => c.Reports)
                 .Where(c => c.Reports.Any())
@@ -99,7 +95,7 @@ namespace ELearning.Api.Controllers
                 {
                     Id = c.Id,
                     Text = c.Content,
-                    Author = c.User.FirstName + " " + c.User.LastName, // U¿ywa c.User
+                    Author = c.User.FirstName + " " + c.User.LastName,
                     CourseTitle = c.Course.Title,
                     ReportCount = c.Reports.Count,
                     LastReported = c.Reports.Max(r => r.ReportedAt)
@@ -119,31 +115,48 @@ namespace ELearning.Api.Controllers
 
             if (comment == null)
             {
-                return NotFound("Komentarz nie zosta³ znaleziony.");
+                return NotFound("Komentarz nie zostaÅ‚ znaleziony.");
             }
 
-            // Usuñ wszystkie zg³oszenia, ale zachowaj komentarz
             _context.CommentReports.RemoveRange(comment.Reports);
             await _context.SaveChangesAsync();
 
-            return NoContent(); // 204 No Content
+            return NoContent();
         }
 
         [HttpDelete("comments/{commentId}")]
         public async Task<IActionResult> DeleteComment(int commentId)
         {
-            var comment = await _context.Comments.FindAsync(commentId);
+            var comment = await _context.Comments
+                .Include(c => c.Reports)
+                .FirstOrDefaultAsync(c => c.Id == commentId);
 
             if (comment == null)
             {
-                return NotFound("Komentarz nie zosta³ znaleziony.");
+                return NotFound("Komentarz nie zostaÅ‚ znaleziony.");
             }
 
+            var replies = await _context.Comments
+                .Where(c => c.ParentCommentId == commentId)
+                .ToListAsync();
+
+            if (replies.Any())
+            {
+                var replyIds = replies.Select(r => r.Id).ToList();
+                var replyReports = await _context.CommentReports
+                    .Where(cr => replyIds.Contains(cr.CommentId))
+                    .ToListAsync();
+
+                _context.CommentReports.RemoveRange(replyReports);
+                _context.Comments.RemoveRange(replies);
+            }
+
+            _context.CommentReports.RemoveRange(comment.Reports);
             _context.Comments.Remove(comment);
+
             await _context.SaveChangesAsync();
 
-            return NoContent(); // 204 No Content
+            return NoContent();
         }
-
     }
 }

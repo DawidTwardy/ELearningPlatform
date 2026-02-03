@@ -41,7 +41,6 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
         const result = await register(registerData);
 
         if (result.success) {
-            alert("Rejestracja przebiegła pomyślnie! Zostałeś zalogowany.");
             if(onRegisterSuccess) onRegisterSuccess();
         } else {
             setError(result.message || 'Wystąpił błąd podczas rejestracji.');
@@ -61,7 +60,6 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
     return (
         <main className="login-container">
             <div className="login-content">
-                
                 <div className="login-illustration">
                     <div className="login-illustration-wrapper">
                         <img 
@@ -82,7 +80,6 @@ const RegisterPage = ({ setCurrentPage, onRegisterSuccess }) => {
                     )}
                     
                     <form onSubmit={handleRegister}>
-                        
                         <div className="form-group">
                             <label htmlFor="firstName">Imię</label>
                             <input 
