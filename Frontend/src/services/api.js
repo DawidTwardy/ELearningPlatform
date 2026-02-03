@@ -426,6 +426,10 @@ const fetchCourseAnalytics = async (courseId) => {
     return authenticatedFetch(`${API_BASE_URL}/Analytics/course/${courseId}`, { method: 'GET' });
 };
 
+const deleteAnalyticsReport = async (reportId) => {
+    return authenticatedFetch(`${API_BASE_URL}/Analytics/report/${reportId}`, { method: 'DELETE' });
+};
+
 const createReview = async (courseId, rating, content) => {
     return authenticatedFetch(`${API_BASE_URL}/Reviews`, {
         method: 'POST',
@@ -526,6 +530,7 @@ export {
     markNotificationRead,
     createNotification,
     fetchCourseAnalytics,
+    deleteAnalyticsReport,
     createReview,
     fetchCourseReviews,
     fetchLeaderboard,
