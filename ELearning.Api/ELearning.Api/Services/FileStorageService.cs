@@ -8,24 +8,18 @@ namespace ELearning.Api.Services
 {
     public class FileStorageService
     {
-        private readonly IWebHostEnvironment _environment;
+        private readonly IWebHostEnvironment _env;
 
-        public FileStorageService(IWebHostEnvironment environment)
+        public FileStorageService(IWebHostEnvironment env)
         {
-            _environment = environment;
+            _env = env;
         }
 
         public async Task<string> SaveFileAsync(IFormFile file)
         {
-            if (file == null || file.Length == 0)
-            {
-                throw new ArgumentException("Plik jest pusty lub nie istnieje.");
-            }
-
-            // POPRAWKA: Zabezpieczenie na wypadek gdyby WebRootPath by³ null (co zdarza siê w API)
-            string webRootPath = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
-
+            string webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
             string uploadsFolder = Path.Combine(webRootPath, "uploads");
+
             if (!Directory.Exists(uploadsFolder))
             {
                 Directory.CreateDirectory(uploadsFolder);
@@ -39,7 +33,7 @@ namespace ELearning.Api.Services
                 await file.CopyToAsync(fileStream);
             }
 
-            return $"/uploads/{uniqueFileName}";
+            return "/uploads/" + uniqueFileName;
         }
     }
 }
